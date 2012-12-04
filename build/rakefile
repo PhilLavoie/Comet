@@ -1,0 +1,20 @@
+#encoding: UTF-8
+$LOAD_PATH << ENV[ 'RUBYSRC' ]
+require 'rake_ext'
+
+PROJECT = "comet"
+
+DEV = ENV[ 'DEV' ]
+
+COMET = Path.join( "..", "src", PROJECT )
+COMET_IMPORT = Path.join( "..", "src" )
+COMET_BIN = Path.join( DEV, "bin", "comet" )
+
+DEIMOS_IMPORT = Path.join( DEV, "import", "D" )
+DEIMOS_PKG = Path.join( DEV, "pkg", "deimos", "deimos" + LIB_EXTENSION )
+
+D_PAT = "*.d"
+
+
+dmd = DMD.new( "-I#{COMET_IMPORT} -I#{DEIMOS_IMPORT}" )
+Build.executable( dmd, COMET_BIN, Path.join( COMET, "main.d" ), recursive_glob( COMET, D_PAT ), [ DEIMOS_PKG ] )
