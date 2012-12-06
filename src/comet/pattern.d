@@ -1,30 +1,28 @@
 module comet.pattern;
 
+import std.traits;
+
 struct Pattern {
   private size_t[] _data;
   
-  this( Atom )( Atom[] data ) {
+  this( Range )( Range data ) {
+    _data = new size_t[ data.length ];
     this.data( data );
   }  
-  
-  private void resize( size_t newLength ) {
-    if( _data is null ) { 
-      _data = new size_t[ newLength ]; 
-    } else { 
-      _data.length = newLength; 
-    }
-  }
   
   @property size_t length() { return _data.length; }
   size_t opIndex( size_t index ) { return _data[ index ]; }
   
   
   //The important parts.
-  @property void data( Atom )( Atom[] newData ) {
-    size_t[ Atom ] atomIndexes;
+  private void data( Range )( Range newData ) {
+    static if( isArray!( Range ) ) {
+      size_t[ typeof( newData[0] ) ] atomIndexes;
+    } else {
+      size_t[ typeof( newData.front() ) ] atomIndexes;
+    }    
     size_t currentIndex = 0;
     size_t dataIndex = 0;
-    resize( newData.length );
     foreach( atom; newData ) {
       if( atom !in atomIndexes ) {
         atomIndexes[ atom ] = currentIndex;
@@ -40,6 +38,14 @@ struct Pattern {
   */
   bool opEquals( Pattern rhs ) {
     return 0 == this.opCmp( rhs );
+  }
+  
+  const hash_t toHash() {
+    hash_t hash; 
+    foreach ( size_t index; _data) {
+      hash = ( hash * 9 ) + index; 
+    }
+    return hash;
   }
   
   int opCmp( Pattern rhs ) {

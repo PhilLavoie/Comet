@@ -6,6 +6,7 @@ module comet.dup;
 
 import comet.sma;
 import comet.config;
+import comet.pattern;
 
 import deimos.bio.dna;
 import deimos.containers.tree;
@@ -13,6 +14,46 @@ import deimos.containers.tree;
 import std.stdio;
 import std.container;
 import std.algorithm;
+
+//TODO: find a better name.
+struct SequenceLeaves {
+private:
+  Sequence[] _sequences;
+  size_t _seqIndex;
+  size_t _maxIndex; //inclusive.
+  
+  size_t _currentPos;  
+  size_t _period;
+
+  public:
+  this( Sequence[] seqs, size_t current, size_t period ) {
+    _sequences = seqs;
+    _seqIndex = 0;
+    _maxIndex = 2 * seqs.length - 1;
+    _currentPos = current;    
+    _period = period;
+    
+  }
+
+  @property auto front() {
+    auto firstPass = _seqIndex < _sequences.length;
+    if( firstPass ) {
+      return _sequences[ _seqIndex ][ _currentPos ];
+    }
+    return _sequences[ _seqIndex - _sequences.length ][ _currentPos + _period ];
+  }
+  
+  @property bool empty() {
+    return _maxIndex < _seqIndex;
+  }
+  
+  void popFront() {
+    ++_seqIndex;
+  } 
+  
+  @property size_t length() { return _sequences.length * 2; }
+
+}
 
 //Entry point.
 auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) {  
@@ -29,12 +70,45 @@ auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) {
   
   //Phylogenize the tree according to the sequences, see documentation to see
   //how it is done.
+  
+  //TODO: remove the phylogeny, just create it in the smtree directly instead.
   Tree!( Sequence ) phylogeny;
   phylogeny.phylogenize( sequences );  
   
   SMTree!Nucleotide smTree;
   smTree.mimic( phylogeny );
   auto results = Results( cfg.noResults );
+  Cost[ Pattern ] patternsCost;
+  Cost delegate( size_t, size_t ) algo;
+  
+  if( cfg.usePatterns ) {
+    algo = ( size_t pos, size_t period ) {
+      auto seqLeaves = SequenceLeaves( sequences, pos, period );
+      auto pattern = Pattern( seqLeaves ); //Extract the leaf nucleotides, but first create a range that extracts the nucleotides.
+      if( pattern in patternsCost ) {
+        return patternsCost[ pattern ];
+      } 
+      //Start by extracting the states from the hierarchy: use them to set the
+      //the leaves of the smtree.
+      setLeaves( smTree, seqLeaves );
+      
+      //Process the state mutation algorithm then extrac the preSpeciation cost.
+      smTree.update( states, mutationCosts );
+      auto preSpecCost = preSpeciationCost( smTree, mutationCosts );
+      patternsCost[ pattern ] = preSpecCost;
+      return preSpecCost;    
+    };
+  } else {
+    algo = ( size_t pos, size_t period ) {
+      //Start by extracting the states from the hierarchy: use them to set the
+      //the leaves of the smtree.
+      setLeaves( smTree, SequenceLeaves( sequences, pos, period ) );
+      
+      //Process the state mutation algorithm then extrac the preSpeciation cost.
+      smTree.update( states, mutationCosts );
+      return preSpeciationCost( smTree, mutationCosts );
+    };
+  }
   
   //Main loop of the program.
   //For each period length, evaluate de duplication cost of every possible positions.
@@ -49,14 +123,7 @@ auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) {
     )
   ) {
     foreach( current; dup.positions ) {      
-      //Start by extracting the states from the hierarchy: use them to set the
-      //the leaves of the smtree.
-      setLeaves( smTree, phylogeny.leaves, seqsCount, current, dup.period );
-      
-      //Process the state mutation algorithm then extrac the preSpeciation cost.
-      smTree.update( states, mutationCosts );
-      auto preSpecCost = preSpeciationCost( smTree, mutationCosts );
-      dup.cost += preSpecCost;      
+        dup.cost += algo( current, dup.period );     
     }
     dup.cost /= dup.period;
     
@@ -164,7 +231,6 @@ void phylogenize( Tree )( ref Tree tree, Sequence[] sequences ) in {
   }  
 }
 
-//TODO: Make a leaf extractor range on top of sequences instead of passing those numerical values.
 /**
   Sets the leaves of the state mutation tree using the provided sequences. The leaves are set according
   to the "leaves" range from the tree structure which, as of right now, reads leaves from "left" to "right"
@@ -172,18 +238,13 @@ void phylogenize( Tree )( ref Tree tree, Sequence[] sequences ) in {
   the values (read nucleotides if working with dna) of one homologous sequence, whereas the opposite half is a mirror
   image containg the values of the other sequence.
 */
-void setLeaves( Tree, Range )( ref Tree smTree, Range sequences, size_t sequencesCount, size_t current, size_t period ) {
-  //Phylogeny leaves are nodes of sequences, whereas state mutations tree leaves are nodes of states info
-  //holder.  
-  size_t counter = 0;
-  auto sequencesCopy = sequences;
-  
+void setLeaves( Tree, Range )( ref Tree smTree, Range sequences ) {
   //Of course, we expect both trees to have the exact same layout and therefore 
   //that the leaves iterator return the same number of leaves and in the same order.
   foreach( ref smLeaf; smTree.leaves ) {
-    smLeaf.element.fixState( sequences.front().element[ ( counter < sequencesCount ) ? current : current + period ] );  
+    assert( !sequences.empty );
+    smLeaf.element.fixState( sequences.front() );  
     sequences.popFront();
-    ++counter;
   }    
 }
 

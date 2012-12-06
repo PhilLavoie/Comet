@@ -47,6 +47,7 @@ struct Config {
   ubyte verbosity = 0;
   bool printConfig = false;
   bool printTime = false;
+  bool usePatterns = false;
 }
 
 void printConfig( ref Config cfg ) {
@@ -60,5 +61,6 @@ void printConfig( ref Config cfg ) {
   writeln( "Verbosity: ", cfg.verbosity );
   writeln( "Print configuration: ", cfg.printConfig );  
   writeln( "Print time: ", cfg.printTime );
+  writeln( "Use patterns: ", cfg.usePatterns );
   writeln( "-------------------------------------------------" );
 }
