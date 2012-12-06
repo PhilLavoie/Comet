@@ -25,6 +25,7 @@ void parse( ref Config cfg, string[] tokens ) {
   parser.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity );
   parser.trigger( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig );
   parser.trigger( "--print-time", "Prints the execution time.", cfg.printTime );
+  parser.trigger( "--patterns", "", cfg.usePatterns );
   
   auto args = parser.parse( tokens );
   

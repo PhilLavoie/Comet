@@ -10,8 +10,8 @@ struct Pattern {
     this.data( data );
   }  
   
-  @property size_t length() { return _data.length; }
-  size_t opIndex( size_t index ) { return _data[ index ]; }
+  @property const size_t length() { return _data.length; }
+  const size_t opIndex( size_t index ) { return _data[ index ]; }
   
   
   //The important parts.
@@ -36,7 +36,7 @@ struct Pattern {
   /**
     Returns true if the comparison operator returns 0.
   */
-  bool opEquals( Pattern rhs ) {
+  const bool opEquals( ref const Pattern rhs ) {
     return 0 == this.opCmp( rhs );
   }
   
@@ -48,7 +48,7 @@ struct Pattern {
     return hash;
   }
   
-  int opCmp( Pattern rhs ) {
+  const int opCmp( ref const Pattern rhs ) {
     if( this.length != rhs.length ) { return this.length - rhs.length; }
         
     for( size_t i = 0; i < _data.length; i++ ) {
