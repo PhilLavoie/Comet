@@ -61,5 +61,5 @@ void printResults( Range )( Range results ) {
 }
 
 void printTime( Time )( Time time ) {
-  writeln( "Execution time in seonds: ", time.seconds );
+  writeln( "Execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
 }
