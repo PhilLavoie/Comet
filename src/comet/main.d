@@ -1,5 +1,4 @@
 import comet.sma;
-import cmd = comet.cmd;
 import comet.config;
 import comet.dup;
 
@@ -19,7 +18,7 @@ void main( string[] args ) {
     //Program configuration. Defaults are defined appropriately and values are set
     //using command line options.
     Config cfg;
-    cmd.parse( args, cfg );
+    cfg.parse( args );
   
     //Extract sequences from file.
     auto sequences = fasta.parse!( Molecule.DNA )( cfg.sequencesFile );

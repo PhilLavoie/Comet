@@ -38,9 +38,16 @@ auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) {
   
   //Main loop of the program.
   //For each period length, evaluate de duplication cost of every possible positions.
-  foreach( dup; Duplications( cfg.minPeriod, cfg.maxPeriod, cfg.periodStep, seqLength ) ) {
-    if( 1 <= cfg.verbosity ) { writeln( "Doing period: ", dup.period ); }
-
+  foreach( 
+    dup; 
+    Duplications( 
+      cfg.minPeriod, 
+      cfg.maxPeriod, 
+      cfg.periodStep, 
+      seqLength,
+      ( size_t period ){ if( 1 <= cfg.verbosity ) { writeln( "Doing period: ", period ); } } 
+    )
+  ) {
     foreach( current; dup.positions ) {      
       //Start by extracting the states from the hierarchy: use them to set the
       //the leaves of the smtree.
@@ -52,7 +59,8 @@ auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) {
       dup.cost += preSpecCost;      
     }
     dup.cost /= dup.period;
-    results.add( dup );
+    
+    if( 0 < cfg.noResults ){ results.add( dup ); }
   }
     
   return results[];
@@ -291,8 +299,9 @@ struct Duplications {
   private size_t _maxPeriod;      //Inclusive.
   private size_t _periodStep;
   private size_t _seqLength;
+  private void delegate( size_t ) _onPeriodChange;
 
-  this( size_t minPeriod, size_t maxPeriod, size_t periodStep, size_t seqLength ) in {
+  this( size_t minPeriod, size_t maxPeriod, size_t periodStep, size_t seqLength, typeof( _onPeriodChange ) onPeriodChange ) in {
     assert( 0 < minPeriod );
     assert( 0 < periodStep );
     assert( 0 < seqLength );    
@@ -304,7 +313,9 @@ struct Duplications {
     _periodStep = periodStep;
     _seqLength = seqLength;
     _currentPos = START_POS;
+    _onPeriodChange = onPeriodChange;
     adjustMaxPos();
+    _onPeriodChange( _currentPeriod );
   }
   
   private void adjustMaxPos() {
@@ -315,6 +326,7 @@ struct Duplications {
     _currentPeriod += _periodStep;
     _currentPos = START_POS;
     adjustMaxPos();
+    _onPeriodChange( _currentPeriod );
   }
   
   @property Duplication front() {
