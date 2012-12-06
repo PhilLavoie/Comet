@@ -24,6 +24,7 @@ void parse( ref Config cfg, string[] tokens ) {
   );
   parser.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity );
   parser.trigger( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig );
+  parser.trigger( "--print-time", "Prints the execution time.", cfg.printTime );
   
   auto args = parser.parse( tokens );
   
@@ -45,9 +46,11 @@ struct Config {
   size_t periodStep = 3;
   ubyte verbosity = 0;
   bool printConfig = false;
+  bool printTime = false;
 }
 
 void printConfig( ref Config cfg ) {
+  writeln( "-------------------------------------------------" );
   writeln( "Configuration:" );
   writeln( "Sequences file: ", cfg.sequencesFile.name );
   writeln( "Number of results: ", cfg.noResults );
@@ -56,4 +59,6 @@ void printConfig( ref Config cfg ) {
   writeln( "Period step: ", cfg.periodStep );
   writeln( "Verbosity: ", cfg.verbosity );
   writeln( "Print configuration: ", cfg.printConfig );  
+  writeln( "Print time: ", cfg.printTime );
+  writeln( "-------------------------------------------------" );
 }

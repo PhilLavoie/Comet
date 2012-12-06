@@ -12,6 +12,7 @@ import std.algorithm;
 import std.conv;
 import std.exception;
 import std.container;
+import std.datetime;
 
 void main( string[] args ) {
   try {
@@ -38,8 +39,14 @@ void main( string[] args ) {
       " and is therefore invalid."
     );
     
+    SysTime startTime;
+    if( cfg.printTime ) { startTime = Clock.currTime(); }
+    
     auto bestResults = calculateDuplicationsCosts( sequences, cfg );  
+    
     printResults( bestResults );  
+    if( cfg.printTime ) { printTime( Clock.currTime() - startTime ); }
+    
   } catch( Exception e ) {
     writeln( e.msg );
     return;
@@ -51,4 +58,8 @@ void printResults( Range )( Range results ) {
   foreach( result; results ) {
     writeln( "Duplication{ start: ", result.start, ", period: ", result.period, ", cost: ", result.cost, "}" );
   }
+}
+
+void printTime( Time )( Time time ) {
+  writeln( "Execution time in seonds: ", time.seconds );
 }
