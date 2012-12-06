@@ -19,7 +19,7 @@ void parse( ref Config cfg, string[] tokens ) {
   parser.value( "--max", "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.", cfg.maxPeriod );
   parser.value( 
     "--step",
-    "Period step. It is highly recommended that the minimum period length be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
+    "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
     cfg.periodStep 
   );
   parser.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity );
@@ -32,6 +32,7 @@ void parse( ref Config cfg, string[] tokens ) {
   enforce( args is null || !args.length, "Unexpected arguments: " ~ args.to!string() );
   enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );
   enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
+  enforce( ( cfg.minPeriod % cfg.periodStep ) == 0, "The minimum period value: " ~ cfg.minPeriod.to!string ~ " is not a multiple of the period step: " ~ cfg.periodStep.to!string );
   
   if( cfg.printConfig ) {
     printConfig( cfg );
