@@ -50,6 +50,7 @@ struct Config {
   bool printConfig = false;
   bool printTime = false;
   bool usePatterns = false;
+  //bool useCache = false; have yet to be implemented.
 }
 
 void printConfig( ref Config cfg ) {
