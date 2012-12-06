@@ -28,11 +28,12 @@ interface AlgoI {
 
 
 class Standard( U ): AlgoI {
+private:
   Sequence[] _sequences;
   Nucleotide[] _states;
   U _mutationCosts;
   SMTree!Nucleotide _smTree;
-  
+public:  
   this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
     _sequences = seqs;
     _states = states;
@@ -59,9 +60,9 @@ class Cache {
 }
 
 class Patterns( U ): Standard!( U ) {
+private:
   Cost[ Pattern ] _patternsCost;  
-  
-  
+public:    
   this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
     super( seqs, states, mutationCosts );
   }

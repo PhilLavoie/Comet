@@ -14,8 +14,6 @@ struct StateInfo {
   Cost cost = Cost.max;
 }
 
-
-
 /**
   
 */

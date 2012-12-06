@@ -11,6 +11,20 @@ import std.exception;
 import std.conv;
 import std.stdio;
 
+struct Config {
+  File sequencesFile;
+  size_t noResults = 1000;
+  size_t minPeriod = 3;
+  size_t maxPeriod = size_t.max;
+  size_t periodStep = 3;
+  ubyte verbosity = 0;
+  bool printConfig = false;
+  bool printTime = false;
+  bool usePatterns = false;
+  //bool useCache = false; have yet to be implemented.
+}
+
+
 void parse( ref Config cfg, string[] tokens ) {
   Parser parser;
   parser.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" );
@@ -37,20 +51,6 @@ void parse( ref Config cfg, string[] tokens ) {
   if( cfg.printConfig ) {
     printConfig( cfg );
   }
-}
-
-
-struct Config {
-  File sequencesFile;
-  size_t noResults = 1000;
-  size_t minPeriod = 3;
-  size_t maxPeriod = size_t.max;
-  size_t periodStep = 3;
-  ubyte verbosity = 0;
-  bool printConfig = false;
-  bool printTime = false;
-  bool usePatterns = false;
-  //bool useCache = false; have yet to be implemented.
 }
 
 void printConfig( ref Config cfg ) {
