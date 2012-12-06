@@ -443,12 +443,12 @@ struct Duplication {
   }
   
   /**
-  
+    if( rhs.cost - Cost.epsilon <= cost && cost <= rhs.cost + Cost.epsilon )
   */
   int opCmp( Duplication rhs ) {
-    if( cost < rhs.cost ) { 
+    if( cost < rhs.cost - Cost.epsilon ) { 
       return -1; 
-    } else if( rhs.cost < cost ) {
+    } else if( rhs.cost + Cost.epsilon < cost ) {
       return 1;
     }
     //If the cost is equals, then the longer period wins.
