@@ -8,6 +8,7 @@ import deimos.bio.dna;
 import comet.sma;
 import comet.pattern;
 import comet.config;
+public import comet.dup;
 
 import std.algorithm;
 
@@ -15,6 +16,8 @@ import std.algorithm;
 AlgoI algo( U )( ref const Config cfg, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) {
   if( cfg.usePatterns ) {
     return new Patterns!( U )( sequences, states, mutationCosts );
+  } else if( cfg.useCache ) {
+    return new Cache!( U )( sequences, states, mutationCosts );
   }
   return new Standard!( U )( sequences, states, mutationCosts );
 }
@@ -23,7 +26,7 @@ AlgoI algo( U )( ref const Config cfg, Sequence[] sequences, Nucleotide[] states
   Formal definition of the algorithms interface.
 */
 interface AlgoI {
-  Cost opCall( size_t pos, size_t period );
+  void duplicationCost( ref Duplication );
 }
 
 
@@ -43,8 +46,16 @@ public:
     //how it is done.  
     phylogenize( _smTree, _sequences );    
   }
+  
+  override void duplicationCost( ref Duplication dup ) {
+    real sum = 0;
+    foreach( current; dup.positions ) {      
+        sum += positionCost( current, dup.period );     
+    }
+    dup.cost = sum / dup.period;
+  }
 
-  override Cost opCall( size_t pos, size_t period ) {
+  Cost positionCost( size_t pos, size_t period ) {
     //Start by extracting the states from the hierarchy: use them to set the
     //the leaves of the smtree.
     setLeaves( _smTree, SequenceLeaves( _sequences, pos, period ) );
@@ -55,8 +66,46 @@ public:
   }
 }
 
-class Cache {
-
+class Cache( U ): Standard!( U ) {
+private:
+  Cost[] _cache;
+  real _costSum;
+public:    
+  this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
+    super( seqs, states, mutationCosts );
+    _cache = new Cost[ seqs[ 0 ].length ];
+  }
+  
+  //Relies on the fact that the outer loop is on period length.
+  //Relies on the face that the first duplication for a given length starts at position 0.
+  override void duplicationCost( ref Duplication dup ) {
+    if( dup.start == 0 ) {
+      _costSum = 0;
+      foreach( current; dup.positions ) {      
+          auto posCost = positionCost( current, dup.period );          
+          _cache[ current ] = posCost;
+          _costSum += posCost;
+      }
+      dup.cost = _costSum / dup.period;
+    } else {
+      import std.stdio;
+      //writeln( "initial cost sum: ", _costSum );
+      //writeln( "previous pos cost: ", _cache[ dup.start - 1 ] );
+      
+      _costSum -= _cache[ dup.start - 1 ];
+      auto posCost = positionCost( dup.stop, dup.period );
+      
+      //writeln( "position cost: ", posCost );
+      
+      _cache[ dup.stop ] = posCost;
+      _costSum += posCost;
+      
+      dup.cost = _costSum / dup.period;
+      
+      //writeln( "final cost sum: ", _costSum );
+      //writeln( "duplication cost: ", dup.cost );      
+    }
+  }  
 }
 
 class Patterns( U ): Standard!( U ) {
@@ -67,10 +116,10 @@ public:
     super( seqs, states, mutationCosts );
   }
   
-  override Cost opCall( size_t pos, size_t period ) { 
+  override Cost positionCost( size_t pos, size_t period ) { 
     auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); //Extract the leaf nucleotides, but first create a range that extracts the nucleotides.
     if( pattern !in _patternsCost ) {
-      _patternsCost[ pattern ] = super.opCall( pos, period );
+      _patternsCost[ pattern ] = super.positionCost( pos, period );
     } 
     return _patternsCost[ pattern ];    
   }

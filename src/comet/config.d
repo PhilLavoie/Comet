@@ -21,7 +21,7 @@ struct Config {
   bool printConfig = false;
   bool printTime = false;
   bool usePatterns = false;
-  //bool useCache = false; have yet to be implemented.
+  bool useCache = false; 
 }
 
 
@@ -40,6 +40,7 @@ void parse( ref Config cfg, string[] tokens ) {
   parser.trigger( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig );
   parser.trigger( "--print-time", "Prints the execution time.", cfg.printTime );
   parser.trigger( "--patterns", "", cfg.usePatterns );
+  parser.trigger( "--cache", "", cfg.useCache );
   
   auto args = parser.parse( tokens );
   
@@ -47,6 +48,8 @@ void parse( ref Config cfg, string[] tokens ) {
   enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );
   enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
   enforce( ( cfg.minPeriod % cfg.periodStep ) == 0, "The minimum period value: " ~ cfg.minPeriod.to!string ~ " is not a multiple of the period step: " ~ cfg.periodStep.to!string );
+  //Currently both optimizations not supported.
+  enforce( !( cfg.usePatterns && cfg.useCache ), "As of right now, both optimizations are not supported in parallel" );
   
   if( cfg.printConfig ) {
     printConfig( cfg );
@@ -65,5 +68,6 @@ void printConfig( ref Config cfg ) {
   writeln( "Print configuration: ", cfg.printConfig );  
   writeln( "Print time: ", cfg.printTime );
   writeln( "Use patterns: ", cfg.usePatterns );
+  writeln( "Use cache: ", cfg.useCache );
   writeln( "-------------------------------------------------" );
 }

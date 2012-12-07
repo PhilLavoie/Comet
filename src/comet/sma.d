@@ -7,7 +7,7 @@ import deimos.containers.tree;
 
 import std.algorithm;
 
-alias float Cost;
+alias double Cost;
 
 struct StateInfo {
   size_t count = 0;
