@@ -22,9 +22,10 @@ struct Config {
   bool printTime = false;
   bool usePatterns = false;
   bool useCache = false; 
+  bool useCachePatterns = false;
 }
 
-
+//TODO: add the possibility to provide an enum.
 void parse( ref Config cfg, string[] tokens ) {
   Parser parser;
   parser.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" );
@@ -41,6 +42,7 @@ void parse( ref Config cfg, string[] tokens ) {
   parser.trigger( "--print-time", "Prints the execution time.", cfg.printTime );
   parser.trigger( "--patterns", "", cfg.usePatterns );
   parser.trigger( "--cache", "", cfg.useCache );
+  parser.trigger( "--cache-patterns", "", cfg.useCachePatterns );
   
   auto args = parser.parse( tokens );
   
@@ -49,7 +51,12 @@ void parse( ref Config cfg, string[] tokens ) {
   enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
   enforce( ( cfg.minPeriod % cfg.periodStep ) == 0, "The minimum period value: " ~ cfg.minPeriod.to!string ~ " is not a multiple of the period step: " ~ cfg.periodStep.to!string );
   //Currently both optimizations not supported.
-  enforce( !( cfg.usePatterns && cfg.useCache ), "As of right now, both optimizations are not supported in parallel" );
+  enforce( 
+    ( !cfg.useCache && !cfg.usePatterns && !cfg.useCachePatterns ) ||
+    (  cfg.useCache && !cfg.usePatterns && !cfg.useCachePatterns ) ||
+    ( !cfg.useCache &&  cfg.usePatterns && !cfg.useCachePatterns ) ||
+    ( !cfg.useCache && !cfg.usePatterns && cfg.useCachePatterns ) 
+  );
   
   if( cfg.printConfig ) {
     printConfig( cfg );
@@ -69,5 +76,6 @@ void printConfig( ref Config cfg ) {
   writeln( "Print time: ", cfg.printTime );
   writeln( "Use patterns: ", cfg.usePatterns );
   writeln( "Use cache: ", cfg.useCache );
+  writeln( "Use both cache and patterns: ", cfg.useCachePatterns );
   writeln( "-------------------------------------------------" );
 }

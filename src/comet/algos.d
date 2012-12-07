@@ -18,6 +18,8 @@ AlgoI algo( U )( ref const Config cfg, Sequence[] sequences, Nucleotide[] states
     return new Patterns!( U )( sequences, states, mutationCosts );
   } else if( cfg.useCache ) {
     return new Cache!( U )( sequences, states, mutationCosts );
+  } else if( cfg.useCachePatterns ) {
+    return new CachePatterns!( U )( sequences, states, mutationCosts );
   }
   return new Standard!( U )( sequences, states, mutationCosts );
 }
@@ -117,7 +119,7 @@ public:
   }
   
   override Cost positionCost( size_t pos, size_t period ) { 
-    auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); //Extract the leaf nucleotides, but first create a range that extracts the nucleotides.
+    auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); 
     if( pattern !in _patternsCost ) {
       _patternsCost[ pattern ] = super.positionCost( pos, period );
     } 
@@ -125,8 +127,22 @@ public:
   }
 }
 
-class CachePatterns {
+class CachePatterns( U ): Cache!( U ) {
+private:
+  Cost[ Pattern ] _patternsCost;  
+public:
+  this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
+    super( seqs, states, mutationCosts );
+  }
 
+  //Copied from Patterns algorithm.
+  override Cost positionCost( size_t pos, size_t period ) { 
+    auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); 
+    if( pattern !in _patternsCost ) {
+      _patternsCost[ pattern ] = super.positionCost( pos, period );
+    } 
+    return _patternsCost[ pattern ];    
+  }
 }
 
 /**
