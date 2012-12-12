@@ -17,14 +17,21 @@ import std.algorithm;
 
 //Factory function.
 AlgoI algo( U )( ref const Config cfg, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) {
-  if( cfg.usePatterns ) {
-    return new Patterns!( U )( sequences, states, mutationCosts );
-  } else if( cfg.useCache ) {
-    return new Cache!( U )( sequences, states, mutationCosts );
-  } else if( cfg.useCachePatterns ) {
-    return new CachePatterns!( U )( sequences, states, mutationCosts );
+  final switch( cfg.algo ) {
+    case Algo.standard:
+      return new Standard!U( sequences, states, mutationCosts );
+      break;
+    case Algo.cache:
+      return new Cache!U( sequences, states, mutationCosts );
+      break;
+    case Algo.patterns:
+      return new Patterns!U( sequences, states, mutationCosts );
+      break;
+    case Algo.cachePatterns:  
+      return new CachePatterns!U( sequences, states, mutationCosts );
+      break;
   }
-  return new Standard!( U )( sequences, states, mutationCosts );
+  assert( false );  
 }
 
 /**

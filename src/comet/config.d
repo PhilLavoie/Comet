@@ -11,6 +11,27 @@ import std.exception;
 import std.conv;
 import std.stdio;
 
+enum Algo {
+  standard = 0,
+  cache,
+  patterns,
+  cachePatterns
+}
+
+private immutable string[ 4 ] algoStrings = [ "standard", "cache", "patterns", "cache-patterns" ];
+private immutable Algo[ string ] algosByStrings;
+
+static this() {
+  algosByStrings = 
+  [ 
+    algoStrings[ Algo.standard ]: Algo.standard,
+    algoStrings[ Algo.cache ]: Algo.cache, 
+    algoStrings[ Algo.patterns ]: Algo.patterns,
+    algoStrings[ Algo.cachePatterns ]: Algo.cachePatterns 
+  ];
+}
+
+
 /**
   Program configuration data.
   Initialized to default value.
@@ -24,9 +45,7 @@ struct Config {
   ubyte verbosity = 0;
   bool printConfig = false;
   bool printTime = false;
-  bool usePatterns = false;
-  bool useCache = false; 
-  bool useCachePatterns = false;
+  Algo algo = Algo.standard;
 }
 
 
@@ -42,6 +61,7 @@ struct Config {
 void parse( ref Config cfg, string[] tokens ) {
   Parser parser;
   bool help = false;
+  
   parser.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" );
   parser.value( "--nr", "Number of results of keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults );
   parser.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod );
@@ -52,12 +72,15 @@ void parse( ref Config cfg, string[] tokens ) {
     cfg.periodStep 
   );
   parser.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity );
+  parser.trigger( "-h", "Prints this menu.", help );
   parser.trigger( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig );
   parser.trigger( "--print-time", "Prints the execution time.", cfg.printTime );
-  parser.trigger( "--patterns", "Use a pattern matching optimization that avoids cost recalculation of already visited pattern.", cfg.usePatterns );
-  parser.trigger( "--cache", "Use a cache optimization that reuse already calculated cost for each period.", cfg.useCache );
-  parser.trigger( "--cache-patterns", "Use both optimizations to calculate duplication costs.", cfg.useCachePatterns );
-  parser.trigger( "-h", "Prints this menu.", help );
+  parser.mapped( 
+    "--algo", 
+    "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
+    cfg.algo,
+    algosByStrings
+  );
   auto args = parser.parse( tokens );
   
   //If help is needed, the rest of the arguments are not checked.
@@ -71,13 +94,6 @@ void parse( ref Config cfg, string[] tokens ) {
   enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );  
   enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
   enforce( ( cfg.minPeriod % cfg.periodStep ) == 0, "The minimum period value: " ~ cfg.minPeriod.to!string ~ " is not a multiple of the period step: " ~ cfg.periodStep.to!string );
-  //Only one type of optimization can be used at a time.
-  enforce( 
-    ( !cfg.useCache && !cfg.usePatterns && !cfg.useCachePatterns ) ||
-    (  cfg.useCache && !cfg.usePatterns && !cfg.useCachePatterns ) ||
-    ( !cfg.useCache &&  cfg.usePatterns && !cfg.useCachePatterns ) ||
-    ( !cfg.useCache && !cfg.usePatterns && cfg.useCachePatterns ) 
-  );
   
   if( cfg.printConfig ) {
     printConfig( cfg );
@@ -99,9 +115,7 @@ void printConfig( ref Config cfg ) {
   writeln( "Verbosity: ", cfg.verbosity );
   writeln( "Print configuration: ", cfg.printConfig );  
   writeln( "Print time: ", cfg.printTime );
-  writeln( "Use patterns: ", cfg.usePatterns );
-  writeln( "Use cache: ", cfg.useCache );
-  writeln( "Use both cache and patterns: ", cfg.useCachePatterns );
+  writeln( "Algorithm: ", algoStrings[ cfg.algo ] );
   writeln( "-------------------------------------------------" );
 }
 
