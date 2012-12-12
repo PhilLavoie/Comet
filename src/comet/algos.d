@@ -1,5 +1,8 @@
 /**
-
+  Module encapsulating logic regarding the calculation of duplication cost.
+  It provides an interface to the user in the form of algorithms. Algorithms
+  all respond to a given interface and a factory method is provided to
+  determine, according to program configuration, which algorithm is to be used.
 */
 module comet.algos;
 

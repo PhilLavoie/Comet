@@ -9,16 +9,35 @@ import std.algorithm;
 
 alias double Cost;
 
-struct StateInfo {
+/**
+  Every state's associated information.
+  This structure does not hold the state only
+  because it was meant to be used associatively.
+  Every state has a cost and a number of occurrences.
+  
+  The number of occurrences is only valid for the
+  subtree under the node holding the state. Therefore,
+  if the node is the root, then the number of occurrences
+  held will be the absolute value. For any other node,
+  the absolute number has to be recalculated based on
+  its parent node and the equivalent states that can
+  be chosen as minimal mutation cost candidates.
+  
+  The default value is expected to hold the minimal
+  number of occurrences and the maximum possibl cost.
+*/
+private struct StateInfo {
   size_t count = 0;
   Cost cost = Cost.max;
 }
 
 /**
-  
+  States info is nothing more than an entity responsible for holding
+  the state info of every known state for its embedding node. In other
+  words, it acts as a map.
 */
 struct StatesInfo( T ) {
-  private StateInfo[ T ] _infos;
+  private StateInfo[ T ] _infos; //Each state is associated with a tuple of data.
   
   /**
     Creates an entry for every given state provided by the range and initializes
@@ -31,8 +50,8 @@ struct StatesInfo( T ) {
   }
   
   /**
-    Indicates that the given state is known to be present therefore
-    favoring him when considering every possible state.
+    Indicates that the given state is known to be present, therefore
+    favoring him when considering every possible states.
     Sets the state's cost to 0 and every other costs to the maximum value.
   */
   void fixState( T state ) {
@@ -45,6 +64,8 @@ struct StatesInfo( T ) {
       }
     }
   }
+  
+  //TODO: refactor this code.
   
   ref Cost cost( T state ) {
     if( state !in _infos ) {
@@ -146,6 +167,7 @@ unittest {
   } 
 }
 
+//TODO: maybe find a better place than at module scope.
 Cost mutationCost( T, U )( Cost base, T initial, T mutated, U mutationCosts ) {
   return base + mutationCosts( initial, mutated );
 }
@@ -164,7 +186,7 @@ struct SMTree( T ) {
 private:
   Tree!( StatesInfo!T ) _tree;
   
-  //Expect the leaves to be set.
+  //Expects the leaves to be set.
   private void gatherInfo( N, Range, U )( N node, Range states, U mutationCosts ) {
     //Do nothing if it is a leaf.
     if( !node.hasChildren() ) { return; }
@@ -201,13 +223,25 @@ public:
   }
   
   /**
-    Kind of interface definition?!?!?!.
-    Cost opCall( T initial, T mutated );
+    Updates the tree given the used states and the mutation costs
+    provider, which has to respond to the MutationCosts interface
+    for the given states type.
+    
+    This method is only to be used once the leaves have been set
+    to a given state.
   */
   void update( Range, U )( Range states, U mutationCosts ) {
     assert( !_tree.empty );
     gatherInfo( _tree.root, states, mutationCosts );
   }
+}
+
+/**
+  This interface represents the behavior must support the entity
+  responsible for providing the cost of a mutation between two states.
+*/
+interface MutationCosts( T ) {
+  Cost opCall( T initialState, T mutatedState );
 }
 
 unittest {

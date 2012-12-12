@@ -1,16 +1,34 @@
 module comet.pattern;
 
 import std.traits;
+import std.range;
 
+/**
+  Patterns identify if two sequences shall produce the
+  same duplication cost.
+  Creating a pattern for two sequences and comparing them
+  will tell wether or not one can use the same cost for
+  both.
+*/
 struct Pattern {
   private size_t[] _data;
   
-  this( Range )( Range data ) {
+  /**
+    Constructs the pattern and readies it for comparison.
+    This is the only way a pattern should be constructed.
+  */
+  this( Range )( Range data ) if( isInputRange!Range && __traits( compiles, data.length ) ) {
     _data = new size_t[ data.length ];
     this.data( data );
   }  
   
+  /**
+    Returns the length of the pattern.
+  */
   @property const size_t length() { return _data.length; }
+  /**
+    Returns the value held in the given index.
+  */
   const size_t opIndex( size_t index ) { return _data[ index ]; }
   
   
@@ -40,6 +58,12 @@ struct Pattern {
     return 0 == this.opCmp( rhs );
   }
   
+  /**
+    Hashes on the content of the pattern rather than the
+    address of the array used. This is done so that if
+    two patterns have the same content, they have the same
+    hash key.
+  */
   const hash_t toHash() {
     hash_t hash; 
     foreach ( size_t index; _data) {
@@ -48,6 +72,13 @@ struct Pattern {
     return hash;
   }
   
+  /**
+    Returns 0 if both patterns are equal. Otherwise, it returns the difference
+    between this object's value and the right hand side's value for the first index
+    where they differ. If both patterns aren't of the same length, then this object's
+    length minus the compared pattern's length is returned. Note that this case
+    should not even occur. This might be moved to be an assert...
+  */
   const int opCmp( ref const Pattern rhs ) {
     if( this.length != rhs.length ) { return this.length - rhs.length; }
         
@@ -68,4 +99,5 @@ unittest {
   auto pattern = Pattern( zeData );
   auto pattern2 = Pattern( zeData2 );
   assert( pattern == pattern2, "Comparison returns: " ~ to!string( pattern.opCmp( pattern2 ) ) );  
+  assert( pattern.toHash() == pattern2.toHash() );
 }

@@ -53,18 +53,30 @@ void main( string[] args ) {
   } 
 }
 
-
+/**
+  Prints the results to the standard output in the given order.
+*/
 void printResults( Range )( Range results ) {
   foreach( result; results ) {
     writeln( "Duplication{ start: ", result.start, ", period: ", result.period, ", cost: ", result.cost, "}" );
   }
 }
 
+/**
+  Prints the execution time value to the standard output.
+*/
 void printTime( Time )( Time time ) {
   writeln( "Execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
 }
 
-
+/**
+  Main loop of the program. For each every duplication possible given
+  the program configuration, it passes it to the appropriate algorithm to
+  calculate its cost. Its cost is stored such that only that the duplications
+  with the n best scores are kept (provided by configuration).
+  
+  Returns a range over the results in descending order (best result comes first).
+*/
 auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) in {
   assert( 2 <= sequences.length );
 } body {  
@@ -109,21 +121,34 @@ auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) in {
 struct Results {
   private RedBlackTree!( Duplication ) _results;
   private size_t _max;
-  private size_t _noResults;
   
+  /**
+    The number of results is intended to be bounded.
+    The parameter provided is that bound (inclusive).
+  */
   this( size_t maxResults ) {
     _results = new typeof( _results )();
-    _noResults = 0;
     _max = maxResults;
   }
   
+  /**
+    Returns the number of results currently stored.
+  */
+  @property size_t length() { return _results.length; }
+  
+  /**
+    This function adds the result only if:
+      - The maximum number of results has not been reached, or
+      - The worst duplication known is worse than the result to be
+        inserted. In that case, the worst result is exchanged
+        with the provided one.
+  */
   void add( Duplication result ) {
     if( !_max ) { return; }
     
     //Store result.
-    if( _noResults < _max ) {
+    if( _results.length < _max ) {
       _results.insert( result );
-      ++_noResults;
     //If we reached the maximum number of results, then we determine
     //if the current duplication result is better than the worst already known.
     //If so, we get rid of the worst and insert the better one.
@@ -134,9 +159,15 @@ struct Results {
   }
 
   /**
-    Returns a range of results in ascending order (the "lowest" result is actually the best).
+    Returns a range of results in ascending order (the "lowest" result is the actual best).
   */
   auto opSlice() {
     return _results[];
-  }  
+  } 
+  /**
+    Returns a range of results in ascending order (the "lowest" result is the actual best).
+  */  
+  auto range() {
+    return _results[];
+  }
 }
