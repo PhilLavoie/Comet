@@ -1,6 +1,7 @@
 import comet.sma;
 import comet.config;
 import comet.algos;
+import comet.ranges;
 
 import deimos.bio.dna;
 import deimos.containers.tree;
@@ -13,6 +14,8 @@ import std.conv;
 import std.exception;
 import std.container;
 import std.datetime;
+
+//TODO: Add parallel processing optimization.
 
 void main( string[] args ) {
   try {
@@ -69,6 +72,14 @@ void printTime( Time )( Time time ) {
   writeln( "Execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
 }
 
+//TODO: add support for multiple threads.
+//In order to maximize the benefits of the cache, work separation should be based
+//on period length, rather than duplication start.
+//Since the processing gets more and more costy as the period length increase,
+//a thread pool should be used. Each thread should have their own results, then
+//merge them. This would prevent the need to synchronize the structure, introducing
+//additional processing only to save space (and god knows this algorithm needs
+//speed more than space!).
 /**
   Main loop of the program. For each every duplication possible given
   the program configuration, it passes it to the appropriate algorithm to
@@ -94,7 +105,16 @@ auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) in {
   //Main loop of the program.
   //For each period length, evaluate de duplication cost of every possible positions.
   size_t seqLength = sequences[ 0 ].length;
-  foreach( 
+  
+  foreach( period; cfg.periods( seqLength ) ) {
+    if( 1 <= cfg.verbosity ) { writeln( "Doing period: ", period.length ); }
+    foreach( dup; period.duplications() ) {
+      algorithm.duplicationCost( dup );
+      results.add( dup );
+    }  
+  }
+  
+  /+foreach( 
     dup; 
     Duplications( 
       cfg.minPeriod, 
@@ -107,6 +127,7 @@ auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) in {
     algorithm.duplicationCost( dup );
     results.add( dup );
   }
+  +/
     
   return results[];
 }

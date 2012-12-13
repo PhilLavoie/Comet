@@ -11,11 +11,15 @@ import deimos.bio.dna;
 import comet.sma;
 import comet.pattern;
 import comet.config;
+import comet.ranges;
 public import comet.dup;
 
 import std.algorithm;
 
-//Factory function.
+/**
+  This function constructs and return an algorithm object based on the
+  program configuration. 
+*/
 AlgoI algo( U )( ref const Config cfg, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) {
   final switch( cfg.algo ) {
     case Algo.standard:

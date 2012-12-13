@@ -3,6 +3,8 @@ module comet.pattern;
 import std.traits;
 import std.range;
 
+//TODO: try to avoid heap usage.
+
 /**
   Patterns identify if two sequences shall produce the
   same duplication cost.
