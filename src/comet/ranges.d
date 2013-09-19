@@ -32,7 +32,7 @@ struct Period {
 */
 struct Periods {
   private size_t _currentPeriod;
-  private size_t _maxPeriod;
+  private size_t _maxPeriod;      //Inclusive.
   private size_t _periodStep;
   private size_t _seqLength;
   
@@ -69,7 +69,7 @@ struct Duplications {
   } body {
     _periodLength = periodLength;
     _currentPos = 0;
-    _maxPos = seqLength - ( 2 * _periodLength ); //Invalid: Only makes sense for even sequence lengths.
+    _maxPos = seqLength - ( 2 * _periodLength );
   }
   
   @property bool empty() { return _maxPos < _currentPos; }

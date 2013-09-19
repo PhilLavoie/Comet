@@ -39,6 +39,7 @@ struct Duplication {
   }
   
   @property size_t start() { return _start; }
+  //Inclusive boundary.
   @property size_t stop() { return _start + _period - 1; }
   @property size_t period() { return _period; }
   
