@@ -42,10 +42,11 @@ struct Config {
   size_t minPeriod = 3;
   size_t maxPeriod = size_t.max;
   size_t periodStep = 3;
+  size_t noThreads = 1;
   ubyte verbosity = 0;
   bool printConfig = false;
   bool printTime = false;
-  Algo algo = Algo.standard;
+  Algo algo = Algo.standard;  
 }
 
 
@@ -59,7 +60,7 @@ struct Config {
   help menu (-h).
 */
 void parse( ref Config cfg, string[] tokens ) {
-  Parser parser;
+  Parser parser = Parser( "comet -s <sequencesFile> [ options ]", "N/A" );
   bool help = false;
   
   parser.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" );
@@ -85,7 +86,7 @@ void parse( ref Config cfg, string[] tokens ) {
   
   //If help is needed, the rest of the arguments are not checked.
   if( help ) { 
-    parser.printHelp( "comet -s <sequencesFile> [ options ]" );
+    parser.printHelp();
     throw new Exception( "Print help menu" );
   }
   //We don't expect any arguments but those used on flags.

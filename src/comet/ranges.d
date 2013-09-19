@@ -59,9 +59,9 @@ auto periods( in ref Config config, size_t seqLength ) {
 }
 
 struct Duplications {
-  private size_t _periodLength;
-  private size_t _currentPos;
-  private size_t _maxPos;
+  private size_t _periodLength; //Length of each segments.
+  private size_t _currentPos;   //Current index on the sequence where the first segments begin.
+  private size_t _maxPos;       //Inclusive.
   
   this( size_t periodLength, size_t seqLength ) in {
     assert( 0 < periodLength );
@@ -69,7 +69,7 @@ struct Duplications {
   } body {
     _periodLength = periodLength;
     _currentPos = 0;
-    _maxPos = seqLength - ( 2 * _periodLength ) - 1;
+    _maxPos = seqLength - ( 2 * _periodLength ); //Invalid: Only makes sense for even sequence lengths.
   }
   
   @property bool empty() { return _maxPos < _currentPos; }

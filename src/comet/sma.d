@@ -26,7 +26,7 @@ alias double Cost;
   The default value is expected to hold the minimal
   number of occurrences and the maximum possibl cost.
 */
-private struct StateInfo {
+struct StateInfo {
   size_t count = 0;
   Cost cost = Cost.max;
 }

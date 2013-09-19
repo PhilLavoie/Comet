@@ -1,5 +1,5 @@
 #encoding: UTF-8
-$LOAD_PATH << ENV[ 'RUBYSRC' ]
+$LOAD_PATH << ( ENV[ 'DEV' ] + "/import/Ruby" )
 require 'rake_ext'
 
 PROJECT = "comet"

@@ -45,7 +45,7 @@ void main( string[] args ) {
     SysTime startTime;
     if( cfg.printTime ) { startTime = Clock.currTime(); }
     
-    auto bestResults = calculateDuplicationsCosts( sequences, cfg );  
+    auto bestResults = sequentialDupCostsCalculation( sequences, cfg );  
     
     printResults( bestResults );  
     if( cfg.printTime ) { printTime( Clock.currTime() - startTime ); }
@@ -88,12 +88,12 @@ void printTime( Time )( Time time ) {
   
   Returns a range over the results in descending order (best result comes first).
 */
-auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) in {
+auto sequentialDupCostsCalculation( Seq )( Seq[] sequences, ref Config cfg ) in {
   assert( 2 <= sequences.length );
 } body {  
   //Up to now, only nucleotides are supported.
   Nucleotide[] states = [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];  
-  //Basic 0, 1 cost table.
+  //Basic 0, 1 cost table. Include gaps?
   auto mutationCosts = ( Nucleotide initial, Nucleotide mutated ) { 
     if( initial != mutated ) { return 1; }
     return 0;
@@ -114,30 +114,20 @@ auto calculateDuplicationsCosts( Seq )( Seq[] sequences, ref Config cfg ) in {
     }  
   }
   
-  /+foreach( 
-    dup; 
-    Duplications( 
-      cfg.minPeriod, 
-      cfg.maxPeriod, 
-      cfg.periodStep, 
-      seqLength,
-      ( size_t period ){ if( 1 <= cfg.verbosity ) { writeln( "Doing period: ", period ); } } 
-    )
-  ) {
-    algorithm.duplicationCost( dup );
-    results.add( dup );
-  }
-  +/
-    
   return results[];
 }
+
+/*
+auto parallelDupCostsCalculation() {
+  return void;
+}
+*/
 
 /**
   A wrapper around a fast, ordered index (as of right now, the structure used is a red black tree).
   It keeps track of how many results were inserted so that it does not go beyond a maximum limit.
   When the limit is reached, if the new result to be inserted is better than the worse one held,
-  then the latter is popped from the tree and the former is inserted, maintaining the number of
-  results below the limit.
+  then the latter is popped from the tree and the former is inserted, satisfying the limit.
 */
 struct Results {
   private RedBlackTree!( Duplication ) _results;
