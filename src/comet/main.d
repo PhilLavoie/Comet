@@ -3,6 +3,7 @@ import comet.config;
 import comet.algos;
 import comet.ranges;
 
+import comet.flags;
 import deimos.bio.dna;
 import deimos.containers.tree;
 import fasta = deimos.bio.fasta;
@@ -50,6 +51,8 @@ void main( string[] args ) {
     printResults( bestResults );  
     if( cfg.printTime ) { printTime( Clock.currTime() - startTime ); }
     
+  } catch( HelpMenuRequested e ) {
+    //Don't do anything.
   } catch( Exception e ) {
     writeln( e.msg );
     return;

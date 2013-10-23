@@ -5,7 +5,7 @@
 */
 module comet.config;
 
-import deimos.flags;
+import comet.flags;
 
 import std.exception;
 import std.conv;
@@ -30,7 +30,6 @@ static this() {
     algoStrings[ Algo.cachePatterns ]: Algo.cachePatterns 
   ];
 }
-
 
 /**
   Program configuration data.
@@ -60,8 +59,7 @@ struct Config {
   help menu (-h).
 */
 void parse( ref Config cfg, string[] tokens ) {
-  Parser parser = Parser( "comet -s <sequencesFile> [ options ]", "N/A" );
-  bool help = false;
+  auto parser = Parser( tokens, "N/A" );
   
   parser.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" );
   parser.value( "--nr", "Number of results of keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults );
@@ -73,7 +71,6 @@ void parse( ref Config cfg, string[] tokens ) {
     cfg.periodStep 
   );
   parser.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity );
-  parser.trigger( "-h", "Prints this menu.", help );
   parser.trigger( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig );
   parser.trigger( "--print-time", "Prints the execution time.", cfg.printTime );
   parser.mapped( 
@@ -82,15 +79,8 @@ void parse( ref Config cfg, string[] tokens ) {
     cfg.algo,
     algosByStrings
   );
-  auto args = parser.parse( tokens );
+  parser.parse();
   
-  //If help is needed, the rest of the arguments are not checked.
-  if( help ) { 
-    parser.printHelp();
-    throw new Exception( "Print help menu" );
-  }
-  //We don't expect any arguments but those used on flags.
-  enforce( args is null || !args.length, "Unexpected arguments: " ~ args.to!string() );
   //Sequence file is mandatory.
   enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );  
   enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
