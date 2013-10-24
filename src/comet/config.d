@@ -40,7 +40,7 @@ struct Config {
   //TODO: remove verbosity, use debug instead.
   ubyte verbosity = 0;  
   File outFile;
-  bool printRest = true;
+  bool printResults = true;
   File resFile;
   size_t noResults = 1000;
   size_t minPeriod = 3;
@@ -82,11 +82,17 @@ void print( ref Config cfg ) {
   help menu (-h).
 */
 void parse( ref Config cfg, string[] tokens ) {
-  auto parser = Parser( tokens, "N/A" );
+  //Runtime defaults.
+  cfg.outFile = stdout;
+  cfg.resFile = stdout;  
+  
+  auto parser = Parser( tokens, "N/A" );  
+  
+  
   parser.add(
     Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" ),
     Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", cfg.outFile, "w" ),
-    Flag.file( "--rf", "Result filt. This is where the program prints the results. Default is to use the outfile.", cfg.resFile, "w" ),
+    Flag.file( "--rf", "Results file. This is where the program prints the results. Default is to use the outfile.", cfg.resFile, "w" ),
     Flag.value( "--nr", "Number of results to keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults ),
     Flag.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod ),
     Flag.value( "--max", "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.", cfg.maxPeriod ),
@@ -97,7 +103,7 @@ void parse( ref Config cfg, string[] tokens ) {
     ),
     //Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
     Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig ),
-    Flag.toggle( "--no-time", "Removes the execution time from the output.", cfg.printTime ),
+    Flag.toggle( "--no-time", "Removes the execution time from the results.", cfg.printTime ),
     Flag.mapped( 
       "--algo", 
       "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 

@@ -48,8 +48,8 @@ void main( string[] args ) {
     
     auto bestResults = sequentialDupCostsCalculation( sequences, cfg );  
     
-    printResults( bestResults );  
-    if( cfg.printTime ) { printTime( Clock.currTime() - startTime ); }
+    if( cfg.printTime ) { cfg.resFile.printTime( Clock.currTime() - startTime ); }
+    if( cfg.printResults ) { cfg.resFile.printResults( bestResults ); }
     
   } catch( Exception e ) {
     writeln( e.msg );
@@ -60,17 +60,17 @@ void main( string[] args ) {
 /**
   Prints the results to the standard output in the given order.
 */
-void printResults( Range )( Range results ) {
+void printResults( Range )( File output, Range results ) {
   foreach( result; results ) {
-    writeln( "Duplication{ start: ", result.start, ", period: ", result.period, ", cost: ", result.cost, "}" );
+    output.writeln( "Duplication{ start: ", result.start, ", period: ", result.period, ", cost: ", result.cost, "}" );
   }
 }
 
 /**
   Prints the execution time value to the standard output.
 */
-void printTime( Time )( Time time ) {
-  writeln( "Execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
+void printTime( Time )( File output, Time time ) {
+  output.writeln( "Execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
 }
 
 //TODO: add support for multiple threads.
