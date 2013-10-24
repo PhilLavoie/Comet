@@ -37,7 +37,6 @@ static this() {
 */
 struct Config {
   File sequencesFile;
-  //TODO: remove verbosity, use debug instead.
   ubyte verbosity = 0;  
   File outFile;
   bool printResults = true;
@@ -87,8 +86,7 @@ void parse( ref Config cfg, string[] tokens ) {
   cfg.resFile = stdout;  
   
   auto parser = Parser( tokens, "N/A" );  
-  
-  
+    
   parser.add(
     Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" ),
     Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", cfg.outFile, "w" ),
@@ -101,7 +99,7 @@ void parse( ref Config cfg, string[] tokens ) {
       "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
       cfg.periodStep 
     ),
-    //Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
+    Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
     Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig ),
     Flag.toggle( "--no-time", "Removes the execution time from the results.", cfg.printTime ),
     Flag.mapped( 
@@ -116,8 +114,10 @@ void parse( ref Config cfg, string[] tokens ) {
   parser.parse();
   
   //Sequence file is mandatory.
-  enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );  
+  enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." ); 
+  //The minimum pattern length must be below the maximum pattern length.
   enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
+  //Not sure it's worth giving the user control over this. It has to be a period of three or 1...
   enforce( ( cfg.minPeriod % cfg.periodStep ) == 0, "The minimum period value: " ~ cfg.minPeriod.to!string ~ " is not a multiple of the period step: " ~ cfg.periodStep.to!string );
   
   if( cfg.printConfig ) {

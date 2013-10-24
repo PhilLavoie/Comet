@@ -62,7 +62,7 @@ void main( string[] args ) {
 */
 void printResults( Range )( File output, Range results ) {
   foreach( result; results ) {
-    output.writeln( "Duplication{ start: ", result.start, ", period: ", result.period, ", cost: ", result.cost, "}" );
+    output.writeln( "Duplication{ start: ", result.start, ", period: ", result.period, ", cost: ", result.cost, " }" );
   }
 }
 
