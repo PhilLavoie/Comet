@@ -1,7 +1,7 @@
 /**
   Module defining a set of facilities to ease the parsing of the command line.
 */
-module deimos.flags;
+module comet.flags;
 
 import std.algorithm;
 import std.conv;
@@ -328,19 +328,113 @@ private class FlagInfo {
 */
 struct Parser {
 private:
-  FlagInfo[ string ] _flags;
-  string _helpFlag = "-h";
-  bool _helpNeeded = false;
+
+  //Maps the flagged arguments with their flags.
+  FlagInfo[ string ] _flags;  
+  /**
+    Returns the flag info associated with the program argument.
+  */
+  FlagInfo flagInfo( string name ) {
+    return _flags[ name ];
+  }
+  ///Ditto.
+  auto flagInfo( Flag flag ) {
+    return flagInfo( flag.name );
+  }    
+  /**
+    Returns true if the flag is known by the parser. Only checks if the name is known, it 
+    does not compare any other information.
+    
+    @return true if flag is known by parser, false otherwise.
+  */
+  public bool isMember( Flag flag ) {
+    if( flag.name in _flags ) { return true; }
+    return false;
+  }
+  /**
+    Makes sure the flag name's is known by the parser.
+  */
+  void checkMembership( Flag[] flags ... ) {
+    foreach( flag; flags ) {
+      assert( isMember( flag ), "unknown flag: " ~ flag.name );
+    }
+  }  
   
+  //Help flag. When present, shows the command line menu.
+  string _helpFlag = "-h";
+  bool _helpNeeded = false;  
+  @property public {
+    //TODO: add the possibility to change/remove the help flag.
+    string helpFlag() { return _helpFlag; }
+  }
+  /**
+    Prints a help message based using the description
+    strings held by this parser. It lists all known flags and their descriptions.
+    It uses the parser's output.
+  */
+  public void printHelp() {
+    if( _description !is null ) {
+      _out.writeln( "\nDESCRIPTION: ", _description, "\n" );
+    }
+    
+    _out.writeln( "USAGE: ", usageString(), "\n" );
+    
+    _out.writeln( "FLAGS:" );    
+    //Get the longest flag to determine the first column size.
+    size_t longest = 0;
+    foreach( string name, _; _flags ) {
+      longest = max( longest, name.length );
+    }
+    
+    foreach( string name, flag; _flags ) {
+      _out.writefln( "%-*s : %s", longest, name, flag.description );
+    }
+  }
+    
+  //Program name.
   string _name;
+  @property public {
+    string name() { return _name; }
+    void name( string name ) in {
+      checkNonEmpty( "name", name );
+    } body {
+      _name = name;
+    }
+  }
+  
+  //Program description.
   string _description;
-  File _output;  
-  string[] _args;
+  @property public {
+    string description() {  return _description; }
+    void description( string d ) in {
+      checkNonEmpty( "description", d );
+    } body {
+      _description = d;
+    }    
+  }
+    
+  //Arguments that will be parsed.
+  string[] _args;  
+  @property public {
+    string[] args() { return _args; }
+    void args( string[] newArgs ) { _args = newArgs; }
+  }
+  
+  //Program output, on which help messages are printed.
+  File _out;  
+  File _err;
   
   //TODO add the mantadory flags here.
   string usageString() {
     return commandName( _args ) ~ " [ options ]";
   }
+  
+  /**
+    Make sure that the strings contains at least 1 character that is not whitespace.
+  */
+  void checkNonEmpty( string name, string s ) {
+    assert( s.strip.length, "expected the " ~ name ~ " to be non empty" );
+  }  
   
   /**
     Prepares all data for a parsing.
@@ -350,15 +444,17 @@ private:
       fi.reset();
     }
   }
-  
+
   /**
-    Makes sure the flag name's is known by the parser.
+    Verifies that all mutually exclusive arguments for the one provided are not
+    already in use.
   */
-  void checkMembership( Flag[] flags ... ) {
-    foreach( flag; flags ) {
-      assert( isMember( flag ), "unknown flag: " ~ flag.name );
+  void enforceMutuallyExclusives( FlagInfo fi ) {
+    foreach( me; fi.mutuallyExclusives ) {
+      enforce( !me.used, "flag " ~ fi.name ~ " was found but is mutually exclusive with " ~ me.name );
     }
-  }
+  }  
+  
   
   void parse( string[] tokens ) in {
     assert( 0 < tokens.length  );
@@ -385,24 +481,7 @@ private:
       //throw new HelpMenuRequested();
     }
   }
-  
-  void checkNonEmpty( string name, string s ) {
-    assert( s.strip.length, "expected the " ~ name ~ " to be non empty" );
-  }
-  
-  FlagInfo flagInfo( string name ) {
-    return _flags[ name ];
-  }
-  auto flagInfo( Flag flag ) {
-    return flagInfo( flag.name );
-  }    
-  
-  void enforceMutuallyExclusives( FlagInfo fi ) {
-    foreach( me; fi.mutuallyExclusives ) {
-      enforce( !me.used, "flag " ~ fi.name ~ " was found but is mutually exclusive with " ~ me.name );
-    }
-  }
-        
+          
 public:
 
   @disable this();
@@ -410,36 +489,14 @@ public:
   /**
     Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
   */
-  this( string[] arguments, string desc = "", File output = stdout ) {
+  this( string[] arguments, string desc = "", File output = stdout, File error = stderr ) {
     args = arguments;
     description = desc;
-    _output = output;
+    _out = output;
+    _err = stderr;
     
     add( Flag.toggle( _helpFlag, "Prints the help menu.", _helpNeeded ) );
-  }
-
-  @property {
-    
-    string description() {  return _description; }
-    void description( string d ) in {
-      checkNonEmpty( "description", d );
-    } body {
-      _description = d;
-    }    
-    
-    string name() { return _name; }
-    void name( string name ) in {
-      checkNonEmpty( "name", name );
-    } body {
-      _name = name;
-    }
-    
-    string helpFlag() { return _helpFlag; }
-    
-    string[] args() { return _args; }
-    void args( string[] newArgs ) { _args = newArgs; }
-  
-  }
+  } 
   
   /**
     Main method of the parser.
@@ -447,31 +504,8 @@ public:
     This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
     assigning any values.    
   */
-  void parse() { parse( _args ); }
-    
-  /**
-    Prints a help message based using the description
-    strings held by this parser. It lists all known flags and their descriptions.
-    It uses the parser's output.
-  */
-  void printHelp() {
-    if( _description !is null ) {
-      _output.writeln( "\nDESCRIPTION: ", _description, "\n" );
-    }
-    
-    _output.writeln( "USAGE: ", usageString(), "\n" );
-    
-    _output.writeln( "FLAGS:" );    
-    //Get the longest flag to determine the first column size.
-    size_t longest = 0;
-    foreach( string name, _; _flags ) {
-      longest = max( longest, name.length );
-    }
-    
-    foreach( string name, flag; _flags ) {
-      _output.writefln( "%-*s : %s", longest, name, flag.description );
-    }
-  }
+  void parse() { parse( _args ); } 
+  
     
   /**
     Adds a flags to the parser. Their identifying strings must be unique amongst the ones known
@@ -484,17 +518,25 @@ public:
       add( flag );
     }
   }  
+  ///Ditto.
   void add( Flags... )( Flags flags ) if( 1 < flags.length ) {
     foreach( Flag flag; flags ) {
       add( flag );
     }
   } 
+  ///Ditto.
   void add( F )( F flag ) if( is( F == Flag ) ) in {
     assert( !isMember( flag ), "flag names must be unique and " ~ flag.name ~ " is already known" );
   } body {
     _flags[ flag.name ] = new FlagInfo( flag );
   }
  
+  /**
+    Specifies that the program arguments are mutually exclusive and cannot
+    be found at the same time on the command line.
+    Must provide a group of at least two arguments.
+    All arguments must be known by the parser.
+  */
   void mutuallyExclusive( Flag[] flags ... ) in {
     assert( 2 <= flags.length, "expected at least two mutually exclusive flags" );
     foreach( Flag flag; flags ) {
@@ -510,18 +552,8 @@ public:
         next.addME( current );
       }
     }
-  }
-      
-  /**
-    Returns true if the flag is known by the parser. Only checks if the name is known, it 
-    does not compare any other information.
-    
-    @return true if flag is known by parser, false otherwise.
-  */
-  bool isMember( Flag flag ) {
-    if( flag.name in _flags ) { return true; }
-    return false;
-  }  
+  }      
+  
 }
 
 
@@ -550,6 +582,4 @@ unittest {
   assert( i == 0 );
   assert( s == "toto" );
   assert( verbosity == 0 );
-
-  parser.printHelp();  
 }

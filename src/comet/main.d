@@ -51,8 +51,6 @@ void main( string[] args ) {
     printResults( bestResults );  
     if( cfg.printTime ) { printTime( Clock.currTime() - startTime ); }
     
-  } catch( HelpMenuRequested e ) {
-    //Don't do anything.
   } catch( Exception e ) {
     writeln( e.msg );
     return;

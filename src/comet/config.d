@@ -48,54 +48,11 @@ struct Config {
   Algo algo = Algo.standard;  
 }
 
-
-/**
-  This function will get the arguments from the command line and initialize
-  the configuration accordingly. When this function throws, the main program
-  should not consider the configuration in a usable state and therefore
-  abort.
-  
-  This function not only throws on error, but also if the user asked for the
-  help menu (-h).
-*/
-void parse( ref Config cfg, string[] tokens ) {
-  auto parser = Parser( tokens, "N/A" );
-  
-  parser.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" );
-  parser.value( "--nr", "Number of results of keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults );
-  parser.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod );
-  parser.value( "--max", "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.", cfg.maxPeriod );
-  parser.value( 
-    "--step",
-    "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
-    cfg.periodStep 
-  );
-  parser.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity );
-  parser.trigger( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig );
-  parser.trigger( "--print-time", "Prints the execution time.", cfg.printTime );
-  parser.mapped( 
-    "--algo", 
-    "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
-    cfg.algo,
-    algosByStrings
-  );
-  parser.parse();
-  
-  //Sequence file is mandatory.
-  enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );  
-  enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
-  enforce( ( cfg.minPeriod % cfg.periodStep ) == 0, "The minimum period value: " ~ cfg.minPeriod.to!string ~ " is not a multiple of the period step: " ~ cfg.periodStep.to!string );
-  
-  if( cfg.printConfig ) {
-    printConfig( cfg );
-  }  
-}
-
 /**
   Prints the program configuration to the standard output.
   Typically, it is to be used on demand by the user.
 */
-void printConfig( ref Config cfg ) {
+void print( ref Config cfg ) {
   writeln( "-------------------------------------------------" );
   writeln( "Configuration:" );
   writeln( "Sequences file: ", cfg.sequencesFile.name );
@@ -110,3 +67,48 @@ void printConfig( ref Config cfg ) {
   writeln( "-------------------------------------------------" );
 }
 
+
+/**
+  This function will get the arguments from the command line and initialize
+  the configuration accordingly. When this function throws, the main program
+  should not consider the configuration in a usable state and therefore
+  abort.
+  
+  This function not only throws on error, but also if the user asked for the
+  help menu (-h).
+*/
+void parse( ref Config cfg, string[] tokens ) {
+  auto parser = Parser( tokens, "N/A" );
+  parser.add(
+    Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" ),
+    Flag.value( "--nr", "Number of results of keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults ),
+    Flag.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod ),
+    Flag.value( "--max", "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.", cfg.maxPeriod ),
+    Flag.value( 
+      "--step",
+      "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
+      cfg.periodStep 
+    ),
+    Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
+    Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig ),
+    Flag.toggle( "--print-time", "Prints the execution time.", cfg.printTime ),
+    Flag.mapped( 
+      "--algo", 
+      "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
+      cfg.algo,
+      algosByStrings
+    )
+  );
+  
+  
+  parser.parse();
+  
+  //Sequence file is mandatory.
+  enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );  
+  enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
+  enforce( ( cfg.minPeriod % cfg.periodStep ) == 0, "The minimum period value: " ~ cfg.minPeriod.to!string ~ " is not a multiple of the period step: " ~ cfg.periodStep.to!string );
+  
+  if( cfg.printConfig ) {
+    cfg.print();
+  }  
+}
