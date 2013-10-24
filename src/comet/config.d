@@ -116,19 +116,20 @@ void parse( ref Config cfg, string[] tokens ) {
     cfg.timeFile = stdout;
     
     auto parser = Parser( tokens, "N/A" );  
-      
+    
+    auto seqFile = Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" );
+    
     parser.add(
-      Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" ),
+      seqFile,
       Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", cfg.outFile, "w" ),
       Flag.file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", cfg.resFile, "w" ),
       Flag.file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", cfg.timeFile, "w" )
     );
     parser.add( commonFlags );
     
-    parser.parse();
-   
-    //Sequence file is mandatory.
-    enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );     
+    parser.mandatory( seqFile );
+    
+    parser.parse();    
   }
   
   //The minimum pattern length must be below the maximum pattern length.

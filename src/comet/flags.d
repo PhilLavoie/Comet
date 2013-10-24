@@ -240,10 +240,12 @@ public:
     );
   }
   
-  //TODO: support stdout, stderr as outfiles and stdin as input.
   /**
     This factory method builds a flag that expect a string referring to a file. The
     file is eagerly opened in the provided mode.
+    This flag supports stdin, stdout and stderr files as values from the user.
+    The mode of the file must not start with an "r" for both stdout and stderr but
+    must start with an "r" for stdin.
   */
   static Flag file( string name, string description, ref File file, string mode ) {
     return Flag.custom(
@@ -350,6 +352,16 @@ private void enforceNotUsedBefore( FlagInfo fi ) {
   enforce( !fi.used, "flag " ~ fi.name ~ " is used twice" );
 }
 
+private void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
+  foreach( fi; range ) {
+    enforceMandatoryUse( fi );
+  }
+}
+private void enforceMandatoryUse( F )( F fi ) if( is( F == FlagInfo ) ) {
+  enforce( fi.used, "user must provide flag " ~ fi.name );
+}
+
+//TODO find a way to standardize behavior with errors and prevent the callee from doing most work.
 /**
   Command line parser.
   It provides the user with facilities to create flags and register
@@ -358,6 +370,8 @@ private void enforceNotUsedBefore( FlagInfo fi ) {
   added to the parser's list.
 */
 struct Parser {
+  import std.container;
+  
 private:
 
   //Maps the flagged arguments with their flags.
@@ -390,6 +404,23 @@ private:
       assert( isMember( flag ), "unknown flag: " ~ flag.name );
     }
   }  
+  
+  SList!FlagInfo _mandatories;
+  void mandatory( Range )( Range range ) if( isForwardRange!Range ) {
+    foreach( Flag flag; flags ) {
+      mandatory( flag );
+    }
+  }
+  void mandatory( F... )( F flags ) if( 1 <= F.length ) {
+    foreach( Flag flag; flags ) {
+      mandatory( flag );
+    }
+  }
+  void mandatory( F )( F flag ) if( is( F == Flag ) ) in {
+    checkMembership( flag );
+  } body {
+    _mandatories.insertFront( flagInfo( flag ) );
+  }
   
   //Help flag. When present, shows the command line menu.
   string _helpFlag = "-h";
@@ -457,7 +488,7 @@ private:
   
   //TODO add the mantadory flags here.
   string usageString() {
-    return commandName( _args ) ~ " [ options ]";
+    return _name ~ " [ options ]";
   }
   
   /**
@@ -476,6 +507,14 @@ private:
     }
   }
  
+  /**
+    Main method of the parser.
+    It parses the arguments using the internal list of known flags.    
+    This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
+    assigning any values.    
+  */
+  public void parse() { parse( _args ); } 
+  ///Ditto.
   void parse( string[] tokens ) in {
     assert( 0 < tokens.length  );
   } body {
@@ -497,6 +536,7 @@ private:
       }
     }
     enforceNoUnrecognizedTokens( unrecognized[ 0 .. unrecognizedCount ] );
+    enforceMandatoryUse( _mandatories[] );
     if( _helpNeeded ) {
       printHelp();
       //throw new HelpMenuRequested();
@@ -513,20 +553,12 @@ public:
   this( string[] arguments, string desc = "", File output = stdout, File error = stderr ) {
     args = arguments;
     description = desc;
+    name = commandName( args[ 0 ] );
     _out = output;
     _err = stderr;
     
     add( Flag.toggle( _helpFlag, "Prints the help menu.", _helpNeeded ) );
-  } 
-  
-  /**
-    Main method of the parser.
-    It parses the arguments using the internal list of known flags.    
-    This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
-    assigning any values.    
-  */
-  void parse() { parse( _args ); } 
-  
+  }   
     
   /**
     Adds a flags to the parser. Their identifying strings must be unique amongst the ones known
