@@ -15,8 +15,6 @@ import std.range;
 //mandatory flags checked by the parser.
 //Same for "to be found onced" flag. 
 
-//TODO: add/switch file flags to be lazy and not open the files eagerly, just make sure the user can.
-
 /**
   Returns the name of the command used on the command line. It was meant to be called with the
   arguments provided by the program's entry points. It returns only the base name and stripped of
@@ -235,7 +233,6 @@ public:
     );
   }
   
-  //TODO: make it a lazy opening. Make the eager opening optional?
   /**
     This factory method builds a flag that expect a string referring to a file. The
     file is eagerly opened in the provided mode.
@@ -317,6 +314,20 @@ private class FlagInfo {
   void reset() {
     used = false;
   }  
+}
+
+/**
+  Verifies that all mutually exclusive arguments for the one provided are not
+  already in use.
+*/
+private void enforceNoMutuallyExclusiveUsed( FlagInfo fi ) {
+  foreach( me; fi.mutuallyExclusives ) {
+    enforce( !me.used, "flag " ~ fi.name ~ " was found but is mutually exclusive with " ~ me.name );
+  }
+}  
+
+private void enforceNotUsedBefore( FlagInfo fi ) {
+  enforce( !fi.used, "flag " ~ fi.name ~ " is used twice" );
 }
 
 /**
@@ -444,18 +455,7 @@ private:
       fi.reset();
     }
   }
-
-  /**
-    Verifies that all mutually exclusive arguments for the one provided are not
-    already in use.
-  */
-  void enforceMutuallyExclusives( FlagInfo fi ) {
-    foreach( me; fi.mutuallyExclusives ) {
-      enforce( !me.used, "flag " ~ fi.name ~ " was found but is mutually exclusive with " ~ me.name );
-    }
-  }  
-  
-  
+ 
   void parse( string[] tokens ) in {
     assert( 0 < tokens.length  );
   } body {
@@ -466,7 +466,8 @@ private:
     while( tokens.length ) {
       if( tokens[ 0 ] in _flags ) {
         auto fi = flagInfo( tokens[ 0 ] );
-        enforceMutuallyExclusives( fi );
+        enforceNotUsedBefore( fi );
+        enforceNoMutuallyExclusiveUsed( fi );
         tokens = tokens[ 1 + fi( tokens[ 1 .. $ ] ) .. $ ];
         fi.used = true;
       } else {

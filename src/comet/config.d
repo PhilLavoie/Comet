@@ -37,14 +37,18 @@ static this() {
 */
 struct Config {
   File sequencesFile;
+  //TODO: remove verbosity, use debug instead.
+  ubyte verbosity = 0;  
+  File outFile;
+  bool printRest = true;
+  File resFile;
   size_t noResults = 1000;
   size_t minPeriod = 3;
   size_t maxPeriod = size_t.max;
   size_t periodStep = 3;
   size_t noThreads = 1;
-  ubyte verbosity = 0;
   bool printConfig = false;
-  bool printTime = false;
+  bool printTime = true;
   Algo algo = Algo.standard;  
 }
 
@@ -81,7 +85,9 @@ void parse( ref Config cfg, string[] tokens ) {
   auto parser = Parser( tokens, "N/A" );
   parser.add(
     Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" ),
-    Flag.value( "--nr", "Number of results of keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults ),
+    Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", cfg.outFile, "w" ),
+    Flag.file( "--rf", "Result filt. This is where the program prints the results. Default is to use the outfile.", cfg.resFile, "w" ),
+    Flag.value( "--nr", "Number of results to keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults ),
     Flag.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod ),
     Flag.value( "--max", "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.", cfg.maxPeriod ),
     Flag.value( 
@@ -89,9 +95,9 @@ void parse( ref Config cfg, string[] tokens ) {
       "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
       cfg.periodStep 
     ),
-    Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
+    //Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
     Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig ),
-    Flag.toggle( "--print-time", "Prints the execution time.", cfg.printTime ),
+    Flag.toggle( "--no-time", "Removes the execution time from the output.", cfg.printTime ),
     Flag.mapped( 
       "--algo", 
       "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
