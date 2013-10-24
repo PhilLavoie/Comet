@@ -103,6 +103,7 @@ private:
   string _description;
   string _name;
   TokensParser _parser;
+  bool _used;
   
   /**
     Creates a flag with the given description and tokens parser.
@@ -111,6 +112,7 @@ private:
     _name = name;
     _description = description; 
     _parser = parser;    
+    _used = false;
   }
   
   /**
@@ -122,12 +124,17 @@ private:
     return _parser( tokens );
   }
   
+  @property void used( bool used ) { _used = used; }
+  
+  
 public:
   @property string description() { return _description; }
   @property string name() { return _name; }
   @property void name( string n ) {
     _name = n;
   }
+  @property bool used() { return _used; }
+  
   
   
   /* Flags factory methods */
@@ -233,6 +240,7 @@ public:
     );
   }
   
+  //TODO: support stdout, stderr as outfiles and stdin as input.
   /**
     This factory method builds a flag that expect a string referring to a file. The
     file is eagerly opened in the provided mode.
@@ -284,7 +292,6 @@ private class FlagInfo {
   import std.container;
   
   Flag flag;
-  bool used = false;
   //Mutually exclusives.
   SList!( FlagInfo ) mutuallyExclusives;
   bool hasMEs() { return !mutuallyExclusives.empty; }
@@ -312,7 +319,7 @@ private class FlagInfo {
     Resets all field to their initial state, ready to be used for parsing.
   */
   void reset() {
-    used = false;
+    flag.used = false;
   }  
 }
 

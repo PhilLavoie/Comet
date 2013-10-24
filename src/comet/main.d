@@ -46,6 +46,9 @@ void main( string[] args ) {
     SysTime startTime;
     if( cfg.printTime ) { startTime = Clock.currTime(); }
     
+    if( 1 <= cfg.verbosity ) {
+      cfg.outFile.writeln( "Processing file " ~ cfg.sequencesFile.name ~ "..." );
+    }
     auto bestResults = sequentialDupCostsCalculation( sequences, cfg );  
     
     if( cfg.printTime ) { cfg.resFile.printTime( Clock.currTime() - startTime ); }
@@ -108,7 +111,7 @@ auto sequentialDupCostsCalculation( Seq )( Seq[] sequences, ref Config cfg ) in 
   size_t seqLength = sequences[ 0 ].length;
   
   foreach( period; cfg.periods( seqLength ) ) {
-    if( 1 <= cfg.verbosity ) { writeln( "Doing period: ", period.length ); }
+    if( 2 <= cfg.verbosity ) { writeln( "Doing period: ", period.length ); }
     foreach( dup; period.duplications() ) {
       algorithm.duplicationCost( dup );
       results.add( dup );

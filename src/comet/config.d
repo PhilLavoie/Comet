@@ -41,13 +41,14 @@ struct Config {
   File outFile;
   bool printResults = true;
   File resFile;
+  bool printTime = true;
+  File timeFile;
   size_t noResults = 1000;
   size_t minPeriod = 3;
   size_t maxPeriod = size_t.max;
   size_t periodStep = 3;
   size_t noThreads = 1;
-  bool printConfig = false;
-  bool printTime = true;
+  bool printConfig = false;  
   Algo algo = Algo.standard;  
 }
 
@@ -83,38 +84,53 @@ void print( ref Config cfg ) {
 void parse( ref Config cfg, string[] tokens ) {
   //Runtime defaults.
   cfg.outFile = stdout;
-  cfg.resFile = stdout;  
   
-  auto parser = Parser( tokens, "N/A" );  
+  Flag[] commonFlags = 
+    [
+      Flag.value( "--nr", "Number of results to keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults ),
+      Flag.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod ),
+      Flag.value( "--max", "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.", cfg.maxPeriod ),
+      Flag.value( 
+        "--step",
+        "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
+        cfg.periodStep 
+      ),
+      Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
+      Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig ),
+      Flag.toggle( "--no-time", "Removes the execution time from the results.", cfg.printTime ),
+      Flag.toggle( "--no-res", "Prevents the results from being printed.", cfg.printResults ),
+      Flag.mapped( 
+        "--algo", 
+        "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
+        cfg.algo,
+        algosByStrings
+      )
+    ];
+  
+  if( tokens[ 1 ] == "batch" ) {
+  
     
-  parser.add(
-    Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" ),
-    Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", cfg.outFile, "w" ),
-    Flag.file( "--rf", "Results file. This is where the program prints the results. Default is to use the outfile.", cfg.resFile, "w" ),
-    Flag.value( "--nr", "Number of results to keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults ),
-    Flag.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod ),
-    Flag.value( "--max", "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.", cfg.maxPeriod ),
-    Flag.value( 
-      "--step",
-      "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
-      cfg.periodStep 
-    ),
-    Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
-    Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig ),
-    Flag.toggle( "--no-time", "Removes the execution time from the results.", cfg.printTime ),
-    Flag.mapped( 
-      "--algo", 
-      "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
-      cfg.algo,
-      algosByStrings
-    )
-  );
   
+  } else {
+    cfg.resFile = stdout;  
+    cfg.timeFile = stdout;
+    
+    auto parser = Parser( tokens, "N/A" );  
+      
+    parser.add(
+      Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" ),
+      Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", cfg.outFile, "w" ),
+      Flag.file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", cfg.resFile, "w" ),
+      Flag.file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", cfg.timeFile, "w" )
+    );
+    parser.add( commonFlags );
+    
+    parser.parse();
+    
+    //Sequence file is mandatory.
+    enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );     
+  }
   
-  parser.parse();
-  
-  //Sequence file is mandatory.
-  enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." ); 
   //The minimum pattern length must be below the maximum pattern length.
   enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
   //Not sure it's worth giving the user control over this. It has to be a period of three or 1...
