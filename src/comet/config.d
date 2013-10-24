@@ -126,7 +126,7 @@ void parse( ref Config cfg, string[] tokens ) {
     parser.add( commonFlags );
     
     parser.parse();
-    
+   
     //Sequence file is mandatory.
     enforce( cfg.sequencesFile.isOpen, "User must provide the sequences file." );     
   }

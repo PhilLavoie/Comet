@@ -251,7 +251,20 @@ public:
       description,
       ( string[] tokens ) {
         enforceEnoughArgs( tokens, name, 1 );
-        file = File( tokens[ 0 ], mode );
+        
+        if( tokens[ 0 ] == "stdout" ) {
+          enforce( !mode.startsWith( "r" ), "stdout is used as input for flag " ~ name );
+          file = stdout;
+        } else if( tokens[ 0 ] == "stderr" ) {
+          enforce( !mode.startsWith( "r" ), "stderr is used as input for flag " ~ name );
+          file = stderr;
+        } else if( tokens[ 0 ] == "stdin" ) {
+          enforce( mode.startsWith( "r" ), "stdin is used as output for flag " ~ name );
+          file = stdin;
+        } else {          
+          file = File( tokens[ 0 ], mode );
+        }
+        
         return cast( size_t )1;
       }
     );
