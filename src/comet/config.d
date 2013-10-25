@@ -85,27 +85,32 @@ void parse( ref Config cfg, string[] tokens ) {
   //Runtime defaults.
   cfg.outFile = stdout;
   
-  Flag[] commonFlags = 
-    [
-      Flag.value( "--nr", "Number of results to keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults ),
-      Flag.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod ),
-      Flag.value( "--max", "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.", cfg.maxPeriod ),
-      Flag.value( 
-        "--step",
-        "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
-        cfg.periodStep 
-      ),
-      Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity ),
-      Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig ),
-      Flag.toggle( "--no-time", "Removes the execution time from the results.", cfg.printTime ),
-      Flag.toggle( "--no-res", "Prevents the results from being printed.", cfg.printResults ),
-      Flag.mapped( 
-        "--algo", 
-        "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
-        cfg.algo,
-        algosByStrings
-      )
-    ];
+  auto noResults = Flag.value( "--nr", "Number of results to keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults );
+  auto minPeriod = Flag.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod );
+  auto maxPeriod = 
+    Flag.value( 
+      "--max",
+      "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.",
+      cfg.maxPeriod 
+    );
+  auto periodStep = 
+    Flag.value( 
+      "--step",
+      "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
+      cfg.periodStep 
+    );
+  auto verbosityLvl = Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity );
+  auto printConfig = Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig );
+  auto printTime = Flag.toggle( "--no-time", "Removes the execution time from the results.", cfg.printTime );
+  auto printResults = Flag.toggle( "--no-res", "Prevents the results from being printed.", cfg.printResults );
+  auto algo = 
+    Flag.mapped( 
+      "--algo", 
+      "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
+      cfg.algo,
+      algosByStrings
+    );
+
   
   if( tokens[ 1 ] == "batch" ) {
   
@@ -118,16 +123,29 @@ void parse( ref Config cfg, string[] tokens ) {
     auto parser = Parser( tokens, "N/A" );  
     
     auto seqFile = Flag.file( "-s", "Sequences file. This flag is mandatory.", cfg.sequencesFile, "r" );
+    auto outFile = Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", cfg.outFile, "w" );
+    auto resFile = Flag.file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", cfg.resFile, "w" );
+    auto timeFile = Flag.file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", cfg.timeFile, "w" );
     
     parser.add(
       seqFile,
-      Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", cfg.outFile, "w" ),
-      Flag.file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", cfg.resFile, "w" ),
-      Flag.file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", cfg.timeFile, "w" )
+      verbosityLvl,
+      outFile,
+      printResults,
+      resFile,
+      printTime,
+      timeFile,
+      noResults,
+      minPeriod,
+      maxPeriod,
+      periodStep,
+      printConfig,
+      algo      
     );
-    parser.add( commonFlags );
     
     parser.mandatory( seqFile );
+    parser.mutuallyExclusive( printResults, resFile );
+    parser.mutuallyExclusive( printTime, timeFile );
     
     parser.parse();    
   }
