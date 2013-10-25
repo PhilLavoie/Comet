@@ -25,15 +25,8 @@ void main( string[] args ) {
     Config cfg;
     cfg.parse( args );
   
-    for( int i = 0; i < cfg.sequencesFiles.length; ++i ) {
-      File resultsFile;
-      
-      if( !i < cfg.resultsFiles.length ) {
-        resultsFile = cfg.resultsFiles[ $ - 1 ];
-      } else {
-        resultsFile = cfg.resultsFiles[ i ];
-      }
-      processFile( cfg.sequencesFiles[ i ], resultsFile, cfg );
+    foreach( seqFile; cfg.sequencesFiles ) {
+      processFile( seqFile, cfg.resultsFileFor( seqFile ), cfg );
     }
     
   } catch( Exception e ) {
