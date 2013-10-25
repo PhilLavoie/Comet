@@ -25,7 +25,16 @@ void main( string[] args ) {
     Config cfg;
     cfg.parse( args );
   
-    processFile( cfg.sequencesFile, cfg );
+    for( int i = 0; i < cfg.sequencesFiles.length; ++i ) {
+      File resultsFile;
+      
+      if( !i < cfg.resultsFiles.length ) {
+        resultsFile = cfg.resultsFiles[ $ - 1 ];
+      } else {
+        resultsFile = cfg.resultsFiles[ i ];
+      }
+      processFile( cfg.sequencesFiles[ i ], resultsFile, cfg );
+    }
     
   } catch( Exception e ) {
     writeln( e.msg );
@@ -33,13 +42,13 @@ void main( string[] args ) {
   } 
 }
 
-void processFile( File file, ref Config cfg ) {
+void processFile( File seqFile, File resultsFile, ref Config cfg ) {
   if( 1 <= cfg.verbosity ) {
-    cfg.outFile.writeln( "Processing file " ~ file.name ~ "..." );
+    cfg.outFile.writeln( "Processing file " ~ seqFile.name ~ "..." );
   }
   
   //Extract sequences from file.
-  auto sequences = fasta.parse!( Molecule.DNA )( file );
+  auto sequences = fasta.parse!( Molecule.DNA )( seqFile );
   size_t seqsCount = sequences.length;
   enforce( 1 < seqsCount, "Expected at least two sequences but received " ~ seqsCount.to!string() );
   
@@ -62,8 +71,8 @@ void processFile( File file, ref Config cfg ) {
   
   auto bestResults = sequentialDupCostsCalculation( sequences, cfg );  
   
-  if( cfg.printTime ) { cfg.resFile.printTime( Clock.currTime() - startTime ); }
-  if( cfg.printResults ) { cfg.resFile.printResults( bestResults ); }
+  if( cfg.printTime ) { cfg.timeFile.printTime( Clock.currTime() - startTime ); }
+  if( cfg.printResults ) { resultsFile.printResults( bestResults ); }
 }
 
 /**

@@ -544,12 +544,14 @@ private:
         tokens = tokens[ 1 .. $ ];
       }
     }
-    enforceNoUnrecognizedTokens( unrecognized[ 0 .. unrecognizedCount ] );
-    enforceMandatoryUse( _mandatories[] );
+    
     if( _helpNeeded ) {
       printHelp();
       //throw new HelpMenuRequested();
     }
+    
+    enforceNoUnrecognizedTokens( unrecognized[ 0 .. unrecognizedCount ] );
+    enforceMandatoryUse( _mandatories[] );
   }
           
 public:
