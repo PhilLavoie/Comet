@@ -25,39 +25,45 @@ void main( string[] args ) {
     Config cfg;
     cfg.parse( args );
   
-    //Extract sequences from file.
-    auto sequences = fasta.parse!( Molecule.DNA )( cfg.sequencesFile );
-    size_t seqsCount = sequences.length;
-    enforce( 1 < seqsCount, "Expected at least two sequences but received " ~ seqsCount.to!string() );
-    
-    size_t seqLength = sequences[0].length;
-    foreach( sequence; sequences ) {
-      enforce( sequence.length == seqLength, "Expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.length.to!string ~ " to be of length: " ~ seqLength.to!string );
-    }
-    size_t midPosition = seqLength / 2;
-    
-    //Make sure the minimum period is within bounds.
-    enforce( 
-      cfg.minPeriod <= midPosition,
-      "The minimum period: " ~ cfg.minPeriod.to!string() ~ " is set beyond the midPosition sequence position: " ~ to!string( midPosition ) ~
-      " and is therefore invalid."
-    );
-    
-    SysTime startTime;
-    if( cfg.printTime ) { startTime = Clock.currTime(); }
-    
-    if( 1 <= cfg.verbosity ) {
-      cfg.outFile.writeln( "Processing file " ~ cfg.sequencesFile.name ~ "..." );
-    }
-    auto bestResults = sequentialDupCostsCalculation( sequences, cfg );  
-    
-    if( cfg.printTime ) { cfg.resFile.printTime( Clock.currTime() - startTime ); }
-    if( cfg.printResults ) { cfg.resFile.printResults( bestResults ); }
+    processFile( cfg.sequencesFile, cfg );
     
   } catch( Exception e ) {
     writeln( e.msg );
     return;
   } 
+}
+
+void processFile( File file, ref Config cfg ) {
+  if( 1 <= cfg.verbosity ) {
+    cfg.outFile.writeln( "Processing file " ~ file.name ~ "..." );
+  }
+  
+  //Extract sequences from file.
+  auto sequences = fasta.parse!( Molecule.DNA )( file );
+  size_t seqsCount = sequences.length;
+  enforce( 1 < seqsCount, "Expected at least two sequences but received " ~ seqsCount.to!string() );
+  
+  size_t seqLength = sequences[0].length;
+  foreach( sequence; sequences ) {
+    enforce( sequence.length == seqLength, "Expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.length.to!string ~ " to be of length: " ~ seqLength.to!string );
+  }
+  size_t midPosition = seqLength / 2;
+  
+  //Make sure the minimum period is within bounds.
+  enforce( 
+    cfg.minPeriod <= midPosition,
+    "The minimum period: " ~ cfg.minPeriod.to!string() ~ " is set beyond the midPosition sequence position: " ~ to!string( midPosition ) ~
+    " and is therefore invalid."
+  );
+  
+  SysTime startTime;
+  if( cfg.printTime ) { startTime = Clock.currTime(); }
+  
+  
+  auto bestResults = sequentialDupCostsCalculation( sequences, cfg );  
+  
+  if( cfg.printTime ) { cfg.resFile.printTime( Clock.currTime() - startTime ); }
+  if( cfg.printResults ) { cfg.resFile.printResults( bestResults ); }
 }
 
 /**
