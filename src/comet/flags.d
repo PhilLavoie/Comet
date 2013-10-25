@@ -128,14 +128,16 @@ private:
   
   
 public:
-  @property string description() { return _description; }
-  @property string name() { return _name; }
-  @property void name( string n ) {
-    _name = n;
+  @property { 
+    string description() { return _description; }
+    string name() { return _name; }
+    void name( string n ) {
+      _name = n;
+    }
+    bool used() { return _used; }
   }
-  @property bool used() { return _used; }
   
-  
+public static:  
   
   /* Flags factory methods */
 
@@ -144,18 +146,18 @@ public:
     general factory method. It lets the user specify the tokens parser.
     Refer to its type declaration for more information on its signature.
   */
-  static Flag custom( string name, string description, TokensParser parser ) {
+  Flag custom( string name, string description, TokensParser parser ) {
     return new Flag( name, description, parser );    
   }
   
   /**
     A simple flag that reverses the boolean value when found on the command line.     
   */
-  static Flag toggle( string name, string description, ref bool toggled ) {
+  Flag toggle( string name, string description, ref bool toggled ) {
     return Flag.setter( name, description, toggled, !toggled );
   } 
   
-  static Flag setter( T )( string name, string description, ref T settee, T setTo ) {
+  Flag setter( T )( string name, string description, ref T settee, T setTo ) {
     return Flag.custom( name, description, ( string[] tokens ) { settee = setTo; return cast( size_t)0; } );
   }  
   
@@ -163,7 +165,7 @@ public:
     Flag expecting one argument of type T. The argument is set using the
     standard conversion function: to.
   */
-  static Flag value( T )( string name, string description, ref T value ) {
+  Flag value( T )( string name, string description, ref T value ) {
     return Flag.custom( 
       name, 
       description, 
@@ -181,7 +183,7 @@ public:
     If a flag should expect a number from 1 to 10, then the call should pass
     1 as min and 10 as max.
   */
-  static Flag bounded( T )( string name, string description, ref T value, T min, T max ) {
+  Flag bounded( T )( string name, string description, ref T value, T min, T max ) {
     return Flag.custom( 
       name,
       description, 
@@ -207,7 +209,7 @@ public:
     separated by the "|" symbol. Therefore, if one should expect one of the following: "toto", "tata", "tutu", then
     the candidates should be written like this: "toto|tata|tutu".
   */
-  static Flag enumeration( T, Range )( string name, string description, ref T value, Range candidates ) if( is( T : string ) && is( Range : string ) ) {
+  Flag enumeration( T, Range )( string name, string description, ref T value, Range candidates ) if( is( T : string ) && is( Range : string ) ) {
     auto splitted = candidates.splitter( '|' );
     return Flag.custom(
       name,
@@ -226,7 +228,7 @@ public:
     This facility uses a map of words listing the possible values. If the token found was one of them,
     then the value is set to the token's mapped value.
   */
-  static Flag mapped( T )( string name, string description, ref T value, in T[ string ] map ) {
+  Flag mapped( T )( string name, string description, ref T value, in T[ string ] map ) {
     return Flag.custom(
       name,
       description,
@@ -247,7 +249,7 @@ public:
     The mode of the file must not start with an "r" for both stdout and stderr but
     must start with an "r" for stdin.
   */
-  static Flag file( string name, string description, ref File file, string mode ) {
+  Flag file( string name, string description, ref File file, string mode ) {
     return Flag.custom(
       name,
       description,
@@ -279,7 +281,7 @@ public:
     Ex: With "-dir a/directory", the argument assigned
     to the reference value will end with a separator: "a/directory/".
   */
-  static Flag dir( string name, string description, ref string dir ) {
+  Flag dir( string name, string description, ref string dir ) {
     return Flag.custom(
       name,
       description,
@@ -348,20 +350,27 @@ private void enforceNoMutuallyExclusiveUsed( FlagInfo fi ) {
   }
 }  
 
+/**
+  Makes sure that the flag has not been used before, throws otherwise.
+*/
 private void enforceNotUsedBefore( FlagInfo fi ) {
   enforce( !fi.used, "flag " ~ fi.name ~ " is used twice" );
 }
 
+/**
+  Makes sure that all the flags passed have been used, throws otherwise.
+*/
 private void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
   foreach( fi; range ) {
     enforceMandatoryUse( fi );
   }
 }
+//Throws if the flag passed is not used.
 private void enforceMandatoryUse( F )( F fi ) if( is( F == FlagInfo ) ) {
   enforce( fi.used, "user must provide flag " ~ fi.name );
 }
 
-//TODO find a way to standardize behavior with errors and prevent the callee from doing most work.
+//TODO find a way to standardize behavior with errors (try/catch) and prevent the callee from doing most work.
 /**
   Command line parser.
   It provides the user with facilities to create flags and register
