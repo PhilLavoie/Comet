@@ -11,6 +11,9 @@ import std.exception;
 import std.conv;
 import std.stdio;
 
+/**
+  Those are the algorithms used to process sequences and determine segment pairs distances.
+*/
 enum Algo {
   standard = 0,
   cache,
@@ -18,9 +21,11 @@ enum Algo {
   cachePatterns
 }
 
+//The strings used to identify the algorithms on the command line.
 private immutable string[ 4 ] algoStrings = [ "standard", "cache", "patterns", "cache-patterns" ];
-private immutable Algo[ string ] algosByStrings;
 
+//The algorithms mapped with their strings for easy access.
+private immutable Algo[ string ] algosByStrings;
 static this() {
   algosByStrings = 
   [ 
@@ -34,25 +39,32 @@ static this() {
 /**
   Program configuration data.
   Initialized to default value.
+  Note that this should only be read by the rest of the program and never modified.
 */
 struct Config {
   File sequencesFile;
+  
   ubyte verbosity = 0;  
   File outFile;
+    
   bool printResults = true;
+  size_t noResults = 1000;
+    
   File resFile;
   bool printTime = true;
   File timeFile;
-  size_t noResults = 1000;
+  
   size_t minPeriod = 3;
   size_t maxPeriod = size_t.max;
   size_t periodStep = 3;
   size_t noThreads = 1;
-  bool printConfig = false;  
   Algo algo = Algo.standard;  
+  
+  bool printConfig = false;  
 }
 
-string fileName( File file ) {
+//Small helper function to help print configuration files in a user friendly fashion.
+private string fileName( File file ) {
   if( file == stdout ) {
     return "stdout";
   }
@@ -108,6 +120,8 @@ void print( ref Config cfg ) {
 void parse( ref Config cfg, string[] tokens ) {
   //Runtime defaults.
   cfg.outFile = stdout;
+  cfg.resFile = stdout;  
+  cfg.timeFile = stdout;
   
   auto noResults = Flag.value( "--nr", "Number of results to keep in memory. Default is " ~ cfg.noResults.to!string() ~ ".", cfg.noResults );
   auto minPeriod = Flag.value( "--min", "Minimum period length. Default is " ~ cfg.minPeriod.to!string() ~ ".", cfg.minPeriod );
@@ -117,11 +131,12 @@ void parse( ref Config cfg, string[] tokens ) {
       "Maximum period length. Default is " ~ cfg.minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.",
       cfg.maxPeriod 
     );
-  auto periodStep = 
-    Flag.value( 
-      "--step",
-      "Period step. The minimum period length MUST be set to a multiple of this value. The default is " ~ cfg.periodStep.to!string() ~ ".",
-      cfg.periodStep 
+  auto singleStep = 
+    Flag.setter( 
+      "--single-step",
+      "Sets the segment pair length step to be 1 instead of 3.",
+      cfg.periodStep,
+      1u
     );
   auto verbosityLvl = Flag.value( "-v", "Verbosity level. Default is " ~ cfg.verbosity.to!string ~ ".", cfg.verbosity );
   auto printConfig = Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", cfg.printConfig );
@@ -141,8 +156,7 @@ void parse( ref Config cfg, string[] tokens ) {
     
   
   } else {
-    cfg.resFile = stdout;  
-    cfg.timeFile = stdout;
+    
     
     auto parser = Parser( tokens, "N/A" );  
     
@@ -162,7 +176,7 @@ void parse( ref Config cfg, string[] tokens ) {
       noResults,
       minPeriod,
       maxPeriod,
-      periodStep,
+      singleStep,
       printConfig,
       algo      
     );
@@ -174,10 +188,10 @@ void parse( ref Config cfg, string[] tokens ) {
     parser.parse();    
   }
   
-  //The minimum pattern length must be below the maximum pattern length.
-  enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );
-  //Not sure it's worth giving the user control over this. It has to be a period of three or 1...
-  enforce( ( cfg.minPeriod % cfg.periodStep ) == 0, "The minimum period value: " ~ cfg.minPeriod.to!string ~ " is not a multiple of the period step: " ~ cfg.periodStep.to!string );
+  //The minimum segment pair length must be below the maximum.
+  enforce( cfg.minPeriod <= cfg.maxPeriod, "The minimum period value: " ~ cfg.minPeriod.to!string() ~ " is above the maximum: " ~ cfg.maxPeriod.to!string() );  
+  assert( cfg.periodStep == 1 || cfg.periodStep == 3 );
+  
   
   if( cfg.printConfig ) {
     cfg.print();
