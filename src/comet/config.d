@@ -52,23 +52,47 @@ struct Config {
   Algo algo = Algo.standard;  
 }
 
+string fileName( File file ) {
+  if( file == stdout ) {
+    return "stdout";
+  }
+  if( file == stdin ) {
+    return "stdin";
+  }
+  if( file == stderr ) {
+    return "stderr";
+  }
+  return file.name;
+}
+
 /**
   Prints the program configuration to the standard output.
   Typically, it is to be used on demand by the user.
 */
 void print( ref Config cfg ) {
-  writeln( "-------------------------------------------------" );
-  writeln( "Configuration:" );
-  writeln( "Sequences file: ", cfg.sequencesFile.name );
-  writeln( "Number of results: ", cfg.noResults );
-  writeln( "Minimum period: ", cfg.minPeriod );
-  writeln( "Maximum period: ", cfg.maxPeriod );
-  writeln( "Period step: ", cfg.periodStep );
-  writeln( "Verbosity: ", cfg.verbosity );
-  writeln( "Print configuration: ", cfg.printConfig );  
-  writeln( "Print time: ", cfg.printTime );
-  writeln( "Algorithm: ", algoStrings[ cfg.algo ] );
-  writeln( "-------------------------------------------------" );
+  with( cfg.outFile ) {
+    writeln( "-------------------------------------------------" );
+    writeln( "Configuration:" );
+    
+    writeln( "Verbosity level: ", cfg.verbosity );
+    writeln( "Sequences file: ", cfg.sequencesFile.fileName() );
+    
+    writeln( "Print results: ", cfg.printResults );
+    writeln( "Number of results: ", cfg.noResults );
+    writeln( "Results file: ", cfg.resFile.fileName() );
+    
+    writeln( "Print time: ", cfg.printTime );
+    writeln( "Time file: ", cfg.timeFile.fileName() );
+    
+    writeln( "Algorithm: ", algoStrings[ cfg.algo ] );
+    writeln( "Minimum period: ", cfg.minPeriod );
+    writeln( "Maximum period: ", cfg.maxPeriod );
+    writeln( "Period step: ", cfg.periodStep );
+    
+    writeln( "Print configuration: ", cfg.printConfig );    
+    
+    writeln( "-------------------------------------------------" );
+  }
 }
 
 
