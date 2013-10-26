@@ -11,10 +11,6 @@ import std.string;
 import std.file;
 import std.range;
 
-//TODO: find the way to implement the possibility to have
-//mandatory flags checked by the parser.
-//Same for "to be found onced" flag. 
-
 /**
   Returns the name of the command used on the command line. It was meant to be called with the
   arguments provided by the program's entry points. It returns only the base name and stripped of
