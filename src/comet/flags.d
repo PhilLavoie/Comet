@@ -70,7 +70,7 @@ void enforceNoUnrecognizedTokens( string[] unrecognizedTokens ) {
   Exception thrown when the help menu has been requested by the user.
 */
 class HelpMenuRequested: Exception {
-  this() { super( "help menu requested" ); }
+  this() { super( "" ); }
 }
 
 /**
@@ -543,7 +543,7 @@ private:
     
     if( _helpNeeded ) {
       printHelp();
-      //throw new HelpMenuRequested();
+      throw new HelpMenuRequested();
     }
     
     enforceNoUnrecognizedTokens( unrecognized[ 0 .. unrecognizedCount ] );

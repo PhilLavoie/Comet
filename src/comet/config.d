@@ -201,7 +201,7 @@ struct Config {
     help menu (-h).
   */
   public void parse( string[] tokens ) {
-    immutable string PROGRAM_NAME = "comet";
+    immutable string PROGRAM_NAME = commandName( tokens[0] );
     
     _timeFile = stdout;
     _outFile = stdout;

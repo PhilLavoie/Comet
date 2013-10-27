@@ -30,7 +30,9 @@ void main( string[] args ) {
     }
     
   } catch( Exception e ) {
-    writeln( e.msg );
+    if( e.msg.length ) {
+		writeln( e.msg );
+	}
     return;
   } 
 }
