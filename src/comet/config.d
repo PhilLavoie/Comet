@@ -237,6 +237,7 @@ struct Config {
       );
 
     
+    //TODO: without at least one argument, the program crashes when attempting to get the mode.
     _mode = getMode( tokens );
     
     switch( _mode ) {
@@ -298,6 +299,10 @@ struct Config {
         parser.args = parser.args[ 1 .. $ ];
         
         parser.parse();    
+        break;
+        
+      case Mode.runTests:
+        
         break;
      
       default:
