@@ -668,8 +668,8 @@ protected:
       take( tokens );
       store();
       assign();
-    } catch( AbortException e ) {
-      throw e;
+    } catch( HelpMenuRequested e ) {
+      throw new Exception( "" );
     } catch( Exception e ) {
       _out.writeln( e.msg );
       _out.writeln( _name ~ " " ~ _helpFlag ~ " for help" );      
