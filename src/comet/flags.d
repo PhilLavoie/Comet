@@ -10,8 +10,10 @@ import std.stdio;
 import std.string;
 import std.file;
 import std.range;
+import std.container;
 
 interface ParserI {
+protected:
   string[] take( string[] );
   void store();
   void assign();
@@ -149,8 +151,6 @@ protected:
     _assigner = assigner;
   }
   
-public:
-  
   override string[] take( string[] args ) {
     auto arity = _arity( args );
     enforceEnoughArgs( args, arity );
@@ -176,32 +176,46 @@ auto commonParser( T, U )( T converter, ref U value ) {
 }
 
 
-class Argument {
+class Argument: ParserI {
 protected:
   ParserI _parser;
   
   string _description;
-  public @property string description() { return _description; }
-  public @property void description( string desc ) { _description = desc; }
   
   bool _used = false;
   @property void used( bool u ) { _used = u; }
-  public @property bool used() { return _used; }
   
   this( ParserI parser, string description ) {
     _parser = parser;
     _description = description;
-    _used = false;
+    used = false;
   }
   this( string description, ParserI parser ) {
     this( parser, description );
   }
   
-public:
-
-  auto opDispatch( string method, T... )( T args ) {
-    return mixin( "_parser." ~ method ~ "( args )" );
+  override string[] take( string[] args ) {
+    return _parser.take( args );
   }
+  override void store() {
+    _parser.store();
+  }
+  override void assign() {
+    _parser.assign();
+  }
+  
+  /**
+    Prepares the argument for a parser run.
+  */
+  void reset() {
+    used = false;
+  }  
+  
+public:
+  public @property string description() { return _description; }
+  public @property void description( string desc ) { _description = desc; }
+  
+  public @property bool used() { return _used; }   
 }
 
 /**
@@ -210,15 +224,10 @@ public:
   expected arguments, if any.
 */
 class Flagged: Argument {
-private:
+protected:
   string _flag;
-  @property {
-    public string flag() { return _flag; }
-    void flag( string f ) {
-      _flag = f;
-    }
-  }  
-  
+  @property void flag( string f ) { _flag = f; }
+    
   /**
     Creates a flag with the given description and tokens parser.
   */
@@ -230,7 +239,7 @@ private:
     this( parser, description, flag );
   }
   
-  string[] take( string[] args ) {
+  override string[] take( string[] args ) {
     try {
       return _parser.take( args[ 1 .. $ ] );
     } catch( Exception e ) {
@@ -239,7 +248,7 @@ private:
     }
   }
   
-  void store() {
+  override void store() {
     try {
       _parser.store();
     } catch( Exception e ) {
@@ -248,7 +257,7 @@ private:
     }
   }
   
-  void assign() {
+  override void assign() {
     try {
       _parser.assign();
     } catch( Exception e ) {
@@ -256,6 +265,17 @@ private:
       throw e;
     }
   }
+  
+  //Mutually exclusives.
+  SList!( Flagged ) _mutuallyExclusives;
+  @property auto mutuallyExclusives() { return _mutuallyExclusives; }
+  bool hasMEs() { return !_mutuallyExclusives.empty; }
+  void addME( Flagged f ) {
+    _mutuallyExclusives.insertFront( f );
+  }   
+  
+public:
+  @property string flag() { return _flag; }
 }
 
 /**
@@ -360,42 +380,6 @@ auto dir( string name, string description, ref string dir ) {
 }  
 
 /**
-  This structure is designed to extend flags with the transient data associated with a parsing.
-  It is meant to only be seen and used by a parser.
-*/
-private class FlagInfo {
-  import std.container;
-  
-  Flagged flagged;
-  //Mutually exclusives.
-  SList!( FlagInfo ) mutuallyExclusives;
-  bool hasMEs() { return !mutuallyExclusives.empty; }
-  void addME( FlagInfo fi ) {
-    mutuallyExclusives.insertFront( fi );
-  }
-  
-  
-  this( Flagged f ) {
-    flagged = f;
-    reset();
-  }
-  
-  /*
-    Automatic dispatching to flags.
-  */
-  auto opDispatch( string method, T... )( T args ) {
-    return mixin( "flagged." ~ method )( args );
-  }  
-    
-  /**
-    Resets all field to their initial state, ready to be used for parsing.
-  */
-  void reset() {
-    flagged.used = false;
-  }  
-}
-
-/**
   Exception specific to flags expecting arguments.
   If the expected count is lower than what is actually provided on the command line,
   then this exception should be thrown.
@@ -447,30 +431,30 @@ class HelpMenuRequested: Exception {
   Verifies that all mutually exclusive arguments for the one provided are not
   already in use.
 */
-private void enforceNoMutuallyExclusiveUsed( FlagInfo fi ) {
-  foreach( me; fi.mutuallyExclusives ) {
-    enforce( !me.used, "flag " ~ fi.flag ~ " was found but is mutually exclusive with " ~ me.flag );
+private void enforceNoMutuallyExclusiveUsed( Flagged f ) {
+  foreach( me; f.mutuallyExclusives ) {
+    enforce( !me.used, "flag " ~ f.flag ~ " was found but is mutually exclusive with " ~ me.flag );
   }
 }  
 
 /**
   Makes sure that the flag has not been used before, throws otherwise.
 */
-private void enforceNotUsedBefore( FlagInfo fi ) {
-  enforce( !fi.used, "flag " ~ fi.flag ~ " is used twice" );
+private void enforceNotUsedBefore( Flagged f ) {
+  enforce( !f.used, "flag " ~ f.flag ~ " is used twice" );
 }
 
 /**
   Makes sure that all the flags passed have been used, throws otherwise.
 */
 private void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
-  foreach( fi; range ) {
-    enforceMandatoryUse( fi );
+  foreach( f; range ) {
+    enforceMandatoryUse( f );
   }
 }
 //Throws if the flag passed is not used.
-private void enforceMandatoryUse( F )( F fi ) if( is( F == FlagInfo ) ) {
-  enforce( fi.used, "user must provide flag " ~ fi.flag );
+private void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
+  enforce( f.used, "user must provide flag " ~ f.flag );
 }
 
 //TODO find a way to standardize behavior with errors (try/catch) and prevent the callee from doing most work.
@@ -481,24 +465,65 @@ private void enforceMandatoryUse( F )( F fi ) if( is( F == FlagInfo ) ) {
   Every factory method returns a flag, but the flag is also immediately
   added to the parser's list.
 */
-struct CLIParser {
-  import std.container;
+class CLIParser: ParserI {
+protected:
+  //Make parse method private to the user.
+  Array!Argument _used;
+  //TODO override.
+  override string[] take( string[] tokens ) {
+    //TODO Might not be useful anymore.
+    _args = tokens;
+    if( !name.length ) {
+      _name = commandName( tokens );
+    }
+    tokens = tokens[ 1 .. $ ];
+    Array!string unrecognized;
+    while( tokens.length ) {
+      if( tokens[ 0 ] in _flags ) {
+        auto f = flagOf( tokens[ 0 ] );
+        enforceNotUsedBefore( f );
+        enforceNoMutuallyExclusiveUsed( f );
+        tokens = f.take( tokens );
+        //TODO automate this used status?
+        f.used = true;
+        _used.insertBack( f );
+      } else {
+        unrecognized.insertBack( tokens[ 0 ] );
+        tokens = tokens[ 1 .. $ ];
+      }
+    }
+    
+    if( _helpNeeded ) {
+      throw new HelpMenuRequested();
+    }
+    
+    enforceNoUnrecognizedTokens( unrecognized[] );
+    enforceMandatoryUse( _mandatories[] );
+      
+    return [];
+  }
   
-private:
+  override void store() {
+    foreach( arg; _used ) {
+      arg.store();      
+    }
+  }
+  override void assign() {
+    foreach( arg; _used ) {
+      arg.assign();      
+    }
+  }  
 
   //Maps the flagged arguments with their flags.
-  FlagInfo[ string ] _flags;  
+  Flagged[ string ] _flags;  
   
   /**
     Returns the flag info associated with the program argument.
   */
-  FlagInfo flagInfo( string flag ) {
+  Flagged flagOf( string flag ) {
     return _flags[ flag ];
   }
-  ///Ditto.
-  auto flagInfo( Flagged flag ) {
-    return flagInfo( flag.flag );
-  }    
+  
   /**
     Returns true if the flag is known by the parser. Only checks if the name is known, it 
     does not compare any other information.
@@ -518,7 +543,7 @@ private:
     }
   }  
   
-  SList!FlagInfo _mandatories;
+  SList!Flagged _mandatories;
   void mandatory( Range )( Range range ) if( isForwardRange!Range ) {
     foreach( Flagged flag; flags ) {
       mandatory( flag );
@@ -532,7 +557,7 @@ private:
   void mandatory( F )( F flag ) if( is( F == Flagged ) ) in {
     checkMembership( flag );
   } body {
-    _mandatories.insertFront( flagInfo( flag ) );
+    _mandatories.insertFront( flag );
   }
   
   //Help flag. When present, shows the command line menu.
@@ -571,7 +596,7 @@ private:
   @property public {
     string name() { return _name; }
     void name( string name ) in {
-      checkNonEmpty( "name", name );
+      //checkNonEmpty( "name", name );
     } body {
       _name = name;
     }
@@ -582,7 +607,7 @@ private:
   @property public {
     string description() {  return _description; }
     void description( string d ) in {
-      checkNonEmpty( "description", d );
+      //checkNonEmpty( "description", d );
     } body {
       _description = d;
     }    
@@ -611,8 +636,8 @@ private:
     Prepares all data for a parsing.
   */
   void resetAll() {
-    foreach( _, FlagInfo fi; _flags ) {
-      fi.reset();
+    foreach( _, Flagged f; _flags ) {
+      f.reset();
     }
   }
  
@@ -647,61 +672,18 @@ private:
           
 public:
 
-  @disable this();
+  //@disable this();
 
   /**
     Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
   */
-  this( string desc = "", File output = stdout, File error = stderr ) {
+  this( string n = "", string desc = "", File output = stdout, File error = stderr ) {
+    name = n;
     description = desc;
     _out = output;
     _err = stderr;    
     add( toggle( _helpFlag, "Prints the help menu.", _helpNeeded ) );
-  }   
-  
-  //Make parse method private to the user.
-  Array!Argument _used;
-  //TODO override.
-  string[] take( string[] tokens ) {
-    //TODO Might not be useful anymore.
-    _args = tokens;
-    tokens = tokens[ 1 .. $ ];
-    Array!string unrecognized;
-    while( tokens.length ) {
-      if( tokens[ 0 ] in _flags ) {
-        auto fi = flagInfo( tokens[ 0 ] );
-        enforceNotUsedBefore( fi );
-        enforceNoMutuallyExclusiveUsed( fi );
-        tokens = fi.take( tokens );
-        //TODO automate this used status?
-        fi.used = true;
-        _used.insertBack( fi.flagged );
-      } else {
-        unrecognized.insertBack( tokens[ 0 ] );
-        tokens = tokens[ 1 .. $ ];
-      }
-    }
-    
-    if( _helpNeeded ) {
-      throw new HelpMenuRequested();
-    }
-    
-    enforceNoUnrecognizedTokens( unrecognized[] );
-    enforceMandatoryUse( _mandatories[] );
-      
-    return [];
-  }
-  
-  void store() {
-    foreach( arg; _used ) {
-      arg.store();      
-    }
-  }
-  void assign() {
-    foreach( arg; _used ) {
-      arg.assign();      
-    }
-  }
+  }    
   
   
   /**
@@ -723,10 +705,10 @@ public:
     }
   }    
   ///Ditto.
-  void add( F )( F flag ) if( is( F == Flagged ) ) in {
-    assert( !isMember( flag ), "flags must be unique and " ~ flag.flag ~ " is already known" );
+  void add( F )( F f ) if( is( F == Flagged ) ) in {
+    assert( !isMember( f ), "flags must be unique and " ~ f.flag ~ " is already known" );
   } body {
-    _flags[ flag.flag ] = new FlagInfo( flag );
+    _flags[ f.flag ] = f;
   }
   
   /**
@@ -742,9 +724,9 @@ public:
     }
   } body {
     for( size_t i = 0; i < flags.length; ++i ) {
-      auto current = flagInfo( flags[ i ] );
+      auto current = flags[ i ];
       for( size_t j = i + 1; j < flags.length; ++j ) {
-        auto next = flagInfo( flags[ j ] );
+        auto next = flags[ j ];
         
         current.addME( next );
         next.addME( current );
@@ -779,7 +761,7 @@ unittest {
   string s = "tata";
   bool toggled = false;
   
-  auto parser = CLIParser( "This is a unit test" );
+  auto parser = new CLIParser( "This is a unit test" );
   parser.add(
     value( "-i", "The integer flag.", i ),
     value( "-s", "The string flag.", s ),
@@ -796,6 +778,7 @@ unittest {
   try {
     parser.parse( args );
   } catch( Exception e ) {
+    writeln( "Error with parser " ~ parser.name );
     return;
   }
   
