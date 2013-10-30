@@ -209,27 +209,27 @@ struct Config {
     
     auto parser = Parser( tokens, "N/A" );
 
-    auto noResults = Flag.value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
-    auto minPeriod = Flag.value( "--min", "Minimum period length. Default is " ~ _minPeriod.to!string() ~ ".", _minPeriod );
+    auto noResults = value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
+    auto minPeriod = value( "--min", "Minimum period length. Default is " ~ _minPeriod.to!string() ~ ".", _minPeriod );
     auto maxPeriod = 
-      Flag.value( 
+      value( 
         "--max",
         "Maximum period length. Default is " ~ _minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.",
         _maxPeriod 
       );
     auto singleStep = 
-      Flag.setter( 
+      setter( 
         "--single-step",
         "Sets the segment pair length step to be 1 instead of 3.",
         _periodStep,
         1u
       );
-    auto verbosityLvl = Flag.value( "-v", "Verbosity level. Default is " ~ _verbosity.to!string ~ ".", _verbosity );
-    auto printConfig = Flag.toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", _printConfig );
-    auto printTime = Flag.toggle( "--no-time", "Removes the execution time from the results.", _printTime );
-    auto printResults = Flag.toggle( "--no-res", "Prevents the results from being printed.", _printResults );
+    auto verbosityLvl = value( "-v", "Verbosity level. Default is " ~ _verbosity.to!string ~ ".", _verbosity );
+    auto printConfig = toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", _printConfig );
+    auto printTime = toggle( "--no-time", "Removes the execution time from the results.", _printTime );
+    auto printResults = toggle( "--no-res", "Prevents the results from being printed.", _printResults );
     auto algo = 
-      Flag.mapped( 
+      mapped( 
         "--algo", 
         "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
         _algo,
@@ -245,10 +245,10 @@ struct Config {
         _sequencesFiles = new File[ 1 ];
         _sequencesFiles[ 0 ] = stdout;
               
-        auto seqFile = Flag.file( "-s", "Sequences file. This flag is mandatory.", _sequencesFiles[ 0 ], "r" );
-        auto outFile = Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
-        auto resFile = Flag.file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
-        auto timeFile = Flag.file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
+        auto seqFile = file( "-s", "Sequences file. This flag is mandatory.", _sequencesFiles[ 0 ], "r" );
+        auto outFile = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
+        auto resFile = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
+        auto timeFile = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
         
         parser.name = PROGRAM_NAME;
         
@@ -279,11 +279,11 @@ struct Config {
         //TODO create a variable to hold the name of the gen-references.
         parser.name = PROGRAM_NAME ~ " gen-references";
        
-        auto seqDir = Flag.dir( "--sd", "Sequences directory. This flag is mandatory.", _sequencesDir );
+        auto seqDir = dir( "--sd", "Sequences directory. This flag is mandatory.", _sequencesDir );
         
-        auto resDir = Flag.dir( "--rd", "Results directory. This flag is mandatory.", _resultsDir );
+        auto resDir = dir( "--rd", "Results directory. This flag is mandatory.", _resultsDir );
       
-        auto outFile = Flag.file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
+        auto outFile = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
       
         parser.add(
           seqDir,
