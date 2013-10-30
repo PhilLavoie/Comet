@@ -1,6 +1,6 @@
 /**
   Command line interface of the program.
-  It is rommand() { return _ommand; }esponsible for setting up the flags and parsing the user's
+  It is responsible for setting up the flags and parsing the user's
   input, guaranteeing a usable state for the system.
 */
 module comet.config;
@@ -42,24 +42,6 @@ enum Mode {
   generateReferences,
   runTests,
   compileMeasures
-}
-
-private Mode getMode( string[] args ) {
-  return getMode( args[ 1 ] );
-}
-private Mode getMode( string mode ) {
-  switch( mode ) {
-    case "batch":
-      return Mode.batch;
-    case "gen-references":
-      return Mode.generateReferences;
-    case "run-tests":
-      return Mode.runTests;
-    case "compile-measures":
-      return Mode.compileMeasures;
-    default:
-      return Mode.normal;  
-  }
 }
 
 /**
@@ -201,14 +183,14 @@ struct Config {
     help menu (-h).
   */
   public void parse( string[] tokens ) {
-    immutable string PROGRAM_NAME = commandName( tokens[0] );
-    
+    //Run time defaults.
     _timeFile = stdout;
     _outFile = stdout;
     _resultsFile = stdout;
+    _sequencesFiles = new File[ 1 ];
+    _sequencesFiles[ 0 ] = stdout;
     
-    auto parser = Parser( tokens, "N/A" );
-
+    
     auto noResults = value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
     auto minPeriod = value( "--min", "Minimum period length. Default is " ~ _minPeriod.to!string() ~ ".", _minPeriod );
     auto maxPeriod = 
@@ -235,80 +217,65 @@ struct Config {
         _algo,
         algosByStrings
       );
-
-    
-    //TODO: without at least one argument, the program crashes when attempting to get the mode.
-    _mode = getMode( tokens );
-    
-    switch( _mode ) {
-      case Mode.normal:
-        _sequencesFiles = new File[ 1 ];
-        _sequencesFiles[ 0 ] = stdout;
-              
-        auto seqFile = file( "-s", "Sequences file. This flag is mandatory.", _sequencesFiles[ 0 ], "r" );
-        auto outFile = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
-        auto resFile = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
-        auto timeFile = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
-        
-        parser.name = PROGRAM_NAME;
-        
-        parser.add(
-          seqFile,
-          verbosityLvl,
-          outFile,
-          printResults,
-          resFile,
-          printTime,
-          timeFile,
-          noResults,
-          minPeriod,
-          maxPeriod,
-          singleStep,
-          printConfig,
-          algo      
-        );
-        
-        parser.mandatory( seqFile );
-        parser.mutuallyExclusive( printResults, resFile );
-        parser.mutuallyExclusive( printTime, timeFile );
-        
-        parser.parse();    
-        break;
-    
-      case Mode.generateReferences:
-        //TODO create a variable to hold the name of the gen-references.
-        parser.name = PROGRAM_NAME ~ " gen-references";
-       
-        auto seqDir = dir( "--sd", "Sequences directory. This flag is mandatory.", _sequencesDir );
-        
-        auto resDir = dir( "--rd", "Results directory. This flag is mandatory.", _resultsDir );
       
-        auto outFile = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
-      
-        parser.add(
-          seqDir,
-          resDir,
-          verbosityLvl,
-          outFile,
-          printTime,
-          printConfig,
-        );
-               
-        parser.mandatory( seqDir );
-        parser.mandatory( resDir );
-        parser.args = parser.args[ 1 .. $ ];
-        
-        parser.parse();    
-        break;
-        
-      case Mode.runTests:
-        
-        break;
+    auto seqDir = dir( "--sd", "Sequences directory. This flag is mandatory.", _sequencesDir );
      
-      default:
-        assert( false, "unknown mode: " ~ _mode.to!string );
-    }  
+    auto resDir = dir( "--rd", "Results directory. This flag is mandatory.", _resultsDir );
+  
+    auto outFile = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
+  
+    auto genRefParser = new ProgramParser();
+    genRefParser.name = commandName( tokens ) ~ " generate-references";
+    
+    genRefParser.add(
+      seqDir,
+      resDir,
+      verbosityLvl,
+      outFile,
+      printTime,
+      printConfig,
+    );           
+    genRefParser.mandatory( seqDir );
+    genRefParser.mandatory( resDir );
+    
+    auto genRef = custom( "generate-references", "Boom", genRefParser );
+        
+             
+    auto seqFile = file( "-s", "Sequences file. This flag is mandatory.", _sequencesFiles[ 0 ], "r" );
+    auto resFile = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
+    auto timeFile = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
+    
+    //Normal mode parser.
+    auto parser = new ProgramParser();
+    parser.name = commandName( tokens );    
+    parser.add(
+      genRef,
+      seqFile,
+      verbosityLvl,
+      outFile,
+      printResults,
+      resFile,
+      printTime,
+      timeFile,
+      noResults,
+      minPeriod,
+      maxPeriod,
+      singleStep,
+      printConfig,
+      algo      
+    );
+    
+    parser.mandatory( seqFile );
+    parser.mutuallyExclusive( printResults, resFile );
+    parser.mutuallyExclusive( printTime, timeFile );
+    
+    parser.parse( tokens );
+    
+    if( genRef.used ) {
+      _mode = Mode.generateReferences;
+    }    
       
+    
     //The minimum segment pair length must be below the maximum.
     enforce( _minPeriod <= _maxPeriod, "The minimum period value: " ~ _minPeriod.to!string() ~ " is above the maximum: " ~ _maxPeriod.to!string() );  
     assert( _periodStep == 1 || _periodStep == 3 );
@@ -317,7 +284,6 @@ struct Config {
       print();
     }  
   }
- 
 }
 
 //Small helper function to help print configuration files in a user friendly fashion.

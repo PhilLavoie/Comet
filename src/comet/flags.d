@@ -11,6 +11,9 @@ import std.string;
 import std.file;
 import std.range;
 import std.container;
+import std.traits;
+
+//TODO supplement "is" templates with arity when it gets fixed.
 
 interface ParserI {
 protected:
@@ -39,12 +42,8 @@ interface Converter( T ) {
   T opCall( string[] );
 }
 
-template typeOf( T ) if( isConverter!T ) {
-  alias typeOf = typeof( T( [ "toto" ] ) );
-}
-
 template isConverter( T ) {
-  static if( is( typeof( () { T t; string[] args; auto value = t( args ); } ) ) ) {
+  static if( !is( ReturnType!T == void ) && is( ParameterTypeTuple!T[ 0 ] == string[] ) ) {
     enum isConverter = true;
   } else {
     enum isConverter = false;
@@ -81,7 +80,7 @@ auto mappedConverter( T )( in T[ string ] map ) {
   return ( string[] tokens ) {
     string temp = tokens[ 0 ];
     enforce( temp in map, temp ~ " is not one of possible values: " ~ map.keys.to!string );
-    return map[ temp ];;
+    return map[ temp ];
   };
 }
 
@@ -119,7 +118,19 @@ interface Assigner( T ) {
   void opCall( T value );
 }
 
-template isAssigner( T, U ) {
+template isAssigner( T ) {
+  static if( is( ReturnType!T == void ) ) {
+    enum isAssigner = true;
+  } else {
+    enum isAssigner = false;
+  }
+}
+
+template typeOf( T ) if( isAssigner!T ) {
+  alias typeOf = Unqual!( ParameterTypeTuple!T[ 0 ] );
+}
+
+template isAssignerOf( T, U ) {
   static if( is( typeof( () { T t; U arg; t( arg ); } ) ) ) {
     enum isAssigner = true;
   } else {
@@ -134,7 +145,7 @@ auto assigner( T )( ref T assignee ) {
 class Parser( T, U, V  ): ParserI if(
   isArity!T &&
   isConverter!U &&
-  isAssigner!( V, typeOf!U )
+  isAssigner!V
 ) {
 protected:
   string[] _args;
@@ -143,7 +154,7 @@ protected:
   U _converter;
   V _assigner;
   
-  typeOf!U _value;
+  typeOf!V _value;
   
   this( T arity, U converter, V assigner ) {
     _arity = arity;
@@ -343,7 +354,7 @@ auto mapped( T )( string flag, string description, ref T value, in T[ string ] m
   return custom(
     flag,
     description,
-    commonParser( mappedConverter, value )
+    commonParser( mappedConverter( map ), value )
   );
 }
 
@@ -457,7 +468,6 @@ private void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
   enforce( f.used, "user must provide flag " ~ f.flag );
 }
 
-//TODO find a way to standardize behavior with errors (try/catch) and prevent the callee from doing most work.
 /**
   Command line parser.
   It provides the user with facilities to create flags and register
@@ -465,18 +475,14 @@ private void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
   Every factory method returns a flag, but the flag is also immediately
   added to the parser's list.
 */
-class CLIParser: ParserI {
+class ProgramParser: ParserI {
 protected:
-  //Make parse method private to the user.
   Array!Argument _used;
-  //TODO override.
+
   override string[] take( string[] tokens ) {
     //TODO Might not be useful anymore.
     _args = tokens;
-    if( !name.length ) {
-      _name = commandName( tokens );
-    }
-    tokens = tokens[ 1 .. $ ];
+    
     Array!string unrecognized;
     while( tokens.length ) {
       if( tokens[ 0 ] in _flags ) {
@@ -493,7 +499,8 @@ protected:
       }
     }
     
-    if( _helpNeeded ) {
+    if( _help.used ) {
+      printHelp();
       throw new HelpMenuRequested();
     }
     
@@ -563,6 +570,8 @@ protected:
   //Help flag. When present, shows the command line menu.
   string _helpFlag = "-h";
   bool _helpNeeded = false;  
+  Flagged _help;
+  
   @property public {
     //TODO: add the possibility to change/remove the help flag.
     string helpFlag() { return _helpFlag; }
@@ -647,23 +656,23 @@ protected:
     This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
     assigning any values.    
   */
-  public void parse() { parse( _args ); } 
-  
-  ///Ditto.
   public void parse( string[] tokens ) in {
     assert( 0 < tokens.length  );
   } body {
+    if( !name.length ) {
+      _name = commandName( tokens );
+    }
     resetAll();
+    tokens = tokens[ 1 .. $ ];
     try {
       take( tokens );
       store();
       assign();
-    } catch( HelpMenuRequested e ) {
-      printHelp();
-      throw new Exception( "" );
+    } catch( AbortException e ) {
+      throw e;
     } catch( Exception e ) {
       _out.writeln( e.msg );
-      _out.writeln( "Use " ~ _helpFlag ~ " for help." );      
+      _out.writeln( _name ~ " " ~ _helpFlag ~ " for help" );      
       //TODO: throw another exception that means program abortion.
       e.msg = "";
       throw e;
@@ -682,7 +691,8 @@ public:
     description = desc;
     _out = output;
     _err = stderr;    
-    add( toggle( _helpFlag, "Prints the help menu.", _helpNeeded ) );
+    _help = toggle( _helpFlag, "Prints the help menu.", _helpNeeded );
+    add( _help );
   }    
   
   
@@ -754,14 +764,14 @@ string commandName( string token ) {
 
 
 unittest {
-  string[] args = [ "unittest.exe", "-i", "aca", "-s", "toto", "--silent", /* "-v", "4" */ ];
+  string[] args = [ "unittest.exe", "-i", "0", "-s", "toto", "--silent", /* "-v", "4" */ ];
   
   //The config.
   int i = 400;
   string s = "tata";
   bool toggled = false;
   
-  auto parser = new CLIParser( "This is a unit test" );
+  auto parser = new ProgramParser( "This is a unit test" );
   parser.add(
     value( "-i", "The integer flag.", i ),
     value( "-s", "The string flag.", s ),

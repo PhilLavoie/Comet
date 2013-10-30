@@ -31,8 +31,8 @@ void main( string[] args ) {
     
   } catch( Exception e ) {
     if( e.msg.length ) {
-		writeln( e.msg );
-	}
+      writeln( e.msg );
+    }
     return;
   } 
 }
