@@ -3,7 +3,6 @@ import comet.config;
 import comet.algos;
 import comet.ranges;
 
-import comet.flags;
 import deimos.bio.dna;
 import deimos.containers.tree;
 import fasta = deimos.bio.fasta;

@@ -5,7 +5,7 @@
 */
 module comet.config;
 
-import comet.flags;
+import comet.cli.all;
 
 import std.exception;
 import std.conv;

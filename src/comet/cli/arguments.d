@@ -1,193 +1,21 @@
 /**
   Module defining a set of facilities to ease the parsing of the command line.
 */
-module comet.flags;
+module comet.cli.arguments;
+
+import comet.cli.utils;
+import comet.cli.parsers;
+import comet.cli.exceptions;
 
 import std.algorithm;
 import std.conv;
-import std.exception;
 import std.stdio;
+import std.exception;
 import std.string;
-import std.file;
-import std.range;
 import std.container;
-import std.traits;
+import std.range;
 
-//TODO supplement "is" templates with arity when it gets fixed.
-
-interface ParserI {
-protected:
-  string[] take( string[] );
-  void store();
-  void assign();
-}
-
-interface Arity {
-  size_t opCall( string[] );
-}
-
-template isArity( T ) {
-  static if( is( typeof( () { T t; string[] args; size_t value = t( args ); } ) ) ) {
-    enum isArity = true;
-  } else {
-    enum isArity = false;
-  }
-}
-
-template fixedArity( size_t arity ) {
-  auto fixedArity = ( string[] ) => arity;
-}
-
-interface Converter( T ) {
-  T opCall( string[] );
-}
-
-template isConverter( T ) {
-  static if( !is( ReturnType!T == void ) && is( ParameterTypeTuple!T[ 0 ] == string[] ) ) {
-    enum isConverter = true;
-  } else {
-    enum isConverter = false;
-  }
-}
-
-auto constantConverter( T )( T value ) {
-  return ( string[] ) => value;
-}
-
-auto toConverter( T )() {
-  return ( string[] tokens ) => tokens[ 0 ].to!T();
-}
-
-auto boundedConverter( T )( T min, T max ) {
-  return ( string[] tokens ) { 
-    auto t = tokens[ 0 ].to!T(); 
-    enforce( min <= t, tokens[ 0 ] ~ " is under the minimum boundary allowed: " ~ min.to!string() );
-    enforce( t <= max, tokens[ 0 ] ~ " is above the maximum boundary allowed: " ~ max.to!string() ); 
-    return t;
-  };
-}
-
-auto enumerationConverter( string candidates ) {
-  return ( string[] tokens ) {
-    auto splitted = candidates.splitter( "|" );
-    auto temp = tokens[ 0 ];
-    enforce( splitted.canFind( temp ), temp ~ " is not one of possible values: " ~ splitted.to!string );
-    return temp;      
-  };
-}
-
-auto mappedConverter( T )( in T[ string ] map ) {
-  return ( string[] tokens ) {
-    string temp = tokens[ 0 ];
-    enforce( temp in map, temp ~ " is not one of possible values: " ~ map.keys.to!string );
-    return map[ temp ];
-  };
-}
-
-auto fileConverter( string mode ) {
-  return ( string[] tokens ) {
-    if( tokens[ 0 ] == "stdout" ) {
-      enforce( !mode.startsWith( "r" ), "stdout is used as input with mode " ~ mode );
-      return stdout;
-    } else if( tokens[ 0 ] == "stderr" ) {
-      enforce( !mode.startsWith( "r" ), "stderr is used as input with mode " ~ mode );
-      return stderr;
-    } else if( tokens[ 0 ] == "stdin" ) {
-      enforce( mode.startsWith( "r" ), "stdin is used as output with mode " ~ mode );
-      return stdin;
-    } else {          
-      return File( tokens[ 0 ], mode );
-    }    
-  };
-}
-
-auto dirConverter() {
-  return ( string[] tokens ) {
-    auto dir = tokens[ 0 ];
-    auto makeSure = dirEntries( dir, SpanMode.breadth ); //This will throw if if is not a dir.
-    import std.path;
-    if( dir.endsWith( dirSeparator ) ) {
-      return dir;
-    }    
-    return dir ~ dirSeparator;
-  };
-}
-
-
-interface Assigner( T ) {
-  void opCall( T value );
-}
-
-template isAssigner( T ) {
-  static if( is( ReturnType!T == void ) ) {
-    enum isAssigner = true;
-  } else {
-    enum isAssigner = false;
-  }
-}
-
-template typeOf( T ) if( isAssigner!T ) {
-  alias typeOf = Unqual!( ParameterTypeTuple!T[ 0 ] );
-}
-
-template isAssignerOf( T, U ) {
-  static if( is( typeof( () { T t; U arg; t( arg ); } ) ) ) {
-    enum isAssigner = true;
-  } else {
-    enum isAssigner = false;
-  }
-}
-
-auto assigner( T )( ref T assignee ) {
-  return ( T value ) { assignee = value; };
-}
-
-class Parser( T, U, V  ): ParserI if(
-  isArity!T &&
-  isConverter!U &&
-  isAssigner!V
-) {
-protected:
-  string[] _args;
-   
-  T _arity;
-  U _converter;
-  V _assigner;
-  
-  typeOf!V _value;
-  
-  this( T arity, U converter, V assigner ) {
-    _arity = arity;
-    _converter = converter;
-    _assigner = assigner;
-  }
-  
-  override string[] take( string[] args ) {
-    auto arity = _arity( args );
-    enforceEnoughArgs( args, arity );
-    _args = args[ 0 .. arity ];
-    return args[ arity .. $ ];
-  }
-  
-  override void store() {
-    _value = _converter( _args );
-  }
-  
-  override void assign() {
-    _assigner( _value );
-  }
-
-}
-
-auto parser( T, U, V )( T arityGiver, U converter, V assigner ) {
-  return new Parser!( T, U, V )( arityGiver, converter, assigner );
-}
-auto commonParser( T, U )( T converter, ref U value ) {
-  return parser( fixedArity!1u, converter, assigner( value ) );
-}
-
-
-class Argument: ParserI {
+abstract class Argument: ParserI {
 protected:
   ParserI _parser;
   
@@ -195,6 +23,10 @@ protected:
   
   bool _used = false;
   @property void used( bool u ) { _used = u; }
+  
+  bool _optional = true;
+  @property bool optional() { return _optional; }
+  @property void optional( bool opt ) { _optional = opt; }
   
   this( ParserI parser, string description ) {
     _parser = parser;
@@ -204,7 +36,8 @@ protected:
   this( string description, ParserI parser ) {
     this( parser, description );
   }
-  
+
+public:  
   override string[] take( string[] args ) {
     return _parser.take( args );
   }
@@ -229,13 +62,28 @@ public:
   public @property bool used() { return _used; }   
 }
 
+class Indexed: Argument {
+protected:
+  int _index;
+  
+  this( int index, string description, ParserI parser ) {
+    super( parser, description );
+    _index = index;
+  }
+
+}
+
+auto indexed( int index, string description, ParserI parser ) {
+  return new Indexed( index, description, parser );
+}
+
 /**
   A flag object is a representation of a command line flag. It is associated with
   an invocation, a description and a token parser that is responsible for parsing
   expected arguments, if any.
 */
 class Flagged: Argument {
-protected:
+private:
   string _flag;
   @property void flag( string f ) { _flag = f; }
     
@@ -250,6 +98,15 @@ protected:
     this( parser, description, flag );
   }
   
+  //Mutually exclusives.
+  SList!( Flagged ) _mutuallyExclusives;
+  @property auto mutuallyExclusives() { return _mutuallyExclusives; }
+  bool hasMEs() { return !_mutuallyExclusives.empty; }
+  void addME( Flagged f ) {
+    _mutuallyExclusives.insertFront( f );
+  }   
+  
+public:  
   override string[] take( string[] args ) {
     try {
       return _parser.take( args[ 1 .. $ ] );
@@ -276,26 +133,54 @@ protected:
       throw e;
     }
   }
-  
-  //Mutually exclusives.
-  SList!( Flagged ) _mutuallyExclusives;
-  @property auto mutuallyExclusives() { return _mutuallyExclusives; }
-  bool hasMEs() { return !_mutuallyExclusives.empty; }
-  void addME( Flagged f ) {
-    _mutuallyExclusives.insertFront( f );
-  }   
-  
+    
 public:
   @property string flag() { return _flag; }
+}
+
+private {
+  /**
+    Verifies that all mutually exclusive arguments for the one provided are not
+    already in use.
+  */
+  void enforceNoMutuallyExclusiveUsed( Flagged f ) {
+    foreach( me; f.mutuallyExclusives ) {
+      enforce( !me.used, "flag " ~ f.flag ~ " was found but is mutually exclusive with " ~ me.flag );
+    }
+  }  
+
+  /**
+    Makes sure that the flag has not been used before, throws otherwise.
+  */
+  void enforceNotUsedBefore( Flagged f ) {
+    enforce( !f.used, "flag " ~ f.flag ~ " is used twice" );
+  }
+
+  /**
+    Makes sure that all the flags passed have been used, throws otherwise.
+  */
+  void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
+    foreach( f; range ) {
+      enforceMandatoryUse( f );
+    }
+  }
+  //Throws if the flag passed is not used.
+  void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
+    enforce( f.used, "user must provide flag " ~ f.flag );
+  }
 }
 
 /**
   If no predefined arguments satisfy the user's needs, this one is the most
   general factory method. It lets the user specify the tokens parser.
 */
-Flagged custom( string flag, string description, ParserI parser ) {
+Flagged flagged( string flag, string description, ParserI parser ) {
   return new Flagged( flag, description, parser );    
 } 
+
+auto custom( string flag, string description, ParserI parser ) {
+  return flagged( flag, description, parser );
+}
 
 /**
   A simple flag that reverses the boolean value when found on the command line.     
@@ -304,7 +189,7 @@ auto toggle( string flag, string description, ref bool toggled ) {
   return setter( flag, description, toggled, !toggled );
 } 
 auto setter( T )( string flag, string description, ref T settee, T setTo ) {
-  return custom( flag, description, parser( fixedArity!0u, constantConverter( setTo ), assigner( settee ) ) );
+  return custom( flag, description, commonParser( constantConverter( setTo ), settee ) );
 }  
 
 /**
@@ -390,83 +275,7 @@ auto dir( string name, string description, ref string dir ) {
   ); 
 }  
 
-/**
-  Exception specific to flags expecting arguments.
-  If the expected count is lower than what is actually provided on the command line,
-  then this exception should be thrown.
-*/
-class MissingArgumentsException: Exception {
-  this( size_t noArgs ) in {
-    assert( 0 < noArgs, "a missing argument exception requires that at least 1 argument is missing, not: " ~ noArgs.to!string );
-  } body {
-    super( "expected " ~ noArgs.to!string ~ " argument" ~ ( 1 == noArgs ? "" : "s" ) );
-  }  
-}
 
-/**
-  Checks that the tokens provided hold enough arguments for the flag.
-  Throws a standard exception otherwise (with a standard error message).
-*/
-void enforceEnoughArgs( string[] tokens, size_t noArgs ) {
-  enforce( noArgs <= tokens.length, new MissingArgumentsException( noArgs ) );
-}
-
-/**
-  Exception thrown when there are unrecognized tokens on the command line and they 
-  were not expected.
-*/
-class UnrecognizedTokens: Exception {
-  this( Range )( Range tokens ) if( isForwardRange!Range ) in {
-    assert( !tokens.empty, "an unrecognized tokens exception requires at least one token" );
-  } body {
-    super( "unrecognized tokens: " ~ tokens.to!string );
-  }
-}
-
-/**
-  Verifies that the slice passed is empty, otherwise throws an exception.
-*/
-void enforceNoUnrecognizedTokens( Range )( Range unrecognizedTokens ) if( isForwardRange!Range ) {
-  enforce( unrecognizedTokens.empty, new UnrecognizedTokens( unrecognizedTokens ) );
-}
-
-/**
-  Exception thrown when the help menu has been requested by the user.
-*/
-class HelpMenuRequested: Exception {
-  this() { super( "" ); }
-}
-
-
-/**
-  Verifies that all mutually exclusive arguments for the one provided are not
-  already in use.
-*/
-private void enforceNoMutuallyExclusiveUsed( Flagged f ) {
-  foreach( me; f.mutuallyExclusives ) {
-    enforce( !me.used, "flag " ~ f.flag ~ " was found but is mutually exclusive with " ~ me.flag );
-  }
-}  
-
-/**
-  Makes sure that the flag has not been used before, throws otherwise.
-*/
-private void enforceNotUsedBefore( Flagged f ) {
-  enforce( !f.used, "flag " ~ f.flag ~ " is used twice" );
-}
-
-/**
-  Makes sure that all the flags passed have been used, throws otherwise.
-*/
-private void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
-  foreach( f; range ) {
-    enforceMandatoryUse( f );
-  }
-}
-//Throws if the flag passed is not used.
-private void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
-  enforce( f.used, "user must provide flag " ~ f.flag );
-}
 
 /**
   Command line parser.
@@ -476,9 +285,7 @@ private void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
   added to the parser's list.
 */
 class ProgramParser: ParserI {
-protected:
-  Array!Argument _used;
-
+public:
   override string[] take( string[] tokens ) {
     //TODO Might not be useful anymore.
     _args = tokens;
@@ -520,6 +327,10 @@ protected:
       arg.assign();      
     }
   }  
+  
+protected:
+
+  Array!Argument _used;
 
   //Maps the flagged arguments with their flags.
   Flagged[ string ] _flags;  
@@ -633,14 +444,7 @@ protected:
   string usageString() {
     return _name ~ " [ options ]";
   }
-  
-  /**
-    Make sure that the strings contains at least 1 character that is not whitespace.
-  */
-  void checkNonEmpty( string name, string s ) {
-    assert( s.strip.length, "expected the " ~ name ~ " to be non empty" );
-  }  
-  
+    
   /**
     Prepares all data for a parsing.
   */
@@ -745,23 +549,6 @@ public:
   }      
   
 }
-
-
-/**
-  Returns the name of the command used on the command line. It was meant to be called with the
-  arguments provided by the program's entry points. It returns only the base name and stripped of
-  its extension.
-*/
-string commandName( string[] tokens ) {
-  return commandName( tokens[ 0 ] );
-}
-///Ditto
-string commandName( string token ) {
-  import std.path;
-  //Strip leading directories and extension.
-  return token.baseName().stripExtension();  
-}
-
 
 unittest {
   string[] args = [ "unittest.exe", "-i", "0", "-s", "toto", "--silent", /* "-v", "4" */ ];
