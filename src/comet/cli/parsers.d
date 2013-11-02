@@ -16,8 +16,9 @@ package:
 /**
   This interface is for objects designed to parse arguments from the command line.
 */
-package interface ParserI {
+public interface ParserI {
 public:
+  
   /**
     Takes the number of arguments it needs and returns the slice without them.
   */
@@ -37,8 +38,7 @@ public:
 //The next definitions are 
 
 /**
-  Interface definition for callable objects used to return the arity
-  the program argument they belong to.
+  TODO
 */
 interface Arity {
   size_t opCall( string[] );
@@ -56,16 +56,9 @@ private template isArity( T ) {
 }
 
 /**
-  A returns an object that will return the fixed arity provided.
-*/
-private template fixedArity( size_t arity ) {
-  auto fixedArity = ( string[] ) => arity;
-}
-
-/**
   A converter is an object that takes strings and returns a converted value.
 */
-private interface Converter( T ) {
+interface Converter( T ) {
   T opCall( string[] );
 }
 
@@ -141,7 +134,7 @@ auto dirConverter() {
 }
 
 
-private interface Assigner( T ) {
+interface Assigner( T ) {
   void opCall( T value );
 }
 
@@ -174,23 +167,61 @@ class Parser( T, U, V  ): ParserI if(
   isConverter!U &&
   isAssigner!V
 ) {
+protected:
   string[] _args;
-   
+
   T _arity;
   U _converter;
   V _assigner;
   
   typeOf!V _value;
-  
+
+
   this( T arity, U converter, V assigner ) {
     _arity = arity;
     _converter = converter;
     _assigner = assigner;
   }
 
-public:
+public:  
   override string[] take( string[] args ) {
     auto arity = _arity( args );
+    enforceEnoughArgs( args, arity );
+    _args = args[ 0 .. arity ];
+    return args[ arity .. $ ];
+  }
+
+  override void store() {
+    _value = _converter( _args );
+  }
+  
+  override void assign() {
+    _assigner( _value );
+  }
+
+}
+
+//Optimised for fixed arity.
+class Parser( size_t arity, U, V  ): ParserI if(
+  1 <= arity &&
+  isConverter!U &&
+  isAssigner!V
+) {
+protected:
+  string[] _args;
+  
+  U _converter;
+  V _assigner;
+  
+  typeOf!V _value;
+
+  this( U converter, V assigner ) {
+    _converter = converter;
+    _assigner = assigner;
+  }
+
+public:  
+  override string[] take( string[] args ) {
     enforceEnoughArgs( args, arity );
     _args = args[ 0 .. arity ];
     return args[ arity .. $ ];
@@ -203,12 +234,75 @@ public:
   override void assign() {
     _assigner( _value );
   }
-
 }
 
+//Optimised for single arguments.
+class Parser( size_t arity : 1u, T, U  ): ParserI if(
+  isConverter!T
+) {
+protected:
+  string[] _args;
+  
+  T _converter;
+  U * _assigned;  
+  U _value;
+
+  this( T  converter, typeof( _assigned ) assigned ) {
+    _converter = converter;
+    _assigned = assigned;
+  }
+
+public:  
+  override string[] take( string[] args ) {
+    enforceEnoughArgs( args, arity );
+    _args = args[ 0 .. arity ];
+    return args[ arity .. $ ];
+  }
+  
+  override void store() {
+    _value = _converter( _args );
+  }
+  
+  override void assign() {
+    *_assigned = _value;
+  }
+}
+
+//Optimised for toggles and setters (no arguments).
+class Parser( T ): ParserI {
+protected:
+  
+  T * _assigned;  
+  T _assignedTo;
+
+  this( typeof( _assigned ) assigned, T assignedTo ) {
+    _assigned = assigned;
+    _assignedTo = assignedTo;
+  }
+
+public:  
+  override string[] take( string[] args ) {
+    return args;
+  }
+  
+  //No value is parsed so nothing is done.
+  override void store() {}
+  
+  override void assign() {
+    *_assigned = _assignedTo;
+  }
+}
+
+ 
 auto parser( T, U, V )( T arityGiver, U converter, V assigner ) {
   return new Parser!( T, U, V )( arityGiver, converter, assigner );
 }
+auto fixedArityParser( size_t arity, T, U )( T converter, U assigner ) {
+  return new Parser!( arity, T, U )( converter, assigner );
+}
 auto commonParser( T, U )( T converter, ref U value ) {
-  return parser( fixedArity!1u, converter, assigner( value ) );
+  return new Parser!( 1u, T, U )( converter, &value );
+}
+auto noArgParser( T )( ref T value, T setTo ) {
+  return new Parser!( T )( &value, setTo );
 }

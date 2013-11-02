@@ -224,21 +224,44 @@ struct Config {
   
     auto outFile = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
   
-    auto genRefParser = new ProgramParser();
-    genRefParser.name = commandName( tokens ) ~ " generate-references";
+    auto subProgram = indexed( 
+      -1, 
+      "Subprogram.", 
+      new class ParserI {
+        override string[] take( string[] args ) {
+          switch( args[ 0 ] ) {
+            case "generate-references":
+              _mode = Mode.generateReferences;
+              
+              auto genRefParser = new ProgramParser();
+              genRefParser.name = commandName( tokens ) ~ " generate-references";
+              
+              genRefParser.add(
+                seqDir,
+                resDir,
+                verbosityLvl,
+                outFile,
+                printTime,
+                printConfig,
+              );           
+              genRefParser.mandatory( seqDir );
+              genRefParser.mandatory( resDir );            
+              //TODO: slice the args and launch the parser.
+              break;            
+            default:
+              return args;
+          }     
+          assert( false );          
+        }
+        
+        override void store() {}
+        override void assign() {}
+      }
+    );
+  
     
-    genRefParser.add(
-      seqDir,
-      resDir,
-      verbosityLvl,
-      outFile,
-      printTime,
-      printConfig,
-    );           
-    genRefParser.mandatory( seqDir );
-    genRefParser.mandatory( resDir );
     
-    auto genRef = custom( "generate-references", "Boom", genRefParser );
+    
         
              
     auto seqFile = file( "-s", "Sequences file. This flag is mandatory.", _sequencesFiles[ 0 ], "r" );
@@ -249,7 +272,6 @@ struct Config {
     auto parser = new ProgramParser();
     parser.name = commandName( tokens );    
     parser.add(
-      genRef,
       seqFile,
       verbosityLvl,
       outFile,
@@ -270,11 +292,6 @@ struct Config {
     parser.mutuallyExclusive( printTime, timeFile );
     
     parser.parse( tokens );
-    
-    if( genRef.used ) {
-      _mode = Mode.generateReferences;
-    }    
-      
     
     //The minimum segment pair length must be below the maximum.
     enforce( _minPeriod <= _maxPeriod, "The minimum period value: " ~ _minPeriod.to!string() ~ " is above the maximum: " ~ _maxPeriod.to!string() );  

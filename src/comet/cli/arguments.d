@@ -15,9 +15,12 @@ import std.string;
 import std.container;
 import std.range;
 
-abstract class Argument: ParserI {
+//TODO: use mixins and anonymous classes instead of defined bases classes.
+
+abstract class Argument{
 protected:
   ParserI _parser;
+  @property ParserI parser() { return _parser; }
   
   string _description;
   
@@ -35,17 +38,6 @@ protected:
   }
   this( string description, ParserI parser ) {
     this( parser, description );
-  }
-
-public:  
-  override string[] take( string[] args ) {
-    return _parser.take( args );
-  }
-  override void store() {
-    _parser.store();
-  }
-  override void assign() {
-    _parser.assign();
   }
   
   /**
@@ -105,34 +97,6 @@ private:
   void addME( Flagged f ) {
     _mutuallyExclusives.insertFront( f );
   }   
-  
-public:  
-  override string[] take( string[] args ) {
-    try {
-      return _parser.take( args[ 1 .. $ ] );
-    } catch( Exception e ) {
-      e.msg = _flag ~ ": " ~ e.msg;
-      throw e;
-    }
-  }
-  
-  override void store() {
-    try {
-      _parser.store();
-    } catch( Exception e ) {
-      e.msg = _flag ~ ": " ~ e.msg;
-      throw e;
-    }
-  }
-  
-  override void assign() {
-    try {
-      _parser.assign();
-    } catch( Exception e ) {
-      e.msg = _flag ~ ": " ~ e.msg;
-      throw e;
-    }
-  }
     
 public:
   @property string flag() { return _flag; }
@@ -189,7 +153,7 @@ auto toggle( string flag, string description, ref bool toggled ) {
   return setter( flag, description, toggled, !toggled );
 } 
 auto setter( T )( string flag, string description, ref T settee, T setTo ) {
-  return custom( flag, description, commonParser( constantConverter( setTo ), settee ) );
+  return custom( flag, description, noArgParser( settee, setTo ) );
 }  
 
 /**
@@ -276,7 +240,7 @@ auto dir( string name, string description, ref string dir ) {
 }  
 
 
-
+//TODO add flag names in exceptions.
 /**
   Command line parser.
   It provides the user with facilities to create flags and register
@@ -284,9 +248,9 @@ auto dir( string name, string description, ref string dir ) {
   Every factory method returns a flag, but the flag is also immediately
   added to the parser's list.
 */
-class ProgramParser: ParserI {
+class ProgramParser {
 public:
-  override string[] take( string[] tokens ) {
+  string[] take( string[] tokens ) {
     //TODO Might not be useful anymore.
     _args = tokens;
     
@@ -296,7 +260,7 @@ public:
         auto f = flagOf( tokens[ 0 ] );
         enforceNotUsedBefore( f );
         enforceNoMutuallyExclusiveUsed( f );
-        tokens = f.take( tokens );
+        tokens = f.parser.take( tokens[ 1 .. $ ] );
         //TODO automate this used status?
         f.used = true;
         _used.insertBack( f );
@@ -317,14 +281,14 @@ public:
     return [];
   }
   
-  override void store() {
+  void store() {
     foreach( arg; _used ) {
-      arg.store();      
+      arg.parser.store();      
     }
   }
-  override void assign() {
+  void assign() {
     foreach( arg; _used ) {
-      arg.assign();      
+      arg.parser.assign();      
     }
   }  
   
