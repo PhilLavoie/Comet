@@ -55,8 +55,8 @@ interface Converter( T ) {
 /**
   Returns true if the type or symbol implement the converter interface.
 */
-private template isConverter( T... ) if( 1 == T.length && isCallable!T[ 0 ] )  {
-  static if( !is( ReturnType!T[ 0 ] == void ) && is( ParameterTypeTuple!( T[ 0 ] )[ 0 ] == string[] ) ) {
+private template isConverter( T... ) if( 1 == T.length ) {
+  static if( isCallable!( T[ 0 ] ) && !is( ReturnType!T[ 0 ] == void ) && is( ParameterTypeTuple!( T[ 0 ] )[ 0 ] == string[] ) ) {
     enum isConverter = true;
   } else {
     enum isConverter = false;
@@ -160,8 +160,8 @@ interface Assigner( T ) {
 /**
   Returns true if the given type or symbol implements the assigner interface.
 */
-private template isAssigner( T... ) if( 1 == T.length && isCallable!T ) {
-  static if( is( ReturnType!T == void ) ) {
+private template isAssigner( T... ) if( 1 == T.length ) {
+  static if( isCallable!( T[ 0 ] ) && is( ReturnType!( T[ 0 ] ) == void ) ) {
     enum isAssigner = true;
   } else {
     enum isAssigner = false;
@@ -189,13 +189,17 @@ mixin template takeThat( size_t arity ) {
     return args[ arity .. $ ];
   }
 }
+mixin template takeOne() {
+  mixin takeThat!1u;
+}
 
 /**
   Predefined argument parser optimized for single arguments that just
   converts and assigns directly to a variable.
 */
 class ArgParser( T, U  ): ParserI if(
-  isConverter!T
+  isConverter!T &&
+  !isAssigner!U
 ) {
 protected:
   T _converter;
@@ -207,7 +211,7 @@ protected:
     _assigned = assigned;
   }
 
-  mixin takeThat!1u;
+  mixin takeOne;
 
 public:  
   override void store() {
@@ -222,11 +226,51 @@ public:
 /**
   This function returns a parser that:
     - Expects 1 argument
-    - Uses the provided parser
+    - Uses the provided converter
     - Assigns the value to the reference variable
 */
-auto commonParser( T, U )( T converter, ref U value ) {
+auto commonParser( T, U )( T converter, ref U value ) if( !isAssigner!U ) {
   return new ArgParser!( T, U )( converter, &value );
+}
+
+/**
+  Predefined argument parser optimized for single arguments converts but also
+  assigns using the provided callable objects.
+*/
+class ArgParser( T, U  ): ParserI if(
+  isConverter!T &&
+  isAssigner!U
+) {
+protected:
+  T _converter;
+  U _assigner;
+  typeOf!U _value;
+
+  this( T  converter, U assigner ) {
+    _converter = converter;
+    _assigner = assigner;
+  }
+
+  mixin takeOne;
+
+public:  
+  override void store() {
+    _value = _converter( _args );
+  }
+  
+  override void assign() {
+    _assigner( _value );
+  }
+}
+
+/**
+  This function returns a parser that:
+    - Expects 1 argument
+    - Uses the provided converter
+    - Uses the custom assigner
+*/
+auto commonParser( T, U )( T converter, U assigner ) if( isAssigner!U ) {
+  return new ArgParser!( T, U )( converter, assigner );
 }
 
 /**

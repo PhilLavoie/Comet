@@ -24,6 +24,9 @@ class MissingArgumentsException: Exception {
 /**
   Checks that the tokens provided hold enough arguments for the flag.
   Throws a standard exception otherwise (with a standard error message).
+  
+  It is highly recommended to use this function for parsers when they extract
+  their argument to keep a standardized way of handling errors.
 */
 void enforceEnoughArgs( string[] tokens, size_t noArgs ) {
   enforce( noArgs <= tokens.length, new MissingArgumentsException( noArgs ) );

@@ -14,6 +14,7 @@ import std.conv;
 import std.exception;
 import std.container;
 import std.datetime;
+import std.range: isForwardRange;
 
 //TODO: Add parallel processing optimization.
 
@@ -24,9 +25,9 @@ void main( string[] args ) {
     Config cfg;
     cfg.parse( args );
   
-    foreach( seqFile; cfg.sequencesFiles ) {
-      processFile( seqFile, cfg.resultsFileFor( seqFile ), cfg );
-    }
+    foreach( fileRuns; cfg.programRuns ) {
+      processFile( fileRuns, cfg );
+    }  
     
   } catch( Exception e ) {
     if( e.msg.length ) {
@@ -36,20 +37,28 @@ void main( string[] args ) {
   } 
 }
 
-void processFile( File seqFile, File resultsFile, ref Config cfg ) {
+void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isForwardRange!Range ) {
+  foreach( sequence; sequences ) {
+    enforce( sequence.length == length, "Expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.length.to!string ~ " to be of length: " ~ length.to!string );
+  }
+}
+
+void processFile( Range )( Range fileRuns, Config cfg ) if( isForwardRange!Range ) {
+  auto seqFile = fileRuns.sequencesFile;
+  
   if( 1 <= cfg.verbosity ) {
     cfg.outFile.writeln( "Processing file " ~ seqFile.name ~ "..." );
   }
+  
   
   //Extract sequences from file.
   auto sequences = fasta.parse!( Molecule.DNA )( seqFile );
   size_t seqsCount = sequences.length;
   enforce( 1 < seqsCount, "Expected at least two sequences but received " ~ seqsCount.to!string() );
   
-  size_t seqLength = sequences[0].length;
-  foreach( sequence; sequences ) {
-    enforce( sequence.length == seqLength, "Expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.length.to!string ~ " to be of length: " ~ seqLength.to!string );
-  }
+  size_t seqLength = sequences[ 0 ].length;
+  enforceSequencesLength( sequences[], seqLength );
+  
   size_t midPosition = seqLength / 2;
   
   //Make sure the minimum period is within bounds.
@@ -61,18 +70,20 @@ void processFile( File seqFile, File resultsFile, ref Config cfg ) {
   
   SysTime startTime;
   
-  if( cfg.printTime ) { startTime = Clock.currTime(); }  
-  
-  auto bestResults = sequentialDupCostsCalculation( sequences, cfg );  
-  
-  if( cfg.printTime ) { cfg.timeFile.printTime( Clock.currTime() - startTime ); }
-  if( cfg.printResults ) { resultsFile.printResults( bestResults ); }
+  foreach( run; fileRuns ) {
+    if( cfg.printTime ) { startTime = Clock.currTime(); }  
+    
+    auto bestResults = sequentialDupCostsCalculation( sequences, cfg, run.algorithm );  
+    
+    if( cfg.printTime ) { cfg.timeFile.printTime( Clock.currTime() - startTime ); }
+    if( cfg.printResults ) { run.resultsFile.printResults( bestResults ); }
+  }
 }
 
 /**
   Prints the results to the standard output in the given order.
 */
-void printResults( Range )( File output, Range results ) {
+void printResults( Range )( File output, Range results ) if( isForwardRange!Range ) {
   foreach( result; results ) {
     output.writeln( "Duplication{ start: ", result.start, ", period: ", result.period, ", cost: ", result.cost, " }" );
   }
@@ -101,7 +112,7 @@ void printTime( Time )( File output, Time time ) {
   
   Returns a range over the results in descending order (best result comes first).
 */
-auto sequentialDupCostsCalculation( Seq )( Seq[] sequences, ref Config cfg, Algo algorithm ) in {
+auto sequentialDupCostsCalculation( Seq )( Seq[] sequences, ref Config cfg, Algo rithm ) in {
   assert( 2 <= sequences.length );
 } body {  
   //Up to now, only nucleotides are supported.
@@ -113,13 +124,14 @@ auto sequentialDupCostsCalculation( Seq )( Seq[] sequences, ref Config cfg, Algo
   };
   
   auto results = Results( cfg.noResults );
+  auto algorithm = algo( rithm, sequences, states, mutationCosts );
   
   //Main loop of the program.
   //For each period length, evaluate de duplication cost of every possible positions.
   size_t seqLength = sequences[ 0 ].length;
   
   foreach( period; cfg.periods( seqLength ) ) {
-    if( 2 <= cfg.verbosity ) { writeln( "Doing period: ", period.length ); }
+    if( 2 <= cfg.verbosity ) { cfg.outFile.writeln( "Doing period: ", period.length ); }
     foreach( dup; period.duplications() ) {
       algorithm.duplicationCost( dup );
       results.add( dup );

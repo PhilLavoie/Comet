@@ -188,19 +188,6 @@ auto bounded( T )( string flag, string description, ref T value, T min, T max ) 
 }
 
 /**
-  The value is checked against the candidates and must be one of them ("=="). String enumerations are
-  separated by the "|" symbol. Therefore, if one should expect one of the following: "toto", "tata", "tutu", then
-  the candidates should be written like this: "toto|tata|tutu".
-*/
-auto enumeration( string flag, string description, ref string value, string candidates ) {
-  return custom(
-    flag,
-    description,
-    commonParser( enumerationConverter( candidates ), value )
-  );
-}
-
-/**
   This facility uses a map of words listing the possible values. If the token found was one of them,
   then the value is set to the token's mapped value.
 */

@@ -15,32 +15,27 @@ import comet.ranges;
 public import comet.dup;
 
 import std.algorithm;
-import std.range;
 
 /**
   This function constructs and returns an algorithm object based on the
   program configuration. 
 */
-AlgoI algos( Range, U )( Range algos, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) if( isForwardRange!Range ) {
-  return algos.map!( 
-    ( Algo algo ) {
-      final switch( cfg.algo ) {
-        case Algo.standard:
-          return new Standard!U( sequences, states, mutationCosts );
-          break;
-        case Algo.cache:
-          return new Cache!U( sequences, states, mutationCosts );
-          break;
-        case Algo.patterns:
-          return new Patterns!U( sequences, states, mutationCosts );
-          break;
-        case Algo.cachePatterns:  
-          return new CachePatterns!U( sequences, states, mutationCosts );
-          break;
-      }
-      assert( false );  
-    }
-  );
+AlgoI algo( U )( Algo algo, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) {
+  final switch( algo ) {
+    case Algo.standard:
+      return new Standard!U( sequences, states, mutationCosts );
+      break;
+    case Algo.cache:
+      return new Cache!U( sequences, states, mutationCosts );
+      break;
+    case Algo.patterns:
+      return new Patterns!U( sequences, states, mutationCosts );
+      break;
+    case Algo.cachePatterns:  
+      return new CachePatterns!U( sequences, states, mutationCosts );
+      break;
+  }
+  assert( false );  
 }
 
 /**

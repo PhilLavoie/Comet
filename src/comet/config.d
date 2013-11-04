@@ -11,15 +11,16 @@ import std.exception;
 import std.conv;
 import std.stdio;
 import std.container;
+import std.range: isForwardRange;
 
 /**
   Those are the algorithms used to process sequences and determine segment pairs distances.
 */
 enum Algo {
-  standard = 0,
-  cache,
-  patterns,
-  cachePatterns
+  standard = 0,   //Without optimizations.
+  cache,          //Using a frame cache.
+  patterns,       //Reusing patterned results.
+  cachePatterns   //Both optimization at the same time.
 }
 
 //The strings used to identify the algorithms on the command line.
@@ -37,22 +38,20 @@ static this() {
   ];
 }
 
+/**
+  The program can run in four modes. The first one being the processing of a single sequences file.
+  There is a mode to generate references results to use for regression testing.
+  The testing mode is used to make sure the new results are equivalent to the previous ones.
+  The last mode is used to compare different measurements.
+*/
 enum Mode {
   normal,
-  batch,
   generateReferences,
   runTests,
   compileMeasures
 }
 
-struct ProgramRuns {
-private:
-
-public:
-
-}
-
-struct FileRun {
+struct Run {
 private:
   File _resultsFile;
   Algo _algorithm;
@@ -64,33 +63,74 @@ private:
     _algorithm = rithm;
   }
 public:
-  @disable this();
   @property auto resultsFile() { return _resultsFile; }
   @property auto algorithm() { return _algorithm; }  
+  auto opDispatch( string meth, T... )( T args ) {
+    return mixin( "_cfg." ~ meth )( args );
+  }
 }
 
-struct FileRuns {
+struct FileRuns( Range ) if( isForwardRange!Range ) {
 private:
   File _sequencesFile;
   Config _cfg;
-  typeof( Config.algos ) _algos;
+  Range _algos;
   
-  this( File sequencesFile, Config cfg ) {
+  this( Config cfg, File sequencesFile, Range algos  ) {
     _sequencesFile = sequencesFile;
     _cfg = cfg;
-    _agos = _cfg.algos;
+    _algos = algos;
   }
 public:
   @property bool empty() {
     return _algos.empty();
   }
-  @property FileRun front() {
-    return FileRun( _cfg, _cfg.resultsFileFor( _sequencesFile ), _algos.front() );
+  @property auto front() {
+    return Run( _cfg, _cfg.resultsFileFor( _sequencesFile ), _algos.front() );
+  }
+  @property auto save() {
+    return this;
   }
   void popFront() {
     _algos.popFront();
   }
+  
+  @property auto sequencesFile() {
+    return _sequencesFile;
+  }
+}
 
+private auto fileRuns( Range )( Config cfg, File seqFile, Range algos ) if( isForwardRange!Range ) {
+  return FileRuns!Range( cfg, seqFile, algos );
+}
+
+struct Runs( Range ) if( isForwardRange!Range ) {
+private:
+  Range _sequencesFiles;
+  Config _cfg;
+  
+  this( Config cfg, Range seqFiles ) {
+    _cfg = cfg;
+    _sequencesFiles = seqFiles;
+  }
+  
+public:
+  @property bool empty() {
+    return _sequencesFiles.empty();
+  }
+  @property auto front() {
+    return fileRuns( _cfg, _sequencesFiles.front(), _cfg.algos );
+  }
+  @property auto save() {
+    return this;
+  }
+  void popFront() {
+    _sequencesFiles.popFront();
+  }
+}
+
+private auto runs( Range )( Config cfg, Range sequencesFiles ) if( isForwardRange!Range ) {
+  return Runs!Range( cfg, sequencesFiles );
 }
 
 
@@ -102,6 +142,10 @@ public:
 */
 struct Config {
   string PROGRAM_NAME;
+  
+  public auto programRuns() {
+    return runs( this, sequencesFiles ); 
+  }
 
   private {
     Flagged _noResultsArg;
@@ -142,16 +186,19 @@ struct Config {
       _printTimeArg = toggle( "--no-time", "Removes the execution time from the results.", _printTime );
       _printResultsArg = toggle( "--no-res", "Prevents the results from being printed.", _printResults );
       _algorithmArg = 
-        mapped( 
+        flagged( 
           "--algo", 
           "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
-          _algo,
-          algosByStrings
+          commonParser( mappedConverter( algosByStrings ), ( Algo algo ) { _algos.insertBack( algo ); } )
         );        
       _seqDirArg = dir( "--sd", "Sequences directory. This flag is mandatory.", _sequencesDir );       
       _resDirArg = dir( "--rd", "Results directory. This flag is mandatory.", _resultsDir );
       _outFileArg = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
-      _seqFileArg = file( "-s", "Sequences file. This flag is mandatory.", _sequencesFiles[ 0 ], "r" );
+      _seqFileArg = flagged( 
+        "-s", 
+        "Sequences file. This flag is mandatory.", 
+        commonParser( fileConverter( "r" ), ( File f ) { _sequencesFiles.insertBack( f );  } )
+        );
       _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
       _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
       _subProgramArg = indexed( 
@@ -199,27 +246,23 @@ struct Config {
   private Mode _mode = Mode.normal;
   @property public Mode mode() { return _mode; }
 
-  private File[] _sequencesFiles;
+  private Array!File _sequencesFiles;
   private string _sequencesDir;
   @property public auto sequencesFiles() { 
-    import std.array;
     import std.file;
     import std.algorithm; 
     
     switch( _mode ) {
       case Mode.generateReferences:
-        auto files = new File[ dirEntries( _sequencesDir, SpanMode.depth ).count() ];
-        
-        int i = 0;
         foreach( file; dirEntries( _sequencesDir, SpanMode.depth ).map!( a => File( a, "r" ) ) ) {
-          files[ i ] = file;
-          ++i;
+          _sequencesFiles.insertBack( file );
         }
         
-        return files[];
+        break;
       default:
         return _sequencesFiles[];     
     } 
+    return _sequencesFiles[];
   }
   
   private ubyte _verbosity = 0;  
@@ -268,7 +311,7 @@ struct Config {
   @property public size_t noThreads() const { return _noThreads; }
   
   private Array!Algo _algos;  
-  @property public auto algos() const { return _algos[]; }
+  @property public auto algos() { return _algos[]; }
   
   private bool _printConfig = false;  
   @property public bool printConfig() const { return _printConfig; }
@@ -290,7 +333,7 @@ struct Config {
       writeln( "Output file: ", _outFile );
       
       if( _mode == Mode.normal ) {
-        writeln( "Sequences files: ", _sequencesFiles.map!( a => a.fileName() ) );
+        writeln( "Sequences files: ", _sequencesFiles[].map!( a => a.fileName() ) );
       } else {
         writeln( "Sequences dir: ", _sequencesDir );
       }
@@ -307,7 +350,7 @@ struct Config {
       writeln( "Print time: ", _printTime );
       writeln( "Time file: ", _timeFile.fileName() );
       
-      writeln( "Algorithm: ", algoStrings[ _algo ] );
+      writeln( "Algorithms: ", _algos[].map!( algo => algoStrings[ algo ] ) );
       writeln( "Minimum period: ", _minPeriod );
       writeln( "Maximum period: ", _maxPeriod );
       writeln( "Period step: ", _periodStep );
@@ -332,8 +375,6 @@ struct Config {
     _timeFile = stdout;
     _outFile = stdout;
     _resultsFile = stdout;
-    _sequencesFiles = new File[ 1 ];
-    _sequencesFiles[ 0 ] = stdout;
     _algos.reserve( algoStrings.length );
     _algos.insertBack( Algo.standard );
     initFlags();   
