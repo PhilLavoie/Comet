@@ -60,8 +60,8 @@ void processFile( File seqFile, File resultsFile, ref Config cfg ) {
   );
   
   SysTime startTime;
-  if( cfg.printTime ) { startTime = Clock.currTime(); }
   
+  if( cfg.printTime ) { startTime = Clock.currTime(); }  
   
   auto bestResults = sequentialDupCostsCalculation( sequences, cfg );  
   
@@ -101,7 +101,7 @@ void printTime( Time )( File output, Time time ) {
   
   Returns a range over the results in descending order (best result comes first).
 */
-auto sequentialDupCostsCalculation( Seq )( Seq[] sequences, ref Config cfg ) in {
+auto sequentialDupCostsCalculation( Seq )( Seq[] sequences, ref Config cfg, Algo algorithm ) in {
   assert( 2 <= sequences.length );
 } body {  
   //Up to now, only nucleotides are supported.
@@ -112,7 +112,6 @@ auto sequentialDupCostsCalculation( Seq )( Seq[] sequences, ref Config cfg ) in 
     return 0;
   };
   
-  auto algorithm = algo( cfg, sequences, states, mutationCosts );
   auto results = Results( cfg.noResults );
   
   //Main loop of the program.

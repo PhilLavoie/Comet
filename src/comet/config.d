@@ -10,6 +10,7 @@ import comet.cli.all;
 import std.exception;
 import std.conv;
 import std.stdio;
+import std.container;
 
 /**
   Those are the algorithms used to process sequences and determine segment pairs distances.
@@ -44,12 +45,156 @@ enum Mode {
   compileMeasures
 }
 
+struct ProgramRuns {
+private:
+
+public:
+
+}
+
+struct FileRun {
+private:
+  File _resultsFile;
+  Algo _algorithm;
+  Config _cfg;
+  
+  this( Config cfg, File res, Algo rithm ) {
+    _cfg = cfg;
+    _resultsFile = res;
+    _algorithm = rithm;
+  }
+public:
+  @disable this();
+  @property auto resultsFile() { return _resultsFile; }
+  @property auto algorithm() { return _algorithm; }  
+}
+
+struct FileRuns {
+private:
+  File _sequencesFile;
+  Config _cfg;
+  typeof( Config.algos ) _algos;
+  
+  this( File sequencesFile, Config cfg ) {
+    _sequencesFile = sequencesFile;
+    _cfg = cfg;
+    _agos = _cfg.algos;
+  }
+public:
+  @property bool empty() {
+    return _algos.empty();
+  }
+  @property FileRun front() {
+    return FileRun( _cfg, _cfg.resultsFileFor( _sequencesFile ), _algos.front() );
+  }
+  void popFront() {
+    _algos.popFront();
+  }
+
+}
+
+
+
 /**
   Program configuration data.
   Initialized to default value.
   Note that this should only be read by the rest of the program and never modified.
 */
 struct Config {
+  string PROGRAM_NAME;
+
+  private {
+    Flagged _noResultsArg;
+    Flagged _minPeriodArg;
+    Flagged _maxPeriodArg;
+    Flagged _singleStepArg;
+    Flagged _verbosityLvlArg;
+    Flagged _printConfigArg;
+    Flagged _printTimeArg;
+    Flagged _printResultsArg;
+    Flagged _algorithmArg;    
+    Flagged _seqDirArg;
+    Flagged _resDirArg;
+    Flagged _outFileArg;
+    Flagged _seqFileArg;
+    Flagged _resFileArg;
+    Flagged _timeFileArg;
+    Indexed _subProgramArg;    
+    
+    void initFlags() {
+      _noResultsArg = value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
+      _minPeriodArg = value( "--min", "Minimum period length. Default is " ~ _minPeriod.to!string() ~ ".", _minPeriod );
+      _maxPeriodArg = 
+        value( 
+          "--max",
+          "Maximum period length. Default is " ~ _minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.",
+          _maxPeriod 
+        );
+      _singleStepArg = 
+        setter( 
+          "--single-step",
+          "Sets the segment pair length step to be 1 instead of 3.",
+          _periodStep,
+          1u
+        );
+      _verbosityLvlArg = value( "-v", "Verbosity level. Default is " ~ _verbosity.to!string ~ ".", _verbosity );
+      _printConfigArg = toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", _printConfig );
+      _printTimeArg = toggle( "--no-time", "Removes the execution time from the results.", _printTime );
+      _printResultsArg = toggle( "--no-res", "Prevents the results from being printed.", _printResults );
+      _algorithmArg = 
+        mapped( 
+          "--algo", 
+          "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
+          _algo,
+          algosByStrings
+        );        
+      _seqDirArg = dir( "--sd", "Sequences directory. This flag is mandatory.", _sequencesDir );       
+      _resDirArg = dir( "--rd", "Results directory. This flag is mandatory.", _resultsDir );
+      _outFileArg = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
+      _seqFileArg = file( "-s", "Sequences file. This flag is mandatory.", _sequencesFiles[ 0 ], "r" );
+      _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
+      _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
+      _subProgramArg = indexed( 
+        -1, 
+        "Subprogram.", 
+        new class ParserI {
+          override string[] take( string[] args ) {
+            switch( args[ 0 ] ) {
+              case "generate-references":
+                _mode = Mode.generateReferences;
+                
+                auto genRefParser = generateReferencesParser();           
+                //TODO: slice the args and launch the parser.
+                break;            
+              default:
+                return args;
+            }     
+            assert( false );          
+          }
+          
+          override void store() {}
+          override void assign() {}
+        }
+      );
+    }
+  }
+
+  Parser generateReferencesParser() {
+    auto genRefParser = new Parser();
+    genRefParser.name = PROGRAM_NAME ~ " generate-references";    
+    genRefParser.add(
+      _seqDirArg,
+      _resDirArg,
+      _verbosityLvlArg,
+      _outFileArg,
+      _printTimeArg,
+      _printConfigArg,
+    );           
+    genRefParser.mandatory( _seqDirArg );
+    genRefParser.mandatory( _resDirArg ); 
+    
+    return genRefParser;  
+  }
     
   private Mode _mode = Mode.normal;
   @property public Mode mode() { return _mode; }
@@ -122,8 +267,8 @@ struct Config {
   private size_t _noThreads = 1;
   @property public size_t noThreads() const { return _noThreads; }
   
-  private Algo _algo = Algo.standard;  
-  @property public Algo algo() const { return _algo; }
+  private Array!Algo _algos;  
+  @property public auto algos() const { return _algos[]; }
   
   private bool _printConfig = false;  
   @property public bool printConfig() const { return _printConfig; }
@@ -189,107 +334,32 @@ struct Config {
     _resultsFile = stdout;
     _sequencesFiles = new File[ 1 ];
     _sequencesFiles[ 0 ] = stdout;
-    
-    
-    auto noResults = value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
-    auto minPeriod = value( "--min", "Minimum period length. Default is " ~ _minPeriod.to!string() ~ ".", _minPeriod );
-    auto maxPeriod = 
-      value( 
-        "--max",
-        "Maximum period length. Default is " ~ _minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.",
-        _maxPeriod 
-      );
-    auto singleStep = 
-      setter( 
-        "--single-step",
-        "Sets the segment pair length step to be 1 instead of 3.",
-        _periodStep,
-        1u
-      );
-    auto verbosityLvl = value( "-v", "Verbosity level. Default is " ~ _verbosity.to!string ~ ".", _verbosity );
-    auto printConfig = toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", _printConfig );
-    auto printTime = toggle( "--no-time", "Removes the execution time from the results.", _printTime );
-    auto printResults = toggle( "--no-res", "Prevents the results from being printed.", _printResults );
-    auto algo = 
-      mapped( 
-        "--algo", 
-        "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
-        _algo,
-        algosByStrings
-      );
-      
-    auto seqDir = dir( "--sd", "Sequences directory. This flag is mandatory.", _sequencesDir );
-     
-    auto resDir = dir( "--rd", "Results directory. This flag is mandatory.", _resultsDir );
-  
-    auto outFile = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
-  
-    auto subProgram = indexed( 
-      -1, 
-      "Subprogram.", 
-      new class ParserI {
-        override string[] take( string[] args ) {
-          switch( args[ 0 ] ) {
-            case "generate-references":
-              _mode = Mode.generateReferences;
-              
-              auto genRefParser = new ProgramParser();
-              genRefParser.name = commandName( tokens ) ~ " generate-references";
-              
-              genRefParser.add(
-                seqDir,
-                resDir,
-                verbosityLvl,
-                outFile,
-                printTime,
-                printConfig,
-              );           
-              genRefParser.mandatory( seqDir );
-              genRefParser.mandatory( resDir );            
-              //TODO: slice the args and launch the parser.
-              break;            
-            default:
-              return args;
-          }     
-          assert( false );          
-        }
-        
-        override void store() {}
-        override void assign() {}
-      }
-    );
-  
-    
-    
-    
-        
-             
-    auto seqFile = file( "-s", "Sequences file. This flag is mandatory.", _sequencesFiles[ 0 ], "r" );
-    auto resFile = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
-    auto timeFile = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
+    _algos.reserve( algoStrings.length );
+    _algos.insertBack( Algo.standard );
+    initFlags();   
+    PROGRAM_NAME = commandName( tokens );
     
     //Normal mode parser.
-    auto parser = new ProgramParser();
-    parser.name = commandName( tokens );    
+    auto parser = new Parser();
     parser.add(
-      seqFile,
-      verbosityLvl,
-      outFile,
-      printResults,
-      resFile,
-      printTime,
-      timeFile,
-      noResults,
-      minPeriod,
-      maxPeriod,
-      singleStep,
-      printConfig,
-      algo      
+      _seqFileArg,
+      _verbosityLvlArg,
+      _outFileArg,
+      _printResultsArg,
+      _resFileArg,
+      _printTimeArg,
+      _timeFileArg,
+      _noResultsArg,
+      _minPeriodArg,
+      _maxPeriodArg,
+      _singleStepArg,
+      _printConfigArg,
+      _algorithmArg
     );
     
-    parser.mandatory( seqFile );
-    parser.mutuallyExclusive( printResults, resFile );
-    parser.mutuallyExclusive( printTime, timeFile );
+    parser.mandatory( _seqFileArg );
+    parser.mutuallyExclusive( _printResultsArg, _resFileArg );
+    parser.mutuallyExclusive( _printTimeArg, _timeFileArg );
     
     parser.parse( tokens );
     

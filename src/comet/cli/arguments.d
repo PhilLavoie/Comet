@@ -27,7 +27,7 @@ protected:
   bool _used = false;
   @property void used( bool u ) { _used = u; }
   
-  bool _optional = true;
+  bool _optional;
   @property bool optional() { return _optional; }
   @property void optional( bool opt ) { _optional = opt; }
   
@@ -61,6 +61,7 @@ protected:
   this( int index, string description, ParserI parser ) {
     super( parser, description );
     _index = index;
+    _optional = false;
   }
 
 }
@@ -85,6 +86,7 @@ private:
   this( ParserI parser, string description, string flag ) { 
     super( parser, description );
     _flag = flag;    
+    _optional = true;
   }
   this( string flag, string description, ParserI parser ) {
     this( parser, description, flag );
@@ -154,6 +156,9 @@ auto toggle( string flag, string description, ref bool toggled ) {
 } 
 auto setter( T )( string flag, string description, ref T settee, T setTo ) {
   return custom( flag, description, noArgParser( settee, setTo ) );
+}
+auto caller( T )( string flag, string description, T callee ) if( isCallable!T ) {
+  return custom( flag, description, noArgParser( callee ) );
 }  
 
 /**
@@ -248,7 +253,7 @@ auto dir( string name, string description, ref string dir ) {
   Every factory method returns a flag, but the flag is also immediately
   added to the parser's list.
 */
-class ProgramParser {
+class Parser {
 public:
   string[] take( string[] tokens ) {
     //TODO Might not be useful anymore.
@@ -522,7 +527,7 @@ unittest {
   string s = "tata";
   bool toggled = false;
   
-  auto parser = new ProgramParser( "This is a unit test" );
+  auto parser = new Parser( "This is a unit test" );
   parser.add(
     value( "-i", "The integer flag.", i ),
     value( "-s", "The string flag.", s ),

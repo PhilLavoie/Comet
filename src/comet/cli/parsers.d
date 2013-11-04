@@ -10,13 +10,21 @@ import std.stdio;
 import std.path;
 import std.algorithm;
 
-//TODO supplement "is" templates with arity when it gets fixed.
-package:
-
 /**
   This interface is for objects designed to parse arguments from the command line.
+  They are defined as "lazy parsers": they offer a three steps parsing.
+  
+  The first step is the taking and keeping of arguments to be parsed. The main parser
+  asks for program argument parsers to take their own argument so it can determine
+  where to move next. 
+  
+  The second step is the actual conversion of the argument into any given type. 
+  
+  The final step is the assignment of the converted value to its associated variable
+  into the user's program. This is also the step in which functions are called if
+  they are to be used instead of typical argument values.
 */
-public interface ParserI {
+interface ParserI {
 public:
   
   /**
@@ -25,59 +33,56 @@ public:
   string[] take( string[] );
   
   /**
-    Converts the value from the previously saved tokens and store it temporarily.
+    Converts the value from the previously saved tokens and store it temporarily, if any.
   */
   void store();
   
   /**
-    Assign the temporarily stored value to its dedicated variable.
+    Final step: affects the user program's environment by either assigning the 
+    converted value or executing the action requested by the user.
   */
   void assign();
 }
 
-//The next definitions are 
-
 /**
-  TODO
-*/
-interface Arity {
-  size_t opCall( string[] );
-}
-
-/**
-  Returns true if the given can be used to get the arity of an argument.
-*/
-private template isArity( T ) {
-  static if( is( typeof( () { T t; string[] args; size_t value = t( args ); } ) ) ) {
-    enum isArity = true;
-  } else {
-    enum isArity = false;
-  }
-}
-
-/**
-  A converter is an object that takes strings and returns a converted value.
+  A converter is a callable object that takes strings and returns a converted value. Note that
+  it could: do nothing, return a constant.
 */
 interface Converter( T ) {
   T opCall( string[] );
 }
 
-private template isConverter( T ) {
-  static if( !is( ReturnType!T == void ) && is( ParameterTypeTuple!T[ 0 ] == string[] ) ) {
+/**
+  Returns true if the type or symbol implement the converter interface.
+*/
+private template isConverter( T... ) if( 1 == T.length && isCallable!T[ 0 ] )  {
+  static if( !is( ReturnType!T[ 0 ] == void ) && is( ParameterTypeTuple!( T[ 0 ] )[ 0 ] == string[] ) ) {
     enum isConverter = true;
   } else {
     enum isConverter = false;
   }
 }
 
+//Predefined converters for ease of use.
+
+/**
+  Returns a converter that always returns the same value, regardless of the parameters passed.
+*/
 auto constantConverter( T )( T value ) {
   return ( string[] ) => value;
 }
 
+/**
+  Returns a converter that uses std.conv.to function to convert to the given type.
+*/
 auto toConverter( T )() {
   return ( string[] tokens ) => tokens[ 0 ].to!T();
 }
 
+/**
+  Returns a converter that, in addition to using std.conv.to makes sure that the value is
+  within given bounds.
+*/
 auto boundedConverter( T )( T min, T max ) {
   return ( string[] tokens ) { 
     auto t = tokens[ 0 ].to!T(); 
@@ -87,15 +92,18 @@ auto boundedConverter( T )( T min, T max ) {
   };
 }
 
-auto enumerationConverter( string candidates ) {
-  return ( string[] tokens ) {
-    auto splitted = candidates.splitter( "|" );
-    auto temp = tokens[ 0 ];
-    enforce( splitted.canFind( temp ), temp ~ " is not one of possible values: " ~ splitted.to!string );
-    return temp;      
-  };
-}
-
+/**
+  A converter that simply:
+    1 - Guarantees the token is in the map.
+    2 - Returns its associated values.
+  This converter is very useful for enumerated values:
+  enum Level {
+    low,
+    medium,
+    highAsHell
+  }
+  auto conv = mappedConverter( [ "low": Level.low, "Okay": Level.medium, "IMissMyMomma": Level.highAsHell );
+*/
 auto mappedConverter( T )( in T[ string ] map ) {
   return ( string[] tokens ) {
     string temp = tokens[ 0 ];
@@ -104,6 +112,9 @@ auto mappedConverter( T )( in T[ string ] map ) {
   };
 }
 
+/**
+  A converter that opens a file with the given mode.
+*/
 auto fileConverter( string mode ) {
   return ( string[] tokens ) {
     if( tokens[ 0 ] == "stdout" ) {
@@ -121,6 +132,10 @@ auto fileConverter( string mode ) {
   };
 }
 
+/**
+  A converter that makes sure that the received token is a directory. It also guarantees
+  that the returned string ends with a directory separator, for conformity's sake.
+*/
 auto dirConverter() {
   return ( string[] tokens ) {
     auto dir = tokens[ 0 ];
@@ -133,12 +148,19 @@ auto dirConverter() {
   };
 }
 
-
+/**
+  An assigner is a callable object that just does something with the converted value. This
+  typically means assigning it to a user's variable, hence the name. However, this could
+  also mean a call to a function, or a method like inserting at the end of a list for example.
+*/
 interface Assigner( T ) {
   void opCall( T value );
 }
 
-private template isAssigner( T ) {
+/**
+  Returns true if the given type or symbol implements the assigner interface.
+*/
+private template isAssigner( T... ) if( 1 == T.length && isCallable!T ) {
   static if( is( ReturnType!T == void ) ) {
     enum isAssigner = true;
   } else {
@@ -146,103 +168,36 @@ private template isAssigner( T ) {
   }
 }
 
+/**
+  Returns the type used as the assigner's parameter.
+*/
 private template typeOf( T ) if( isAssigner!T ) {
   alias typeOf = Unqual!( ParameterTypeTuple!T[ 0 ] );
 }
 
-private template isAssignerOf( T, U ) {
-  static if( is( typeof( () { T t; U arg; t( arg ); } ) ) ) {
-    enum isAssigner = true;
-  } else {
-    enum isAssigner = false;
-  }
-}
-
-auto assigner( T )( ref T assignee ) {
-  return ( T value ) { assignee = value; };
-}
-
-class Parser( T, U, V  ): ParserI if(
-  isArity!T &&
-  isConverter!U &&
-  isAssigner!V
-) {
-protected:
-  string[] _args;
-
-  T _arity;
-  U _converter;
-  V _assigner;
-  
-  typeOf!V _value;
-
-
-  this( T arity, U converter, V assigner ) {
-    _arity = arity;
-    _converter = converter;
-    _assigner = assigner;
-  }
-
-public:  
-  override string[] take( string[] args ) {
-    auto arity = _arity( args );
+/**
+  A predefined implementation for parsers' "take" method.
+  This one generates a method for fixed arity parsers.
+  The variable where the arguments are stored will be called
+  _args.   
+*/
+mixin template takeThat( size_t arity ) {
+  protected string[] _args;
+  public override string[] take( string[] args ) {
     enforceEnoughArgs( args, arity );
     _args = args[ 0 .. arity ];
     return args[ arity .. $ ];
   }
-
-  override void store() {
-    _value = _converter( _args );
-  }
-  
-  override void assign() {
-    _assigner( _value );
-  }
-
 }
 
-//Optimised for fixed arity.
-class Parser( size_t arity, U, V  ): ParserI if(
-  1 <= arity &&
-  isConverter!U &&
-  isAssigner!V
-) {
-protected:
-  string[] _args;
-  
-  U _converter;
-  V _assigner;
-  
-  typeOf!V _value;
-
-  this( U converter, V assigner ) {
-    _converter = converter;
-    _assigner = assigner;
-  }
-
-public:  
-  override string[] take( string[] args ) {
-    enforceEnoughArgs( args, arity );
-    _args = args[ 0 .. arity ];
-    return args[ arity .. $ ];
-  }
-  
-  override void store() {
-    _value = _converter( _args );
-  }
-  
-  override void assign() {
-    _assigner( _value );
-  }
-}
-
-//Optimised for single arguments.
-class Parser( size_t arity : 1u, T, U  ): ParserI if(
+/**
+  Predefined argument parser optimized for single arguments that just
+  converts and assigns directly to a variable.
+*/
+class ArgParser( T, U  ): ParserI if(
   isConverter!T
 ) {
 protected:
-  string[] _args;
-  
   T _converter;
   U * _assigned;  
   U _value;
@@ -252,13 +207,9 @@ protected:
     _assigned = assigned;
   }
 
+  mixin takeThat!1u;
+
 public:  
-  override string[] take( string[] args ) {
-    enforceEnoughArgs( args, arity );
-    _args = args[ 0 .. arity ];
-    return args[ arity .. $ ];
-  }
-  
   override void store() {
     _value = _converter( _args );
   }
@@ -268,8 +219,35 @@ public:
   }
 }
 
-//Optimised for toggles and setters (no arguments).
-class Parser( T ): ParserI {
+/**
+  This function returns a parser that:
+    - Expects 1 argument
+    - Uses the provided parser
+    - Assigns the value to the reference variable
+*/
+auto commonParser( T, U )( T converter, ref U value ) {
+  return new ArgParser!( T, U )( converter, &value );
+}
+
+/**
+  Predefined implementation of an empty "take" method.
+*/
+mixin template takeNothing() {
+  override string[] take( string[] args ) { return args; }
+}
+/**
+  Predefined implementation of an empty "store" method.
+*/
+mixin template storeNothing() {
+  override void store() {}
+}
+
+/**
+  Predefined argument parser optimized for arguments that don't
+  expect any arguments, do no parsing and automatically sets a variable
+  to a predefined value, typically, a boolean to true.
+*/
+class ArgParser( T ): ParserI if( !isCallable!T ) {
 protected:
   
   T * _assigned;  
@@ -281,28 +259,49 @@ protected:
   }
 
 public:  
-  override string[] take( string[] args ) {
-    return args;
-  }
-  
-  //No value is parsed so nothing is done.
-  override void store() {}
-  
+  mixin takeNothing;
+  mixin storeNothing;  
   override void assign() {
     *_assigned = _assignedTo;
   }
 }
 
- 
-auto parser( T, U, V )( T arityGiver, U converter, V assigner ) {
-  return new Parser!( T, U, V )( arityGiver, converter, assigner );
+/**
+  Function returning a parser that:
+    - Expects no arguments (don't take any)
+    - Does no parsing
+    - Sets the user's variable to a given value upon assignment.
+*/
+auto noArgParser( T )( ref T value, T setTo ) if( !isCallable!T ) {
+  return new ArgParser!( T )( &value, setTo );
 }
-auto fixedArityParser( size_t arity, T, U )( T converter, U assigner ) {
-  return new Parser!( arity, T, U )( converter, assigner );
+
+/**
+  Predefined argument parser optimized for arguments that don't
+  expect any arguments, do no parsing and automatically calls a
+  callable object without parameter upon assignment.
+*/
+class ArgParser( T ): ParserI if( isCallable!T ) {
+protected:
+  T _callee;
+  
+  this( T callee ) {
+    _callee = callee;
+  }
+public: 
+  mixin takeNothing;
+  mixin storeNothing;
+  override void assign() {
+    _callee();
+  }
 }
-auto commonParser( T, U )( T converter, ref U value ) {
-  return new Parser!( 1u, T, U )( converter, &value );
-}
-auto noArgParser( T )( ref T value, T setTo ) {
-  return new Parser!( T )( &value, setTo );
+
+/**
+  Function returning a parser that:
+    - Expects no arguments (don't take any)
+    - Does no parsing
+    - Calls a callable object without arguments.
+*/
+auto noArgParser( T )( T callee ) if( isCallable!T ) {
+  return new ArgParser!T( callee );
 }

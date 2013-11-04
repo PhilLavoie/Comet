@@ -8,14 +8,13 @@ import std.conv;
 import std.string;
 
 
-package:
 /**
   Exception specific to flags expecting arguments.
   If the expected count is lower than what is actually provided on the command line,
   then this exception should be thrown.
 */
 class MissingArgumentsException: Exception {
-  this( size_t noArgs ) in {
+  package this( size_t noArgs ) in {
     assert( 0 < noArgs, "a missing argument exception requires that at least 1 argument is missing, not: " ~ noArgs.to!string );
   } body {
     super( "expected " ~ noArgs.to!string ~ " argument" ~ ( 1 == noArgs ? "" : "s" ) );
@@ -35,17 +34,22 @@ void enforceEnoughArgs( string[] tokens, size_t noArgs ) {
   were not expected.
 */
 class UnrecognizedTokens: Exception {
-  this( Range )( Range tokens ) if( isForwardRange!Range ) in {
+  package this( Range )( Range tokens ) if( isForwardRange!Range ) in {
     assert( !tokens.empty, "an unrecognized tokens exception requires at least one token" );
   } body {
     super( "unrecognized tokens: " ~ tokens.to!string );
+  }
+  package this( T )( string token ) if( is( T == string ) ) in {
+    assert( token.length, "passed an empty token as unrecognized" );    
+  } body {
+    super( "unrecognized token: " ~ token );
   }
 }
 
 /**
   Verifies that the slice passed is empty, otherwise throws an exception.
 */
-void enforceNoUnrecognizedTokens( Range )( Range unrecognizedTokens ) if( isForwardRange!Range ) {
+package void enforceNoUnrecognizedTokens( Range )( Range unrecognizedTokens ) if( isForwardRange!Range ) {
   enforce( unrecognizedTokens.empty, new UnrecognizedTokens( unrecognizedTokens ) );
 }
 
@@ -53,5 +57,5 @@ void enforceNoUnrecognizedTokens( Range )( Range unrecognizedTokens ) if( isForw
   Exception thrown when the help menu has been requested by the user.
 */
 class HelpMenuRequested: Exception {
-  this() { super( "help menu requested" ); }
+  package this() { super( "help menu requested" ); }
 }
