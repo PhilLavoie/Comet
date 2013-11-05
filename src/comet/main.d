@@ -22,7 +22,7 @@ void main( string[] args ) {
   try {
     //Program configuration. Defaults are defined appropriately and values are set
     //using command line options.
-    Config cfg;
+    Config cfg = new Config();
     cfg.parse( args );
   
     foreach( fileRuns; cfg.programRuns ) {

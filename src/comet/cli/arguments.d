@@ -15,8 +15,6 @@ import std.string;
 import std.container;
 import std.range;
 
-//TODO: use mixins and anonymous classes instead of defined bases classes.
-
 abstract class Argument{
 protected:
   ParserI _parser;
@@ -29,15 +27,15 @@ protected:
   
   bool _optional;
   @property bool optional() { return _optional; }
-  @property void optional( bool opt ) { _optional = opt; }
+  @property bool mandatory() { return !_optional; }
+  void optional() { _optional = true; }
+  void mandatory() { _optional = false;  }
   
-  this( ParserI parser, string description ) {
-    _parser = parser;
+  this( string description, bool optional, ParserI parser ) {
     _description = description;
-    used = false;
-  }
-  this( string description, ParserI parser ) {
-    this( parser, description );
+    _optional = optional;
+    _parser = parser;
+    _used = false;
   }
   
   /**
@@ -56,17 +54,39 @@ public:
 
 class Indexed: Argument {
 protected:
-  int _index;
+  Index _index;
   
-  this( int index, string description, ParserI parser ) {
-    super( parser, description );
-    _index = index;
-    _optional = false;
+  this( typeof( _index ) index, string description, ParserI parser ) {
+    super( description, false, parser );
+    _index = index;    
   }
 
 }
 
-auto indexed( int index, string description, ParserI parser ) {
+private enum Position {
+  left,
+  right
+}
+
+Index left( size_t index ) {
+  return Index( Position.left, index );
+}
+Index right( size_t index ) {
+  return Index( Position.right, index );
+}
+
+struct Index {
+private:
+  Position _pos;
+  size_t _index;
+  
+  this( Position pos, size_t index ) {
+    _pos = pos;
+    _index = index;
+  }
+}
+
+auto indexed( Index index, string description, ParserI parser ) {
   return new Indexed( index, description, parser );
 }
 
@@ -83,13 +103,9 @@ private:
   /**
     Creates a flag with the given description and tokens parser.
   */
-  this( ParserI parser, string description, string flag ) { 
-    super( parser, description );
-    _flag = flag;    
-    _optional = true;
-  }
   this( string flag, string description, ParserI parser ) {
-    this( parser, description, flag );
+    super( description, true, parser );
+    _flag = flag;    
   }
   
   //Mutually exclusives.
@@ -441,13 +457,11 @@ protected:
           
 public:
 
-  //@disable this();
-
   /**
     Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
   */
-  this( string n = "", string desc = "", File output = stdout, File error = stderr ) {
-    name = n;
+  this( string theName = "", string desc = "", File output = stdout, File error = stderr ) {
+    name = theName;
     description = desc;
     _out = output;
     _err = stderr;    

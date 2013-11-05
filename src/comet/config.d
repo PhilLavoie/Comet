@@ -140,7 +140,7 @@ private auto runs( Range )( Config cfg, Range sequencesFiles ) if( isForwardRang
   Initialized to default value.
   Note that this should only be read by the rest of the program and never modified.
 */
-struct Config {
+class Config {
   string PROGRAM_NAME;
   
   public auto programRuns() {
@@ -202,7 +202,7 @@ struct Config {
       _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
       _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
       _subProgramArg = indexed( 
-        -1, 
+        left( 0 ), 
         "Subprogram.", 
         new class ParserI {
           override string[] take( string[] args ) {
