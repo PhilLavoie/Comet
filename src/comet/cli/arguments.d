@@ -120,6 +120,27 @@ public:
   @property string flag() { return _flag; }
 }
 
+/**
+  Specifies that the program arguments are mutually exclusive and cannot
+  be found at the same time on the command line.
+  Must provide a group of at least two arguments.
+  All arguments must be known by the parser.
+*/
+void mutuallyExclusive( Flagged[] flags ... ) in {
+  assert( 2 <= flags.length, "expected at least two mutually exclusive flags" );
+  //TODO: maybe make sure that those aren't already mutually exclusive?
+} body {
+  for( size_t i = 0; i < flags.length; ++i ) {
+    auto current = flags[ i ];
+    for( size_t j = i + 1; j < flags.length; ++j ) {
+      auto next = flags[ j ];
+      
+      current.addME( next );
+      next.addME( current );
+    }
+  }
+}      
+
 private {
   /**
     Verifies that all mutually exclusive arguments for the one provided are not
@@ -493,31 +514,7 @@ public:
     assert( !isMember( f ), "flags must be unique and " ~ f.flag ~ " is already known" );
   } body {
     _flags[ f.flag ] = f;
-  }
-  
-  /**
-    Specifies that the program arguments are mutually exclusive and cannot
-    be found at the same time on the command line.
-    Must provide a group of at least two arguments.
-    All arguments must be known by the parser.
-  */
-  void mutuallyExclusive( Flagged[] flags ... ) in {
-    assert( 2 <= flags.length, "expected at least two mutually exclusive flags" );
-    foreach( Flagged flag; flags ) {
-      checkMembership( flag );
-    }
-  } body {
-    for( size_t i = 0; i < flags.length; ++i ) {
-      auto current = flags[ i ];
-      for( size_t j = i + 1; j < flags.length; ++j ) {
-        auto next = flags[ j ];
-        
-        current.addME( next );
-        next.addME( current );
-      }
-    }
-  }      
-  
+  }  
 }
 
 unittest {
@@ -540,7 +537,7 @@ unittest {
   auto verbosityFlag = value( "-v", "The verbosity fag.", verbosity );
   
   parser.add( silentFlag, verbosityFlag );
-  parser.mutuallyExclusive( silentFlag, verbosityFlag );
+  mutuallyExclusive( silentFlag, verbosityFlag );
  
   try {
     parser.parse( args );

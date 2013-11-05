@@ -399,8 +399,8 @@ class Config {
     );
     
     parser.mandatory( _seqFileArg );
-    parser.mutuallyExclusive( _printResultsArg, _resFileArg );
-    parser.mutuallyExclusive( _printTimeArg, _timeFileArg );
+    mutuallyExclusive( _printResultsArg, _resFileArg );
+    mutuallyExclusive( _printTimeArg, _timeFileArg );
     
     parser.parse( tokens );
     
