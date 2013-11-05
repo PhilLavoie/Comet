@@ -15,7 +15,9 @@ import std.string;
 import std.container;
 import std.range;
 
-abstract class Argument{
+
+//TODO add names for parser arguments somehow.
+private abstract class Argument{
 protected:
   ParserI _parser;
   @property ParserI parser() { return _parser; }
@@ -26,11 +28,10 @@ protected:
   @property void used( bool u ) { _used = u; }
   
   bool _optional;
-  @property bool optional() { return _optional; }
-  @property bool mandatory() { return !_optional; }
+  
   void optional() { _optional = true; }
   void mandatory() { _optional = false;  }
-  
+    
   this( string description, bool optional, ParserI parser ) {
     _description = description;
     _optional = optional;
@@ -50,44 +51,41 @@ public:
   public @property void description( string desc ) { _description = desc; }
   
   public @property bool used() { return _used; }   
+  
+  bool isOptional() { return _optional; }
+  bool isMandatory() { return !isOptional(); }
 }
 
-class Indexed: Argument {
+private abstract class Indexed: Argument {
 protected:
-  Index _index;
+  size_t _index;
   
   this( typeof( _index ) index, string description, ParserI parser ) {
     super( description, false, parser );
     _index = index;    
   }
-
+public:
+  @property auto index() { return _index; }
 }
 
-private enum Position {
-  left,
-  right
-}
-
-Index left( size_t index ) {
-  return Index( Position.left, index );
-}
-Index right( size_t index ) {
-  return Index( Position.right, index );
-}
-
-struct Index {
-private:
-  Position _pos;
-  size_t _index;
-  
-  this( Position pos, size_t index ) {
-    _pos = pos;
-    _index = index;
+class IndexedLeft: Indexed {
+  this( typeof( _index ) index, string description, ParserI parser ) {
+    super( index, description, parser );    
   }
 }
 
-auto indexed( Index index, string description, ParserI parser ) {
-  return new Indexed( index, description, parser );
+auto indexedLeft( size_t index, string description, ParserI parser ) {
+  return new IndexedLeft( index, description, parser );
+}
+
+class IndexedRight: Indexed {
+  this( typeof( _index ) index, string description, ParserI parser ) {
+    super( index, description, parser );    
+  }
+}
+
+auto indexedRight( size_t index, string description, ParserI parser ) {
+  return new IndexedRight( index, description, parser );
 }
 
 /**
@@ -277,39 +275,64 @@ auto dir( string name, string description, ref string dir ) {
   Every factory method returns a flag, but the flag is also immediately
   added to the parser's list.
 */
-class Parser {
-public:
-  string[] take( string[] tokens ) {
-    //TODO Might not be useful anymore.
-    _args = tokens;
-    
-    Array!string unrecognized;
-    while( tokens.length ) {
-      if( tokens[ 0 ] in _flags ) {
-        auto f = flagOf( tokens[ 0 ] );
-        enforceNotUsedBefore( f );
-        enforceNoMutuallyExclusiveUsed( f );
-        tokens = f.parser.take( tokens[ 1 .. $ ] );
-        //TODO automate this used status?
-        f.used = true;
-        _used.insertBack( f );
-      } else {
-        unrecognized.insertBack( tokens[ 0 ] );
-        tokens = tokens[ 1 .. $ ];
+class Parser {  
+protected:
+
+  Array!Indexed _indexedLeft;
+  Array!Indexed _indexedRight;
+  
+  string[] takeIndexed( string s )( string[] tokens ) if( s == "left" || s == "right" ) {
+    static if( s == "left" ) {
+      auto container = _indexedLeft;
+    } else {
+      auto container = _indexedRight;
+    }
+    foreach( indexed; container ) {
+      try {
+        auto previousTokens = tokens;
+        tokens = indexed.parser.take( tokens );
+        assert( tokens !is previousTokens || indexed.isOptional, "indexed " ~ s ~ " argument " ~ indexed.index.to!string ~ " did not take any argument but is mandatory" );
+        indexed.used = true;
+        _used.insertBack( indexed );
+      } catch( Exception e ) {
+        //TODO something with the message :)
+        throw e;
       }
+    }
+    return tokens;
+  }
+  
+  string[] takeFlagged( string[] tokens ) {
+    while( tokens.length && tokens[ 0 ] in _flags ) {
+      auto f = flagOf( tokens[ 0 ] );
+      enforceNotUsedBefore( f );
+      enforceNoMutuallyExclusiveUsed( f );
+      tokens = f.parser.take( tokens[ 1 .. $ ] );
+      f.used = true;
+      _used.insertBack( f );
     }
     
     if( _help.used ) {
       printHelp();
       throw new HelpMenuRequested();
-    }
+    }    
     
-    enforceNoUnrecognizedTokens( unrecognized[] );
     enforceMandatoryUse( _mandatories[] );
+    
+    return tokens;
+  }
+    
+  string[] take( string[] tokens ) {
+    //TODO Might not be useful anymore.
+    _args = tokens;
+    
+    tokens = takeIndexed!"right"( takeFlagged( takeIndexed!"left"( tokens ) ) );
+    enforceNoUnrecognizedTokens( tokens );    
       
     return [];
   }
   
+  Array!Argument _used;
   void store() {
     foreach( arg; _used ) {
       arg.parser.store();      
@@ -320,10 +343,9 @@ public:
       arg.parser.assign();      
     }
   }  
-  
-protected:
 
-  Array!Argument _used;
+
+  
 
   //Maps the flagged arguments with their flags.
   Flagged[ string ] _flags;  
@@ -355,16 +377,6 @@ protected:
   }  
   
   SList!Flagged _mandatories;
-  void mandatory( Range )( Range range ) if( isForwardRange!Range ) {
-    foreach( Flagged flag; flags ) {
-      mandatory( flag );
-    }
-  }
-  void mandatory( F... )( F flags ) if( 1 <= F.length ) {
-    foreach( Flagged flag; flags ) {
-      mandatory( flag );
-    }
-  }
   void mandatory( F )( F flag ) if( is( F == Flagged ) ) in {
     checkMembership( flag );
   } body {
@@ -380,29 +392,7 @@ protected:
     //TODO: add the possibility to change/remove the help flag.
     string helpFlag() { return _helpFlag; }
   }
-  /**
-    Prints a help message based using the description
-    strings held by this parser. It lists all known flags and their descriptions.
-    It uses the parser's output.
-  */
-  public void printHelp() {
-    if( _description !is null ) {
-      _out.writeln( "\nDESCRIPTION: ", _description, "\n" );
-    }
-    
-    _out.writeln( "USAGE: ", usageString(), "\n" );
-    
-    _out.writeln( "FLAGS:" );    
-    //Get the longest flag to determine the first column size.
-    size_t longest = 0;
-    foreach( string name, _; _flags ) {
-      longest = max( longest, name.length );
-    }
-    
-    foreach( string name, flag; _flags ) {
-      _out.writefln( "%-*s : %s", longest, name, flag.description );
-    }
-  }
+  
     
   //Program name.
   string _name;
@@ -433,9 +423,13 @@ protected:
   File _out;  
   File _err;
   
+  string _usage;
   //TODO add the mantadory flags here.
-  string usageString() {
-    return _name ~ " [ options ]";
+  @property string usage() {
+    if( !_usage.length ) {
+      _usage = _name ~ " [ options ]";
+    }
+    return _usage;
   }
     
   /**
@@ -446,37 +440,10 @@ protected:
       f.reset();
     }
   }
- 
-  /**
-    Main method of the parser.
-    It parses the arguments using the internal list of known flags.    
-    This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
-    assigning any values.    
-  */
-  public void parse( string[] tokens ) in {
-    assert( 0 < tokens.length  );
-  } body {
-    if( !name.length ) {
-      _name = commandName( tokens );
-    }
-    resetAll();
-    tokens = tokens[ 1 .. $ ];
-    try {
-      take( tokens );
-      store();
-      assign();
-    } catch( HelpMenuRequested e ) {
-      throw new Exception( "" );
-    } catch( Exception e ) {
-      _out.writeln( e.msg );
-      _out.writeln( _name ~ " " ~ _helpFlag ~ " for help" );      
-      //TODO: throw another exception that means program abortion.
-      e.msg = "";
-      throw e;
-    }
-  }
-          
+  
 public:
+
+  
 
   /**
     Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
@@ -492,10 +459,10 @@ public:
   
   
   /**
-    Adds a flags to the parser. Their identifying strings must be unique amongst the ones known
+    Adds arguments to the parser. Their identifying strings must be unique amongst the ones known
     by the parser. Exemple, "-f" can only be used once.
     
-    This method can use an input ranges, and flag tuples as entries.
+    This method can use an input ranges, and argument tuples as entries.
   */
   void add( Args... )( Args args ) if( 1 < args.length ) {
     add( args[ 0 ] );
@@ -515,6 +482,95 @@ public:
   } body {
     _flags[ f.flag ] = f;
   }  
+  void add( I )( I i ) if( is( I : Indexed ) ) in {
+    checkIndex( i );
+  } body {
+    static if( is( I == IndexedLeft ) ) {
+      _indexedLeft.insertBack( i );
+    } else {
+      _indexedRight.insertBack( i );
+    }
+  }
+  
+  void checkIndex( I )( I i ) if( is( I : Indexed ) ) {
+    static if( is( I == IndexedLeft ) ) {
+      auto container = _indexedLeft;
+      auto position = "left";
+    } else {
+      auto container = _indexedRight;
+      auto position = "right";
+    }    
+    if( container.length ) {
+      assert( 
+        container[ $ - 1 ].index <= i.index, 
+        "cannot insert " ~ position ~ " an indexed argument whose index: " ~ i.index.to!string() ~ 
+        " is lower than the last one inserted: " ~ container[ $ - 1 ].index.to!string() 
+      );
+    } else {
+      assert( i.index == 0, "the first " ~ position ~ " indexed argument must be located at position 0, not: " ~ i.index.to!string() );
+    }
+  }
+  
+  
+  /**
+    Main method of the parser.
+    It parses the arguments using the internal list of known flags.    
+    This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
+    assigning any values.    
+  */
+  public void parse( string[] tokens ) in {
+    assert( 0 < tokens.length  );
+  } body {
+    if( !name.length ) {
+      _name = commandName( tokens );
+    }
+    resetAll();
+    tokens = tokens[ 1 .. $ ];
+    foreach( _, Flagged f; _flags ) {
+      if( f.isMandatory() ) {
+        mandatory( f );
+      }
+    }
+    
+    try {
+      take( tokens );
+      store();
+      assign();
+    } catch( HelpMenuRequested e ) {
+      throw new Exception( "" );
+    } catch( Exception e ) {
+      _out.writeln( e.msg );
+      _out.writeln( "use " ~ _helpFlag ~ " for help" );      
+      //TODO: throw another exception that means program abortion.
+      e.msg = "";
+      throw e;
+    }
+  }
+  
+  /**
+    Prints a help message based using the description
+    strings held by this parser. It lists all known flags and their descriptions.
+    It uses the parser's output.
+  */
+  public void printHelp() {
+    if( _description.length ) {
+      _out.writeln( "\nDescription: ", _description, "\n" );
+    }
+        
+    _out.writeln( "Usage: ", usage, "\n" );
+    
+    _out.writeln( "Flagged arguments:" );    
+    //Get the longest flag to determine the first column size.
+    size_t longest = 0;
+    foreach( string name, _; _flags ) {
+      longest = max( longest, name.length );
+    }
+    
+    foreach( string name, flag; _flags ) {
+      _out.writefln( "%-*s : %s", longest, name, flag.description );
+    }
+    _out.writeln();
+  }
 }
 
 unittest {

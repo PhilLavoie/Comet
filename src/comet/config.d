@@ -163,7 +163,7 @@ class Config {
     Flagged _seqFileArg;
     Flagged _resFileArg;
     Flagged _timeFileArg;
-    Indexed _subProgramArg;    
+    IndexedLeft _subProgramArg;    
     
     void initFlags() {
       _noResultsArg = value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
@@ -201,8 +201,8 @@ class Config {
         );
       _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
       _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
-      _subProgramArg = indexed( 
-        left( 0 ), 
+      _subProgramArg = indexedLeft( 
+        0, 
         "Subprogram.", 
         new class ParserI {
           override string[] take( string[] args ) {
@@ -230,6 +230,7 @@ class Config {
     auto genRefParser = new Parser();
     genRefParser.name = PROGRAM_NAME ~ " generate-references";    
     genRefParser.add(
+      _subProgramArg,
       _seqDirArg,
       _resDirArg,
       _verbosityLvlArg,
