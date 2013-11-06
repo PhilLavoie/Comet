@@ -19,7 +19,13 @@ import std.typecons: Flag;
 
 //TODO add names for parser arguments somehow.
 //TODO maybe support mutually exclusive flagged and indexed?????????
-//TODO change optional state for a Usage enum for more clarity.
+
+enum Usage: bool {
+  optional = true,
+  mandatory = false
+}
+alias mandatory = Usage.mandatory;
+alias optional = Usage.optional;
 
 /**
   A class representing a command line argument.
@@ -62,19 +68,11 @@ protected:
   }  
   
 public:
-  public @property string description() { return _description; }
-  public @property void description( string desc ) { _description = desc; }
-  
-  public @property bool used() { return _used; }   
+  @property string description() { return _description; }
+  @property void description( string desc ) { _description = desc; }  
+  @property bool used() { return _used; }   
+  abstract @property string identification();
 
-  /**
-    Make the argument optional.
-  */
-  void optional() { _optional = true; }
-  /**
-    Make the argument mandatory.
-  */
-  void mandatory() { _optional = false;  }
   /**
     Returns true if this argument is optional, false otherwise.
   */
@@ -103,6 +101,8 @@ protected:
   }
 public:
   @property auto index() { return _index; }
+  @property auto name() { return _name; }
+  override @property string identification() { return _name; }
 }
 
 /**
@@ -128,8 +128,8 @@ class IndexedLeft: Indexed {
 /**
   Factory function that create an indexed argument whose index starts right after the command invocation.
 */
-auto indexedLeft( size_t index, string name, string description, ParserI parser, bool optional = false ) {
-  return new IndexedLeft( index, name, description, parser, optional );
+auto indexedLeft( size_t index, string name, string description, ParserI parser, Usage usage = mandatory ) {
+  return new IndexedLeft( index, name, description, parser, usage );
 }
 
 /**
@@ -147,8 +147,8 @@ class IndexedRight: Indexed {
 /**
   Factory function that create an indexed argument whose index starts right after the flagged arguments region.
 */
-auto indexedRight( size_t index, string name, string description, ParserI parser, bool optional = false ) {
-  return new IndexedRight( index, name, description, parser, optional );
+auto indexedRight( size_t index, string name, string description, ParserI parser, Usage usage = mandatory ) {
+  return new IndexedRight( index, name, description, parser, usage );
 }
 
 /**
@@ -189,6 +189,7 @@ protected:
     
 public:
   @property string flag() { return _flag; }
+  override @property string identification() { return _flag; }
 }
 
 /**
@@ -236,8 +237,8 @@ private void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Rang
   }
 }
 ///DITTO
-private void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
-  enforce( f.used, "user must provide flag " ~ f.flag );
+private void enforceMandatoryUse( A )( A arg ) if( is( A : Argument ) ) {
+  enforce( arg.used, "user must provide argument " ~ arg.identification );
 }
 
 
@@ -245,7 +246,7 @@ private void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
   If no predefined arguments satisfy the user's needs, this one is the most
   general factory method. It lets the user specify the tokens parser.
 */
-Flagged flagged( string flag, string description, ParserI parser, bool optional = true ) {
+Flagged flagged( string flag, string description, ParserI parser, Usage usage = optional ) {
   return new Flagged( flag, description, parser, optional );    
 } 
 
@@ -354,6 +355,13 @@ protected:
 
   Array!Indexed _indexedLeft;
   Array!Indexed _indexedRight;
+  Array!Argument _mandatories;
+  
+  void addMandatory( Argument arg ) in {
+    assert( arg.isMandatory(), "adding an optional argument as mandatory" );
+  } body {
+    _mandatories.insertBack( arg );
+  }
   
   string[] takeIndexed( string s )( string[] tokens ) if( s == "left" || s == "right" ) {
     static if( s == "left" ) {
@@ -451,14 +459,7 @@ protected:
       assert( isMember( flag ), "unknown flag: " ~ flag.flag );
     }
   }  
-  
-  SList!Flagged _mandatories;
-  void mandatory( F )( F flag ) if( is( F == Flagged ) ) in {
-    checkMembership( flag );
-  } body {
-    _mandatories.insertFront( flag );
-  }
-  
+   
   //Help flag. When present, shows the command line menu.
   string _helpFlag = "-h";
   bool _helpNeeded = false;  
@@ -525,14 +526,35 @@ protected:
       auto container = _indexedRight;
       auto position = "right";
     }    
+    auto errorPrefix = position ~ " indexed argument " ~ i.name ~ " at position " ~ i.index.to!string() ~ ": ";
     if( container.length ) {
+      auto previous = container[ $ - 1 ];
       assert( 
-        container[ $ - 1 ].index <= i.index, 
-        "cannot insert " ~ position ~ " an indexed argument whose index: " ~ i.index.to!string() ~ 
-        " is lower than the last one inserted: " ~ container[ $ - 1 ].index.to!string() 
+        previous.index == i.index ||
+        previous.index == i.index - 1, 
+        errorPrefix ~ 
+        "can only index an argument on the previously used index: " ~ previous.index.to!string() ~ 
+        " or the one right after"
       );
+      if( previous.index == i.index ) {
+        assert( 
+          previous.isOptional, 
+          errorPrefix ~
+          "cannot index on the same position as a previously indexed mandatory argument: " ~ previous.name 
+        );        
+      } else {
+        assert( 
+          previous.isMandatory, 
+          errorPrefix ~
+          "cannot index next to a sequence of optional arguments"
+        );
+      }      
     } else {
-      assert( i.index == 0, "the first " ~ position ~ " indexed argument must be located at position 0, not: " ~ i.index.to!string() );
+      assert( 
+        i.index == 0, 
+        errorPrefix ~
+        "the first indexed argument must be located at position 0" 
+      );
     }
   }
   
@@ -577,6 +599,7 @@ public:
     assert( !isMember( f ), "flags must be unique and " ~ f.flag ~ " is already known" );
   } body {
     _flags[ f.flag ] = f;
+    if( f.isMandatory ) { addMandatory( f ); }
   }  
   void add( I )( I i ) if( is( I : Indexed ) ) in {
     checkIndex( i );
@@ -586,7 +609,9 @@ public:
     } else {
       _indexedRight.insertBack( i );
     }
-  } 
+    if( i.isMandatory() ) { addMandatory( i ); }
+  }   
+  
   
   /**
     Main method of the parser.
@@ -601,19 +626,15 @@ public:
       _name = commandName( tokens );
     }
     resetAll();
-    tokens = tokens[ 1 .. $ ];
-    foreach( _, Flagged f; _flags ) {
-      if( f.isMandatory() ) {
-        mandatory( f );
-      }
-    }
+    tokens = tokens[ 1 .. $ ];    
     
     try {
       tokens = take( tokens );
       store();
       assign();
     } catch( HelpMenuRequested e ) {
-      throw new Exception( "" );
+      e.msg = "";
+      throw e;
     } catch( Exception e ) {
       _out.writeln( e.msg );
       _out.writeln( "use " ~ _helpFlag ~ " for help" );      

@@ -12,6 +12,8 @@ import std.conv;
 import std.stdio;
 import std.container;
 import std.range: isForwardRange;
+import std.file;
+import std.algorithm; 
 
 /**
   Those are the algorithms used to process sequences and determine segment pairs distances.
@@ -133,8 +135,6 @@ private auto runs( Range )( Config cfg, Range sequencesFiles ) if( isForwardRang
   return Runs!Range( cfg, sequencesFiles );
 }
 
-
-
 /**
   Program configuration data.
   Initialized to default value.
@@ -143,91 +143,151 @@ private auto runs( Range )( Config cfg, Range sequencesFiles ) if( isForwardRang
 class Config {
   string PROGRAM_NAME;
   
+  protected this() {
+    initFlags();
+  }
+  
   public auto programRuns() {
     return runs( this, sequencesFiles ); 
   }
 
-  private {
-    Flagged _noResultsArg;
-    Flagged _minPeriodArg;
-    Flagged _maxPeriodArg;
-    Flagged _singleStepArg;
-    Flagged _verbosityLvlArg;
-    Flagged _printConfigArg;
-    Flagged _printTimeArg;
-    Flagged _printResultsArg;
-    Flagged _algorithmArg;    
-    Flagged _seqDirArg;
-    Flagged _resDirArg;
-    Flagged _outFileArg;
-    Flagged _seqFileArg;
-    Flagged _resFileArg;
-    Flagged _timeFileArg;
-    IndexedLeft _script;    
-    
-    void initFlags() {
-      _noResultsArg = value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
-      _minPeriodArg = value( "--min", "Minimum period length. Default is " ~ _minPeriod.to!string() ~ ".", _minPeriod );
-      _maxPeriodArg = 
-        value( 
-          "--max",
-          "Maximum period length. Default is " ~ _minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.",
-          _maxPeriod 
-        );
-      _singleStepArg = 
-        setter( 
-          "--single-step",
-          "Sets the segment pair length step to be 1 instead of 3.",
-          _periodStep,
-          1u
-        );
-      _verbosityLvlArg = value( "-v", "Verbosity level. Default is " ~ _verbosity.to!string ~ ".", _verbosity );
-      _printConfigArg = toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", _printConfig );
-      _printTimeArg = toggle( "--no-time", "Removes the execution time from the results.", _printTime );
-      _printResultsArg = toggle( "--no-res", "Prevents the results from being printed.", _printResults );
-      _algorithmArg = 
-        flagged( 
-          "--algo", 
-          "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
-          commonParser( mappedConverter( algosByStrings ), ( Algo algo ) { _algos.insertBack( algo ); } )
-        );        
-      _seqDirArg = dir( "--sd", "Sequences directory. This flag is mandatory.", _sequencesDir );       
-      _resDirArg = dir( "--rd", "Results directory. This flag is mandatory.", _resultsDir );
-      _outFileArg = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
-      _seqFileArg = flagged( 
-        "-s", 
-        "Sequences file. This flag is mandatory.", 
-        commonParser( fileConverter( "r" ), ( File f ) { _sequencesFiles.insertBack( f );  } )
-        );
-      _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
-      _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
-      _script = indexedLeft( 
-        0, 
-        "script", 
-        "This argument lets the user use a predefined script.", 
-        new class ParserI {
-          override string[] take( string[] args ) {
-            if( !args.length ) return args;
-            
-            switch( args[ 0 ] ) {
-              case "generate-references":
-                _mode = Mode.generateReferences;
-                
-                auto genRefParser = generateReferencesParser();           
-                return genRefParser.parse( args );
-                break;            
-              default:
-                return args;
-            }     
-            assert( false );          
-          }
-          
-          override void store() {}
-          override void assign() {}
-        }
+private {
+  //Default standalone mode arguments.
+  IndexedLeft _script; 
+  IndexedRight _seqFileArg;
+  
+  Flagged _noResultsArg;
+  Flagged _minPeriodArg;
+  Flagged _maxPeriodArg;
+  Flagged _singleStepArg;
+  Flagged _verbosityLvlArg;
+  Flagged _printConfigArg;
+  Flagged _printTimeArg;
+  Flagged _printResultsArg;
+  Flagged _algorithmArg;    
+  
+  IndexedRight _seqDirArg;
+  IndexedRight _resDirArg;
+  IndexedRight _refDirArg;
+  
+  Flagged _outFileArg;
+  
+  Flagged _resFileArg;
+  Flagged _timeFileArg;
+     
+  
+  void initFlags() {
+    _noResultsArg = value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
+    _minPeriodArg = value( "--min", "Minimum period length. Default is " ~ _minPeriod.to!string() ~ ".", _minPeriod );
+    _maxPeriodArg = 
+      value( 
+        "--max",
+        "Maximum period length. Default is " ~ _minPeriod.to!string() ~ ". The mid sequence position is used if it is lower than this value.",
+        _maxPeriod 
       );
-      _script.optional;
-    }
+    _singleStepArg = 
+      setter( 
+        "--single-step",
+        "Sets the segment pair length step to be 1 instead of 3.",
+        _periodStep,
+        1u
+      );
+    _verbosityLvlArg = value( "-v", "Verbosity level. Default is " ~ _verbosity.to!string ~ ".", _verbosity );
+    _printConfigArg = toggle( "--print-config", "Prints the used configuration before starting the process if the flag is present.", _printConfig );
+    _printTimeArg = toggle( "--no-time", "Removes the execution time from the results.", _printTime );
+    _printResultsArg = toggle( "--no-res", "Prevents the results from being printed.", _printResults );
+    _algorithmArg = 
+      flagged( 
+        "--algo", 
+        "Sets the duplication cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
+        commonParser( mappedConverter( algosByStrings ), ( Algo algo ) { _algos.insertBack( algo ); } )
+      );        
+    _seqDirArg = indexedRight( 
+      0,
+      "sequences directory", 
+      "This argument indicates the directory where the sequences files are located.", 
+      commonParser(
+        ( string[] args ) => args[ 0 ],
+        ( string dir ) {         
+          foreach( file; dirEntries( dir, SpanMode.shallow ).map!( a => File( a, "r" ) ) ) {
+            _sequencesFiles.insertBack( file );
+          }
+        } 
+      ),
+      mandatory
+    );       
+      
+    _resDirArg = indexedRight( 
+      1u,
+      "results directory", 
+      "Where the results will be stored.", 
+      commonParser( dirConverter(), _resultsDir ),
+      mandatory
+    );
+    
+    _refDirArg = indexedRight( 
+      1u,
+      "references directory", 
+      "Where the references are stored.", 
+      commonParser( dirConverter(), _resultsDir ),
+      mandatory
+    );
+    
+    
+    _outFileArg = file( "--of", "Output file. This is where the program emits statements. Default is stdout.", _outFile, "w" );
+    _seqFileArg = indexedRight( 
+      0u,
+      "sequencesFile", 
+      "This argument is the file holding the sequences to process.", 
+      commonParser( fileConverter( "r" ), ( File f ) { _sequencesFiles.insertBack( f );  } )
+    );
+    _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
+    _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
+    _script = indexedLeft( 
+      0u, 
+      "script", 
+      "This argument lets the user use a predefined script.", 
+      new class ParserI {
+        override string[] take( string[] args ) {
+          if( !args.length ) return args;
+          
+          switch( args[ 0 ] ) {
+            case "generate-references":
+              _mode = Mode.generateReferences;
+              
+              auto genRefParser = generateReferencesParser();           
+              return genRefParser.parse( args );
+              break;   
+            case "run-tests":
+              assert( false, "not implemented yet" );
+            default:
+              return args;
+          }     
+          assert( false );          
+        }
+        
+        override void store() {}
+        override void assign() {}
+      },
+      optional
+    );
+    
+  }
+}
+
+  Parser runTestsParser() {
+    auto runTestsParser = new Parser();
+    runTestsParser.name = PROGRAM_NAME ~ " run-tests";    
+    runTestsParser.add(
+      _seqDirArg,
+      _refDirArg,
+      _verbosityLvlArg,
+      _outFileArg,
+      _printTimeArg,
+      _printConfigArg,
+    );           
+    
+    return runTestsParser;  
   }
 
   Parser generateReferencesParser() {
@@ -241,8 +301,6 @@ class Config {
       _printTimeArg,
       _printConfigArg,
     );           
-    genRefParser.mandatory( _seqDirArg );
-    genRefParser.mandatory( _resDirArg ); 
     
     return genRefParser;  
   }
@@ -251,21 +309,7 @@ class Config {
   @property public Mode mode() { return _mode; }
 
   private Array!File _sequencesFiles;
-  private string _sequencesDir;
   @property public auto sequencesFiles() { 
-    import std.file;
-    import std.algorithm; 
-    
-    switch( _mode ) {
-      case Mode.generateReferences:
-        foreach( file; dirEntries( _sequencesDir, SpanMode.depth ).map!( a => File( a, "r" ) ) ) {
-          _sequencesFiles.insertBack( file );
-        }
-        
-        break;
-      default:
-        return _sequencesFiles[];     
-    } 
     return _sequencesFiles[];
   }
   
@@ -336,11 +380,7 @@ class Config {
       writeln( "Verbosity level: ", _verbosity );
       writeln( "Output file: ", _outFile );
       
-      if( _mode == Mode.normal ) {
-        writeln( "Sequences files: ", _sequencesFiles[].map!( a => a.fileName() ) );
-      } else {
-        writeln( "Sequences dir: ", _sequencesDir );
-      }
+      writeln( "Sequences files: ", _sequencesFiles[].map!( a => a.fileName() ) );
       
       writeln( "Print results: ", _printResults );
       writeln( "Number of results: ", _noResults );
@@ -381,7 +421,6 @@ class Config {
     _resultsFile = stdout;
     _algos.reserve( algoStrings.length );
     _algos.insertBack( Algo.standard );
-    initFlags();   
     PROGRAM_NAME = commandName( tokens );
     
     //Normal mode parser.
@@ -403,7 +442,6 @@ class Config {
       _algorithmArg
     );
     
-    parser.mandatory( _seqFileArg );
     mutuallyExclusive( _printResultsArg, _resFileArg );
     mutuallyExclusive( _printTimeArg, _timeFileArg );
     
@@ -419,6 +457,10 @@ class Config {
   }
 }
 
+auto config() {
+  return new Config();
+}
+
 //Small helper function to help print configuration files in a user friendly fashion.
 private string fileName( File file ) {
   if( file == stdout ) {
@@ -431,4 +473,15 @@ private string fileName( File file ) {
     return "stderr";
   }
   return file.name;
+}
+
+unittest {
+  import std.stdio;
+  
+  auto name = fileName( stdout );
+  assert( name == "stdout" );
+  name = fileName( stderr );
+  assert( name == "stderr" );
+  name = fileName( stdin );
+  assert( name == "stdin" );
 }
