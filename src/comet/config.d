@@ -18,8 +18,8 @@ import std.range: isForwardRange;
 */
 enum Algo {
   standard = 0,   //Without optimizations.
-  cache,          //Using a frame cache.
-  patterns,       //Reusing patterned results.
+  cache,          //Using a window frame cache.
+  patterns,       //Reusing results based on nucleotides patterns.
   cachePatterns   //Both optimization at the same time.
 }
 
@@ -163,7 +163,7 @@ class Config {
     Flagged _seqFileArg;
     Flagged _resFileArg;
     Flagged _timeFileArg;
-    IndexedLeft _subProgramArg;    
+    IndexedLeft _script;    
     
     void initFlags() {
       _noResultsArg = value( "--nr", "Number of results to keep in memory. Default is " ~ _noResults.to!string() ~ ".", _noResults );
@@ -201,9 +201,10 @@ class Config {
         );
       _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
       _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
-      _subProgramArg = indexedLeft( 
+      _script = indexedLeft( 
         0, 
-        "Subprogram.", 
+        "script", 
+        "This argument lets the user use a predefined script.", 
         new class ParserI {
           override string[] take( string[] args ) {
             if( !args.length ) return args;
@@ -213,7 +214,7 @@ class Config {
                 _mode = Mode.generateReferences;
                 
                 auto genRefParser = generateReferencesParser();           
-                //TODO: slice the args and launch the parser.
+                return genRefParser.parse( args );
                 break;            
               default:
                 return args;
@@ -225,7 +226,7 @@ class Config {
           override void assign() {}
         }
       );
-      _subProgramArg.optional;
+      _script.optional;
     }
   }
 
@@ -386,7 +387,7 @@ class Config {
     //Normal mode parser.
     auto parser = new Parser();
     parser.add(
-      _subProgramArg,
+      _script,
       _seqFileArg,
       _verbosityLvlArg,
       _outFileArg,

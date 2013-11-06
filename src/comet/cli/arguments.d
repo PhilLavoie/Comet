@@ -14,10 +14,12 @@ import std.exception;
 import std.string;
 import std.container;
 import std.range;
+import std.typecons: Flag;
 
 
 //TODO add names for parser arguments somehow.
 //TODO maybe support mutually exclusive flagged and indexed?????????
+//TODO change optional state for a Usage enum for more clarity.
 
 /**
   A class representing a command line argument.
@@ -91,10 +93,13 @@ private abstract class Indexed: Argument {
 protected:
   //The index where the argument is expected. Starts at 0.
   size_t _index;
+  //The argument name, for identification.
+  string _name;
   
-  this( typeof( _index ) index, string description, ParserI parser, bool optional ) {
-    super( description, parser, optional );
-    _index = index;    
+  this( T... )( T args ) {
+    super( args[ 2 .. $ ] );
+    _index = args[ 0 ];    
+    _name = args[ 1 ];
   }
 public:
   @property auto index() { return _index; }
@@ -123,8 +128,8 @@ class IndexedLeft: Indexed {
 /**
   Factory function that create an indexed argument whose index starts right after the command invocation.
 */
-auto indexedLeft( size_t index, string description, ParserI parser, bool optional = false ) {
-  return new IndexedLeft( index, description, parser, optional );
+auto indexedLeft( size_t index, string name, string description, ParserI parser, bool optional = false ) {
+  return new IndexedLeft( index, name, description, parser, optional );
 }
 
 /**
@@ -142,8 +147,8 @@ class IndexedRight: Indexed {
 /**
   Factory function that create an indexed argument whose index starts right after the flagged arguments region.
 */
-auto indexedRight( size_t index, string description, ParserI parser, bool optional = false ) {
-  return new IndexedRight( index, description, parser, optional );
+auto indexedRight( size_t index, string name, string description, ParserI parser, bool optional = false ) {
+  return new IndexedRight( index, name, description, parser, optional );
 }
 
 /**
@@ -384,9 +389,7 @@ protected:
     if( _help.used ) {
       printHelp();
       throw new HelpMenuRequested();
-    }    
-    
-    enforceMandatoryUse( _mandatories[] );
+    }      
     
     return tokens;
   }
@@ -396,7 +399,11 @@ protected:
     _args = tokens;
     
     tokens = takeIndexed!"right"( takeFlagged( takeIndexed!"left"( tokens ) ) );
-    enforceNoUnrecognizedTokens( tokens );    
+    
+    if( tokens.length ) 
+      enforceNoUnrecognizedTokens( tokens[ 0 ] );    
+    
+    enforceMandatoryUse( _mandatories[] );
       
     return [];
   }
@@ -587,7 +594,7 @@ public:
     This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
     assigning any values.    
   */
-  public void parse( string[] tokens ) in {
+  public string[] parse( string[] tokens ) in {
     assert( 0 < tokens.length  );
   } body {
     if( !name.length ) {
@@ -602,7 +609,7 @@ public:
     }
     
     try {
-      take( tokens );
+      tokens = take( tokens );
       store();
       assign();
     } catch( HelpMenuRequested e ) {
@@ -614,6 +621,7 @@ public:
       e.msg = "";
       throw e;
     }
+    return tokens;
   }
   
   /**
