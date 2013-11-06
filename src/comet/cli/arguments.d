@@ -17,22 +17,35 @@ import std.range;
 
 
 //TODO add names for parser arguments somehow.
+//TODO maybe support mutually exclusive flagged and indexed?????????
+
+/**
+  A class representing a command line argument.
+  At the very least, a command line argument requires a description (for help menu purposes) and
+  a parser. The parser is designed to carry the tasks related to interpreting the associated values
+  of the arguments, if any.
+*/
 private abstract class Argument{
 protected:
+  //The argument's parser.
   ParserI _parser;
   @property ParserI parser() { return _parser; }
   
+  //The description, as presented to the user on the help menu.
   string _description;
   
+  //A boolean indicating if the argument has been used by the user.
+  //It is useful for optional arguments like flagged ones. It is used
+  //as a quick way to verify that mutually exclusive flags aren't already
+  //being used for example.
   bool _used = false;
   @property void used( bool u ) { _used = u; }
   
+  //Indicates whether or not the argument is optional. Useful for quickly determining
+  //how an argument should appear on the help menu (as mandatory or optional ).
   bool _optional;
-  
-  void optional() { _optional = true; }
-  void mandatory() { _optional = false;  }
-    
-  this( string description, bool optional, ParserI parser ) {
+      
+  this( string description, ParserI parser, bool optional ) {
     _description = description;
     _optional = optional;
     _parser = parser;
@@ -40,7 +53,7 @@ protected:
   }
   
   /**
-    Prepares the argument for a parser run.
+    Prepares the argument for a parser run. Sets the used status to false.
   */
   void reset() {
     used = false;
@@ -51,65 +64,120 @@ public:
   public @property void description( string desc ) { _description = desc; }
   
   public @property bool used() { return _used; }   
-  
+
+  /**
+    Make the argument optional.
+  */
+  void optional() { _optional = true; }
+  /**
+    Make the argument mandatory.
+  */
+  void mandatory() { _optional = false;  }
+  /**
+    Returns true if this argument is optional, false otherwise.
+  */
   bool isOptional() { return _optional; }
+  /**
+    Returns true if this argument is mandatory, false otherwise.
+  */
   bool isMandatory() { return !isOptional(); }
 }
 
+/**
+  A specialization of argument representing indexed arguments. Indexed arguments
+  are arguments that have to respect a certain position on the command line.
+*/
 private abstract class Indexed: Argument {
 protected:
+  //The index where the argument is expected. Starts at 0.
   size_t _index;
   
-  this( typeof( _index ) index, string description, ParserI parser ) {
-    super( description, false, parser );
+  this( typeof( _index ) index, string description, ParserI parser, bool optional ) {
+    super( description, parser, optional );
     _index = index;    
   }
 public:
   @property auto index() { return _index; }
 }
 
+/**
+  A specialization of arguments that represents an argument expected at a certain index.
+  In this particular case, the index starts right after the command call and the corresponding
+  value is 0. Exemple:
+  "program firstArg secondArg"
+  The first argument has an index of 0 and the second one has the following value: 1.
+  
+  Note that indexed arguments are generally mandatory, but it can be useful to have an optional
+  one. In that event, make sure to have an appropriate parser (that returns the tokens untouched
+  when it wasn't able to parse an argument).
+  
+  Also note that you can't have an optional and a mandatory argument on the same index, but you
+  can have multiple optionals on the same, see the program parser's way of handling this.
+*/
 class IndexedLeft: Indexed {
-  this( typeof( _index ) index, string description, ParserI parser ) {
-    super( index, description, parser );    
+  this( T... )( T args ) {
+    super( args );    
   }
-}
-
-auto indexedLeft( size_t index, string description, ParserI parser ) {
-  return new IndexedLeft( index, description, parser );
-}
-
-class IndexedRight: Indexed {
-  this( typeof( _index ) index, string description, ParserI parser ) {
-    super( index, description, parser );    
-  }
-}
-
-auto indexedRight( size_t index, string description, ParserI parser ) {
-  return new IndexedRight( index, description, parser );
 }
 
 /**
-  A flag object is a representation of a command line flag. It is associated with
-  an invocation, a description and a token parser that is responsible for parsing
-  expected arguments, if any.
+  Factory function that create an indexed argument whose index starts right after the command invocation.
+*/
+auto indexedLeft( size_t index, string description, ParserI parser, bool optional = false ) {
+  return new IndexedLeft( index, description, parser, optional );
+}
+
+/**
+  Those objects follow the same logic as the indexed left argument, but their index starts right
+  after the flagged arguments region:
+  
+  "program [ indexedLeft ] [ flagged ] indexedRight0 indexedRight1"
+*/
+class IndexedRight: Indexed {
+  this( T... )( T args ) {
+    super( args );    
+  }
+}
+
+/**
+  Factory function that create an indexed argument whose index starts right after the flagged arguments region.
+*/
+auto indexedRight( size_t index, string description, ParserI parser, bool optional = false ) {
+  return new IndexedRight( index, description, parser, optional );
+}
+
+/**
+  A flagged argument is what is also typically known as an "option".
+  They are identified by a flag, typically starting with "-", "--", or "/". We use the
+  term flagged argument here because they can be parameterized to be mandatory. 
+  
+  Also, flagged arguments can be made mutually exclusive. Like "--silent" and "--loudest-possible-please"
+  for example.
+  
+  Their location is anywhere between the indexed left arguments and their right counterparts:
+  "program [ indexedLeft ] -f flagOne --no-argument -anotherFlag withAnArgument -f somefile.txt [ indexedRight ]" 
 */
 class Flagged: Argument {
-private:
+protected:
+  //The flag identifying the argument.
   string _flag;
   @property void flag( string f ) { _flag = f; }
     
-  /**
-    Creates a flag with the given description and tokens parser.
-  */
-  this( string flag, string description, ParserI parser ) {
-    super( description, true, parser );
-    _flag = flag;    
+  this( T... )( T args ) {
+    super( args[ 1 .. $ ] );
+    _flag = args[ 0 ];    
   }
   
-  //Mutually exclusives.
+  //Mutually exclusive flagged argument.
   SList!( Flagged ) _mutuallyExclusives;
   @property auto mutuallyExclusives() { return _mutuallyExclusives; }
+  /**
+    Returns true if this argument has any mutually exclusives, false otherwise.
+  */
   bool hasMEs() { return !_mutuallyExclusives.empty; }
+  /**
+    Makes the argument mutually exclusive to this one.
+  */
   void addME( Flagged f ) {
     _mutuallyExclusives.insertFront( f );
   }   
@@ -120,9 +188,7 @@ public:
 
 /**
   Specifies that the program arguments are mutually exclusive and cannot
-  be found at the same time on the command line.
-  Must provide a group of at least two arguments.
-  All arguments must be known by the parser.
+  be found at the same time on the command line. Must provide a group of at least two arguments.
 */
 void mutuallyExclusive( Flagged[] flags ... ) in {
   assert( 2 <= flags.length, "expected at least two mutually exclusive flags" );
@@ -139,45 +205,48 @@ void mutuallyExclusive( Flagged[] flags ... ) in {
   }
 }      
 
-private {
-  /**
-    Verifies that all mutually exclusive arguments for the one provided are not
-    already in use.
-  */
-  void enforceNoMutuallyExclusiveUsed( Flagged f ) {
-    foreach( me; f.mutuallyExclusives ) {
-      enforce( !me.used, "flag " ~ f.flag ~ " was found but is mutually exclusive with " ~ me.flag );
-    }
-  }  
-
-  /**
-    Makes sure that the flag has not been used before, throws otherwise.
-  */
-  void enforceNotUsedBefore( Flagged f ) {
-    enforce( !f.used, "flag " ~ f.flag ~ " is used twice" );
+/**
+  Verifies that all mutually exclusive arguments for the one provided are not
+  already in use.
+*/
+private void enforceNoMutuallyExclusiveUsed( Flagged f ) {
+  foreach( me; f.mutuallyExclusives ) {
+    enforce( !me.used, "flag " ~ f.flag ~ " was found but is mutually exclusive with " ~ me.flag );
   }
+}  
 
-  /**
-    Makes sure that all the flags passed have been used, throws otherwise.
-  */
-  void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
-    foreach( f; range ) {
-      enforceMandatoryUse( f );
-    }
-  }
-  //Throws if the flag passed is not used.
-  void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
-    enforce( f.used, "user must provide flag " ~ f.flag );
+/**
+  Makes sure that the flag has not been used before, throws otherwise.
+*/
+private void enforceNotUsedBefore( Flagged f ) {
+  enforce( !f.used, "flagged argument: " ~ f.flag ~ " is used twice" );
+}
+
+/**
+  Enforce that the mandatory flagged arguments have all been used.
+*/
+private void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
+  foreach( f; range ) {
+    enforceMandatoryUse( f );
   }
 }
+///DITTO
+private void enforceMandatoryUse( F )( F f ) if( is( F == Flagged ) ) {
+  enforce( f.used, "user must provide flag " ~ f.flag );
+}
+
 
 /**
   If no predefined arguments satisfy the user's needs, this one is the most
   general factory method. It lets the user specify the tokens parser.
 */
-Flagged flagged( string flag, string description, ParserI parser ) {
-  return new Flagged( flag, description, parser );    
+Flagged flagged( string flag, string description, ParserI parser, bool optional = true ) {
+  return new Flagged( flag, description, parser, optional );    
 } 
+
+
+//Find a way to uniformize the predefined flagged arguments with the indexed ones.
+
 
 auto custom( string flag, string description, ParserI parser ) {
   return flagged( flag, description, parser );
@@ -441,6 +510,25 @@ protected:
     }
   }
   
+  void checkIndex( I )( I i ) if( is( I : Indexed ) ) {
+    static if( is( I == IndexedLeft ) ) {
+      auto container = _indexedLeft;
+      auto position = "left";
+    } else {
+      auto container = _indexedRight;
+      auto position = "right";
+    }    
+    if( container.length ) {
+      assert( 
+        container[ $ - 1 ].index <= i.index, 
+        "cannot insert " ~ position ~ " an indexed argument whose index: " ~ i.index.to!string() ~ 
+        " is lower than the last one inserted: " ~ container[ $ - 1 ].index.to!string() 
+      );
+    } else {
+      assert( i.index == 0, "the first " ~ position ~ " indexed argument must be located at position 0, not: " ~ i.index.to!string() );
+    }
+  }
+  
 public:
 
   
@@ -448,9 +536,10 @@ public:
   /**
     Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
   */
-  this( string theName = "", string desc = "", File output = stdout, File error = stderr ) {
+  this( string theName = "", string desc = "", string usage = "", File output = stdout, File error = stderr ) {
     name = theName;
     description = desc;
+    _usage = usage;
     _out = output;
     _err = stderr;    
     _help = toggle( _helpFlag, "Prints the help menu.", _helpNeeded );
@@ -490,27 +579,7 @@ public:
     } else {
       _indexedRight.insertBack( i );
     }
-  }
-  
-  void checkIndex( I )( I i ) if( is( I : Indexed ) ) {
-    static if( is( I == IndexedLeft ) ) {
-      auto container = _indexedLeft;
-      auto position = "left";
-    } else {
-      auto container = _indexedRight;
-      auto position = "right";
-    }    
-    if( container.length ) {
-      assert( 
-        container[ $ - 1 ].index <= i.index, 
-        "cannot insert " ~ position ~ " an indexed argument whose index: " ~ i.index.to!string() ~ 
-        " is lower than the last one inserted: " ~ container[ $ - 1 ].index.to!string() 
-      );
-    } else {
-      assert( i.index == 0, "the first " ~ position ~ " indexed argument must be located at position 0, not: " ~ i.index.to!string() );
-    }
-  }
-  
+  } 
   
   /**
     Main method of the parser.

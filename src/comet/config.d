@@ -206,6 +206,8 @@ class Config {
         "Subprogram.", 
         new class ParserI {
           override string[] take( string[] args ) {
+            if( !args.length ) return args;
+            
             switch( args[ 0 ] ) {
               case "generate-references":
                 _mode = Mode.generateReferences;
@@ -223,6 +225,7 @@ class Config {
           override void assign() {}
         }
       );
+      _subProgramArg.optional;
     }
   }
 
@@ -230,7 +233,6 @@ class Config {
     auto genRefParser = new Parser();
     genRefParser.name = PROGRAM_NAME ~ " generate-references";    
     genRefParser.add(
-      _subProgramArg,
       _seqDirArg,
       _resDirArg,
       _verbosityLvlArg,
@@ -384,6 +386,7 @@ class Config {
     //Normal mode parser.
     auto parser = new Parser();
     parser.add(
+      _subProgramArg,
       _seqFileArg,
       _verbosityLvlArg,
       _outFileArg,
