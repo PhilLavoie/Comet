@@ -8,6 +8,12 @@ import std.conv;
 import std.string;
 
 
+class AbortExecution: Exception {
+  package this() {
+    super( "" );
+  }
+}
+
 /**
   Exception specific to flags expecting arguments.
   If the expected count is lower than what is actually provided on the command line,

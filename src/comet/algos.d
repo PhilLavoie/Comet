@@ -20,7 +20,7 @@ import std.algorithm;
   This function constructs and returns an algorithm object based on the
   program configuration. 
 */
-AlgoI algo( U )( Algo algo, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) {
+AlgoI algorithmFor( U )( Algo algo, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) {
   final switch( algo ) {
     case Algo.standard:
       return new Standard!U( sequences, states, mutationCosts );

@@ -357,6 +357,15 @@ protected:
   Array!Indexed _indexedRight;
   Array!Argument _mandatories;
   
+  protected auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
+    try {
+      return mixin( "arg.parser." ~ method )( args );
+    } catch( Exception e ) {
+      e.msg = "argument " ~ arg.identification ~ ": " ~ e.msg;
+      throw e;
+    }
+  }
+  
   void addMandatory( Argument arg ) in {
     assert( arg.isMandatory(), "adding an optional argument as mandatory" );
   } body {
@@ -370,16 +379,11 @@ protected:
       auto container = _indexedRight;
     }
     foreach( indexed; container ) {
-      try {
-        auto previousTokens = tokens;
-        tokens = indexed.parser.take( tokens );
-        assert( tokens !is previousTokens || indexed.isOptional, "indexed " ~ s ~ " argument " ~ indexed.index.to!string ~ " did not take any argument but is mandatory" );
-        indexed.used = true;
-        _used.insertBack( indexed );
-      } catch( Exception e ) {
-        //TODO something with the message :)
-        throw e;
-      }
+      auto previousTokens = tokens;
+      tokens = argProxy!"take"( indexed, tokens );
+      assert( tokens !is previousTokens || indexed.isOptional, "indexed " ~ s ~ " argument " ~ indexed.index.to!string ~ " did not take any argument but is mandatory" );
+      indexed.used = true;
+      _used.insertBack( indexed );
     }
     return tokens;
   }
@@ -389,16 +393,16 @@ protected:
       auto f = flagOf( tokens[ 0 ] );
       enforceNotUsedBefore( f );
       enforceNoMutuallyExclusiveUsed( f );
-      tokens = f.parser.take( tokens[ 1 .. $ ] );
+      tokens = argProxy!"take"( f, tokens[ 1 .. $ ] );
       f.used = true;
       _used.insertBack( f );
     }
     
+    //TODO, maybe not in the right place?
     if( _help.used ) {
       printHelp();
       throw new HelpMenuRequested();
-    }      
-    
+    }          
     return tokens;
   }
     
@@ -419,12 +423,12 @@ protected:
   Array!Argument _used;
   void store() {
     foreach( arg; _used ) {
-      arg.parser.store();      
+      argProxy!"store"( arg );      
     }
   }
   void assign() {
     foreach( arg; _used ) {
-      arg.parser.assign();      
+      argProxy!"assign"( arg );      
     }
   }  
 

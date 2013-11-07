@@ -53,105 +53,25 @@ enum Mode {
   compileMeasures
 }
 
-struct Run {
-private:
-  File _resultsFile;
-  Algo _algorithm;
-  Config _cfg;
-  
-  this( Config cfg, File res, Algo rithm ) {
-    _cfg = cfg;
-    _resultsFile = res;
-    _algorithm = rithm;
-  }
-public:
-  @property auto resultsFile() { return _resultsFile; }
-  @property auto algorithm() { return _algorithm; }  
-  auto opDispatch( string meth, T... )( T args ) {
-    return mixin( "_cfg." ~ meth )( args );
-  }
-}
-
-struct FileRuns( Range ) if( isForwardRange!Range ) {
-private:
-  File _sequencesFile;
-  Config _cfg;
-  Range _algos;
-  
-  this( Config cfg, File sequencesFile, Range algos  ) {
-    _sequencesFile = sequencesFile;
-    _cfg = cfg;
-    _algos = algos;
-  }
-public:
-  @property bool empty() {
-    return _algos.empty();
-  }
-  @property auto front() {
-    return Run( _cfg, _cfg.resultsFileFor( _sequencesFile ), _algos.front() );
-  }
-  @property auto save() {
-    return this;
-  }
-  void popFront() {
-    _algos.popFront();
-  }
-  
-  @property auto sequencesFile() {
-    return _sequencesFile;
-  }
-}
-
-private auto fileRuns( Range )( Config cfg, File seqFile, Range algos ) if( isForwardRange!Range ) {
-  return FileRuns!Range( cfg, seqFile, algos );
-}
-
-struct Runs( Range ) if( isForwardRange!Range ) {
-private:
-  Range _sequencesFiles;
-  Config _cfg;
-  
-  this( Config cfg, Range seqFiles ) {
-    _cfg = cfg;
-    _sequencesFiles = seqFiles;
-  }
-  
-public:
-  @property bool empty() {
-    return _sequencesFiles.empty();
-  }
-  @property auto front() {
-    return fileRuns( _cfg, _sequencesFiles.front(), _cfg.algos );
-  }
-  @property auto save() {
-    return this;
-  }
-  void popFront() {
-    _sequencesFiles.popFront();
-  }
-}
-
-private auto runs( Range )( Config cfg, Range sequencesFiles ) if( isForwardRange!Range ) {
-  return Runs!Range( cfg, sequencesFiles );
-}
-
 /**
   Program configuration data.
   Initialized to default value.
   Note that this should only be read by the rest of the program and never modified.
 */
 class Config {
-  string PROGRAM_NAME;
-  
-  protected this() {
-    initFlags();
-  }
-  
-  public auto programRuns() {
-    return runs( this, sequencesFiles ); 
+public:
+  @property public auto sequencesFiles() { 
+    return _sequencesFiles[];
   }
 
-private {
+protected:
+  string PROGRAM_NAME;
+  
+  protected this( string[] args ) {
+    initFlags();
+    parse( args );
+  }
+  
   //Default standalone mode arguments.
   IndexedLeft _script; 
   IndexedRight _seqFileArg;
@@ -273,7 +193,6 @@ private {
     );
     
   }
-}
 
   Parser runTestsParser() {
     auto runTestsParser = new Parser();
@@ -309,10 +228,7 @@ private {
   @property public Mode mode() { return _mode; }
 
   private Array!File _sequencesFiles;
-  @property public auto sequencesFiles() { 
-    return _sequencesFiles[];
-  }
-  
+    
   private ubyte _verbosity = 0;  
   @property public ubyte verbosity() { return _verbosity; }
   
@@ -457,8 +373,8 @@ private {
   }
 }
 
-auto config() {
-  return new Config();
+auto configFor( string[] args ) {
+  return new Config( args );
 }
 
 //Small helper function to help print configuration files in a user friendly fashion.
