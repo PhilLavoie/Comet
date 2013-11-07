@@ -87,9 +87,9 @@ private:
   Cost[] _cache;
   real _costSum;
 public:    
-  this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
-    super( seqs, states, mutationCosts );
-    _cache = new Cost[ seqs[ 0 ].length ];
+  this( T... )( T args ) {
+    super( args );
+    _cache = new Cost[ _sequences[ 0 ].length ];
   }
   
   //Relies on the fact that the outer loop is on period length.
@@ -128,8 +128,8 @@ class Patterns( U ): Standard!( U ) {
 private:
   Cost[ Pattern ] _patternsCost;  
 public:    
-  this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
-    super( seqs, states, mutationCosts );
+  this( T... )( T args ) {
+    super( args );
   }
   
   override Cost positionCost( size_t pos, size_t period ) { 
@@ -145,8 +145,8 @@ class CachePatterns( U ): Cache!( U ) {
 private:
   Cost[ Pattern ] _patternsCost;  
 public:
-  this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
-    super( seqs, states, mutationCosts );
+  this( T... )( T args ) {
+    super( args );
   }
 
   //Copied from Patterns algorithm.
