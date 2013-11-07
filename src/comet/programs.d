@@ -4,6 +4,7 @@ import comet.sma;
 import comet.config;
 import comet.algos;
 import comet.ranges;
+import comet.results;
 
 import deimos.bio.dna;
 import deimos.containers.tree;
@@ -17,6 +18,7 @@ import std.exception;
 import std.container;
 import std.datetime;
 import std.range: isForwardRange;
+
 
 
 interface ProgramI {
@@ -137,7 +139,7 @@ private void processFile( File seqFile, File resFile, Config cfg, Algo algo ) {
 */
 private void printResults( Range )( File output, Range results ) if( isForwardRange!Range ) {
   foreach( result; results ) {
-    output.writeln( "Duplication{ start: ", result.start, ", period: ", result.period, ", cost: ", result.cost, " }" );
+    output.writeln( "Duplication{ start: ", result.start, ", length: ", result.length, ", cost: ", result.cost, " }" );
   }
 }
 
@@ -195,11 +197,16 @@ private auto sequentialDupCostsCalculation( Seq )( ref Results results, Seq[] se
     if( 2 <= cfg.verbosity ) { cfg.outFile.writeln( "Doing period: ", period.length ); }
     foreach( dup; period.duplications() ) {
       algorithm.duplicationCost( dup );
-      results.add( dup );
+      results.add( dup.toResult() );
     }  
   }
   
   return results[];
+}
+
+//TODO remove eventually.
+auto toResult( ref Duplication dup ) {
+  return result( dup.start, dup.period, dup.cost );
 }
 
 /*
@@ -208,62 +215,3 @@ auto parallelDupCostsCalculation() {
 }
 */
 
-/**
-  A wrapper around a fast, ordered index (as of right now, the structure used is a red black tree).
-  It keeps track of how many results were inserted so that it does not go beyond a maximum limit.
-  When the limit is reached, if the new result to be inserted is better than the worse one held,
-  then the latter is popped from the tree and the former is inserted, satisfying the limit.
-*/
-private struct Results {
-  private RedBlackTree!( Duplication ) _results;
-  private size_t _max;
-  
-  /**
-    The number of results is intended to be bounded.
-    The parameter provided is that bound (inclusive).
-  */
-  this( size_t maxResults ) {
-    _results = new typeof( _results )();
-    _max = maxResults;
-  }
-  
-  /**
-    Returns the number of results currently stored.
-  */
-  @property size_t length() { return _results.length; }
-  
-  /**
-    This function adds the result only if:
-      - The maximum number of results has not been reached, or
-      - The worst duplication known is worse than the result to be
-        inserted. In that case, the worst result is exchanged
-        with the provided one.
-  */
-  void add( Duplication result ) {
-    if( !_max ) { return; }
-    
-    //Store result.
-    if( _results.length < _max ) {
-      _results.insert( result );
-    //If we reached the maximum number of results, then we determine
-    //if the current duplication result is better than the worst already known.
-    //If so, we get rid of the worst and insert the better one.
-    } else if( result < _results.back() ){
-      _results.removeBack();
-      _results.insert( result );
-    }
-  }
-
-  /**
-    Returns a range of results in ascending order (the "lowest" result is the actual best).
-  */
-  auto opSlice() {
-    return _results[];
-  } 
-  /**
-    Returns a range of results in ascending order (the "lowest" result is the actual best).
-  */  
-  auto range() {
-    return _results[];
-  }
-}
