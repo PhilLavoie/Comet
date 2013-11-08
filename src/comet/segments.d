@@ -52,25 +52,62 @@ private auto segmentPairAt( S )( S sequence, size_t start, size_t length ) if( i
   return SegmentPair!S( sequence[ start .. rightStart ], sequence[ rightStart .. rightStart + length ] );
 }
 
+struct ColumnRange( R ) {
+private:
+  size_t _index;
+  R _r;
+  
+  this( R r, size_t index ) {
+    _r = r;
+    _index = index;
+  }
+public: 
+  void popFront() { _r.popFront(); }
+  auto front() { return _r.front; }
+  bool empty() { return _r.empty; }
+  auto index() { return _index; }
+}
+private auto columnRange( R )( R range, size_t index ) if( isInputRange!R ) {
+  return ColumnRange!R( range, index );
+}
+
 /**
   A facility range that iterates over columns in order.
-  It requires a range of random access ranges.
+  It requires a random access range of random access ranges.
 */
-struct ColumnsRange( RoR ) if( isInputRange!RoR && isSequence!( ElementType!RoR ) ) {
+struct ColumnsRange( RoR ) if( isSequence!RoR && isSequence!( ElementType!RoR ) ) {
 private:
   RoR _ror;       //Range of ranges holding the random access ranges. In other words, the range of rows.
-  size_t _index;  //Current index.
-
+  size_t _start;  //Current index.
+  size_t _length; //Current length.
+   
   this( RoR ror ) {
     _ror = ror; 
+    _start = 0;
+    _length = _ror.front.length;
   }  
 public:  
-  bool empty() { return _index == _ror.front.length; }
-  auto front() { return transversal!( TransverseOptions.assumeNotJagged )( _ror, _index ); }
+  bool empty() const { return !_length; }
+  
+  auto front() { return this[ 0 ]; }
+  auto back() { return this[ $ - 1 ]; }
+  auto opIndex( size_t index ) { return columnRange( transversal!( TransverseOptions.assumeNotJagged )( _ror, _start + index  ), _start + index ); }
+  
   void popFront() {
-    ++_index;
+    ++_start;
+    --_length;
   }
+  
+  void popBack() {
+    --_length;
+  }
+  
+  size_t opDollar() const {
+    return _length;
+  }
+  alias length = opDollar;
 }
+
 /**
   Factory functions for creating columns range.
 */
@@ -91,6 +128,7 @@ private auto columnsRange( RoR )( RoR ror ) if( isInputRange!RoR && isSequence!(
 struct SegmentPairs( S ) {
 private:
   Array!( SegmentPair!( S ) ) _pairs; //The container where the pairs are stored.
+  size_t _index;                      //The actual index on the real sequences.
   
   this( size_t pairsCount ) {
     _pairs.length = pairsCount;
@@ -142,10 +180,19 @@ public:
   */
   alias byColumns = columns!"";
   
+  size_t segmentsLength() {
+    return _pairs[ 0 ].left.length;
+  }
+  
+  size_t indexOnSequences() {
+    return _index;
+  }
+  
   /**
     Reset the sequence of pairs. Make sure you use the same amount as previously.
   */
   void set( Range )( Range sequences, size_t start, size_t length ) if( isSequence!Range && isSequence!( ElementType!Range ) ) {
+    _index = start;
     size_t i = 0;
     foreach( sequence; sequences ) {
       _pairs[ i ] = segmentPairAt( sequence, start, length );
@@ -196,7 +243,7 @@ unittest {
   assert( pairs.rightSegments.equal( [ firstPair.right, secondPair.right ] ) );
   
   auto leftColumns = pairs.leftColumns;
-  assert( 4 == count( leftColumns ) );
+  assert( 4 == count( leftColumns ), count( leftColumns ).to!string() );
   assert( leftColumns.front.equal( [ 0, 2 ] ) );
   leftColumns.popFront();
   assert( leftColumns.front.equal( [ 1, 4 ] ) );

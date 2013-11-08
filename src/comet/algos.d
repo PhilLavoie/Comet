@@ -11,8 +11,10 @@ import comet.pattern;
 import comet.config;
 import comet.ranges;
 public import comet.dup;
+import comet.segments;
 
 import std.algorithm;
+import range = std.range;
 
 /**
   This function constructs and returns an algorithm object based on the given parameters. 
@@ -40,16 +42,17 @@ AlgoI algorithmFor( U )( Algo algo, Sequence[] sequences, Nucleotide[] states, U
 */
 interface AlgoI {
   void duplicationCost( ref Duplication );
+  Cost costFor( SegmentPairs!( Nucleotide[] ) pairs );
 }
 
 
 class Standard( U ): AlgoI {
-private:
+protected:
   Sequence[] _sequences;
   Nucleotide[] _states;
   U _mutationCosts;
   SMTree!Nucleotide _smTree;
-public:  
+
   this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
     _sequences = seqs;
     _states = states;
@@ -60,14 +63,6 @@ public:
     phylogenize( _smTree, _sequences );    
   }
   
-  override void duplicationCost( ref Duplication dup ) {
-    real sum = 0;
-    foreach( current; dup.positions ) {      
-        sum += positionCost( current, dup.period );     
-    }
-    dup.cost = sum / dup.period;
-  }
-
   Cost positionCost( size_t pos, size_t period ) {
     //Start by extracting the states from the hierarchy: use them to set the
     //the leaves of the smtree.
@@ -77,18 +72,48 @@ public:
     _smTree.update( _states, _mutationCosts );
     return preSpeciationCost( _smTree, _mutationCosts );
   }
+    
+  Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
+    //Start by extracting the states from the hierarchy: use them to set the
+    //the leaves of the smtree.
+    setLeaves( _smTree, column );
+    
+    //Process the state mutation algorithm then extract the preSpeciation cost.
+    //TODO: does the tree really need the states and mutation costs every time?
+    _smTree.update( _states, _mutationCosts );
+    return preSpeciationCost( _smTree, _mutationCosts );
+  }
+    
+public:
+  override void duplicationCost( ref Duplication dup ) {
+    real sum = 0;
+    foreach( current; dup.positions ) {      
+        sum += positionCost( current, dup.period );     
+    }
+    dup.cost = sum / dup.period;
+  }  
+  
+  override Cost costFor( SegmentPairs!( Nucleotide[] ) pairs ) {
+    real sum = 0;
+    foreach( column; pairs.byColumns ) {
+      sum += columnCost( column );
+    }
+    //Normalized sum.
+    return sum / pairs.segmentsLength;
+  }
 }
 
 class Cache( U ): Standard!( U ) {
-private:
+protected:
   Cost[] _cache;
   real _costSum;
-public:    
+  
   this( T... )( T args ) {
     super( args );
     _cache = new Cost[ _sequences[ 0 ].length ];
   }
-  
+
+public:      
   //Relies on the fact that the outer loop is on period length.
   //Relies on the face that the first duplication for a given length starts at position 0.
   override void duplicationCost( ref Duplication dup ) {
@@ -101,30 +126,48 @@ public:
       }
       dup.cost = _costSum / dup.period;
     } else {
-      import std.stdio;
-      //writeln( "initial cost sum: ", _costSum );
-      //writeln( "previous pos cost: ", _cache[ dup.start - 1 ] );
-      
       _costSum -= _cache[ dup.start - 1 ];
       auto posCost = positionCost( dup.stop, dup.period );
-      
-      //writeln( "position cost: ", posCost );
-      
       _cache[ dup.stop ] = posCost;
       _costSum += posCost;
       
       dup.cost = _costSum / dup.period;
       
-      //writeln( "final cost sum: ", _costSum );
-      //writeln( "duplication cost: ", dup.cost );      
     }
+  }
+
+  //Relies on the fact that the outer loop is on period length.
+  //Relies on the face that the first duplication for a given length starts at position 0.
+  override Cost costFor( SegmentPairs!( Nucleotide[] ) pairs ) {
+    //If those are the first segment pairs of a given length.
+    size_t segmentsStart = pairs.indexOnSequences;
+    if( segmentsStart == 0 ) {
+      _costSum = 0;
+      foreach( column; pairs.byColumns ) {      
+        auto posCost = columnCost( column );          
+        _cache[ segmentsStart + column.index ] = posCost;
+        _costSum += posCost;
+      }
+      return _costSum / pairs.segmentsLength;
+    } 
+    
+    //Remove the first column cost of the previously processed segment pairs.
+    _costSum -= _cache[ segmentsStart - 1 ];
+    //Calculate the cost of this segment pairs last column.
+    auto posCost = columnCost( pairs.byColumns[ $ - 1 ]  );
+    //Store it.    
+    _cache[ segmentsStart + pairs.segmentsLength - 1 ] = posCost;
+    //Add it to the current cost.
+    _costSum += posCost;
+    
+    return _costSum / pairs.segmentsLength;
   }  
 }
 
 class Patterns( U ): Standard!( U ) {
-private:
+protected:
   Cost[ Pattern ] _patternsCost;  
-public:    
+  
   this( T... )( T args ) {
     super( args );
   }
@@ -136,12 +179,20 @@ public:
     } 
     return _patternsCost[ pattern ];    
   }
+  
+  override Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
+    auto pattern = Pattern( column ); 
+    if( pattern !in _patternsCost ) {
+      _patternsCost[ pattern ] = super.columnCost( column );
+    } 
+    return _patternsCost[ pattern ];    
+  }
 }
 
 class CachePatterns( U ): Cache!( U ) {
-private:
+protected:
   Cost[ Pattern ] _patternsCost;  
-public:
+
   this( T... )( T args ) {
     super( args );
   }
@@ -151,6 +202,14 @@ public:
     auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); 
     if( pattern !in _patternsCost ) {
       _patternsCost[ pattern ] = super.positionCost( pos, period );
+    } 
+    return _patternsCost[ pattern ];    
+  }
+  
+  override Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
+    auto pattern = Pattern( column ); 
+    if( pattern !in _patternsCost ) {
+      _patternsCost[ pattern ] = super.columnCost( column );
     } 
     return _patternsCost[ pattern ];    
   }
@@ -207,19 +266,18 @@ private void phylogenize( Tree )( ref Tree tree, Sequence[] sequences ) in {
 }
 
 /**
-  Sets the leaves of the state mutation tree using the provided sequences. The leaves are set according
+  Sets the leaves of the state mutation tree using the provided values. The leaves are set according
   to the "leaves" range from the tree structure which, as of right now, reads leaves from "left" to "right"
   (left being the first child in insertion order and right being the last). The "left" half of the tree holds
   the values (read nucleotides if working with dna) of one homologous sequence, whereas the opposite half is a mirror
-  image containg the values of the other sequence.
+  image containing the values of the other sequence.
 */
-private void setLeaves( Tree, Range )( ref Tree smTree, Range sequences ) {
-  //Of course, we expect both trees to have the exact same layout and therefore 
-  //that the leaves iterator return the same number of leaves and in the same order.
+private void setLeaves( Tree, Range )( ref Tree smTree, Range leaves ) if( range.isInputRange!Range ) {
+  
   foreach( ref smLeaf; smTree.leaves ) {
-    assert( !sequences.empty );
-    smLeaf.element.fixState( sequences.front() );  
-    sequences.popFront();
+    assert( !leaves.empty );
+    smLeaf.element.fixState( leaves.front() );  
+    leaves.popFront();
   }    
 }
 
