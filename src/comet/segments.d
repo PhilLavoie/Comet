@@ -24,7 +24,7 @@ private template isSequence( T ) {
   This structure holds a pair of sequences for the purposes of parallel processing.
   It assumes that both segments be of the same length and satisfy the sequence interface.
 */
-private struct SegmentPair( S ) if( isSequence!S ) {
+public struct SegmentPair( S ) if( isSequence!S ) {
 private:
   S _left;  //Left sequence.
   S _right; //Right sequence.
@@ -113,11 +113,17 @@ private:
       The first element is a range over the left segments first column. 
       The second element is a range over the left segments second column, etc...
     
-    This template also provides a range that iterates over both segments linearly.
+    This template also provides a range that iterates over both segments columns linearly.
     Take those three pairs:
+      [ [ 1, 2, 3,  4, 5, 6    ],
+        [ 2, 4, 6,  8, 10, 12  ],
+        [ 3, 6, 9,  12, 15, 18 ] ]
+    The range will travel left segments on the 0th column first, and then move to the 0th column
+    of the right segments. Then it will do the same for the rest of the columns. Generating
+    this:
+      [ 1, 2, 3, 4, 8, 12 ], [ 2, 4, 6, 5, 10, 15 ], [ 3, 6, 9, 6, 12 18 ].        
     
-    
-  */
+  */  
   auto columns( string s )() if( s == "left" || s == "right" ) {
     return columnsRange( segments!s );
   }
@@ -131,9 +137,14 @@ private:
   alias rightColumns = columns!"right";
   
 public:
-  
+  /**
+    Returns a range over both segments columns.
+  */
   alias byColumns = columns!"";
   
+  /**
+    Reset the sequence of pairs. Make sure you use the same amount as previously.
+  */
   void set( Range )( Range sequences, size_t start, size_t length ) if( isSequence!Range && isSequence!( ElementType!Range ) ) {
     size_t i = 0;
     foreach( sequence; sequences ) {
@@ -142,15 +153,22 @@ public:
     }
   }
   
-  auto opIndex( size_t index ) {
-    return _pairs[ index ];
-  } 
-  
+  /**
+    Returns a range iterating over the segment pairs.
+  */
   auto opSlice() { return _pairs[]; }
   alias pairs = opSlice;
 }
 
-//TODO add check to make sure sequeces elements are sequences.
+/**
+  Factory function that creates a segment pairs structure.
+  It expects a range of random access ranges.
+  It creates a pair of equal length adjacent segments for every sequence at the given index and of the given length.
+  The structure returned holds the pair for every sequence passed in the same order they were traversed.
+  
+  This function should only be called once because it allocates. Reset the segment pairs directly instead of creating
+  a new one for new segment pairs.
+*/
 auto segmentPairsAt( Range )( Range sequences, size_t start, size_t length ) if( isSequence!Range && isSequence!( ElementType!Range ) ) {
   alias Sequence = ElementType!Range;
   auto pairs = SegmentPairs!( Sequence )( sequences.length );
