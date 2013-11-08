@@ -1,8 +1,6 @@
 /**
-  Module encapsulating logic regarding the calculation of duplication cost.
-  It provides an interface to the user in the form of algorithms. Algorithms
-  all respond to a given interface and a factory method is provided to
-  determine, according to program configuration, which algorithm is to be used.
+  Module encapsulating logic regarding the calculation of segment pairs cost.
+  It provides an interface to the user in the form of algorithms. 
 */
 module comet.algos;
 
@@ -17,8 +15,7 @@ public import comet.dup;
 import std.algorithm;
 
 /**
-  This function constructs and returns an algorithm object based on the
-  program configuration. 
+  This function constructs and returns an algorithm object based on the given parameters. 
 */
 AlgoI algorithmFor( U )( Algo algo, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) {
   final switch( algo ) {

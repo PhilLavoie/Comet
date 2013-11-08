@@ -237,8 +237,8 @@ public:
 }
 
 /**
-  This interface represents the behavior must support the entity
-  responsible for providing the cost of a mutation between two states.
+  This interface formalize the interface of the callable object responsible
+  for providing the cost of a mutation between two states.
 */
 interface MutationCosts( T ) {
   Cost opCall( T initialState, T mutatedState );

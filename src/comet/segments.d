@@ -185,10 +185,10 @@ unittest {
       [ 2, 4, 6, 8,   10, 12, 14, 16 ]
     ];
   auto pairs = segmentPairsAt( sequences[], 0, 4 ); 
-  auto firstPair = pairs[ 0 ];
+  auto firstPair = pairs._pairs[ 0 ];
   assert( firstPair.left.equal( [ 0, 1, 2, 3 ] ) );
   assert( firstPair.right.equal( [ 3, 2, 1, 0 ] ) );
-  auto secondPair = pairs[ 1 ];
+  auto secondPair = pairs._pairs[ 1 ];
   assert( secondPair.left.equal( [ 2, 4, 6, 8 ] ) );
   assert( secondPair.right.equal( [ 10, 12, 14, 16 ] ) );
 
@@ -225,48 +225,3 @@ unittest {
   columns.popFront();
   assert( columns.front.equal( [ 3, 8, 0, 16 ] ) );  
 }   
-
-
-
-/*
-struct Flatten( RoR ) {
-private:
-  RoR _ranges;
-  ElementType!RoR _current; 
-
-  this( RoR ror ) {
-    _ranges = ror;
-    if( !_ranges.empty ) {
-      _current = _ranges.front;
-      assignCurrent(); 
-    }
-  }
-  
-  @property void assignCurrent() {    
-    while( !_ranges.empty && _current.empty ) {
-      _ranges.popFront();
-      if( !_ranges.empty ) {
-        _current = _ranges.front();
-      }
-    }        
-  }
-    
-public:
-  bool empty() { return _ranges.empty; }
-  auto front() { return _current.front; }
-  void popFront() {
-    _current.popFront();
-    assignCurrent();
-  }
-
-}
-auto flatten( RoR )( RoR ranges ) {
-  return Flatten!RoR( ranges );
-}
-
-unittest {
-  import std.conv;
-  
-  assert( equal( flatten( [ [ 1, 2, 3 ], [ 4, 5 ], [], [ 6 ], [] ] ), [ 1, 2, 3, 4, 5, 6 ] ) );  
-}
-*/
