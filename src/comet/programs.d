@@ -5,6 +5,7 @@ import comet.config;
 import comet.algos;
 import comet.ranges;
 import comet.results;
+import comet.segments;
 
 import deimos.bio.dna;
 import deimos.containers.tree;

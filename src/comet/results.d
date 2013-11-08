@@ -32,6 +32,39 @@ auto result( size_t start, size_t length, Cost cost ) {
   return Result( start, length, cost );
 }
 
+unittest {
+  Result r1, r2;
+  r1.start = 0;
+  r1.length = 100;
+  r1.cost = 20.0;
+  r2.start = 10;
+  r2.length = 20;
+  r2.cost = 21.0;
+  
+  //Cost based ordering.
+  assert( r1 < r2 );
+  r1.cost = r2.cost + 1;
+  assert( r2 < r1 );
+  
+  //Period ordering.
+  r2.cost = r1.cost;
+  assert( r1 < r2 );
+  r2.length = r1.length + 1;
+  assert( r2 < r1 );
+  
+  //Start index ordering.
+  r2.cost = r1.cost;
+  r2.length = r1.length;
+  assert( r1 < r2 );
+  r1.start = r2.start + 1;
+  assert( r2 < r1 );
+  
+  //Equality.
+  r1 = r2;
+  assert( r1 == r2 );
+}
+
+
 
 
 /**

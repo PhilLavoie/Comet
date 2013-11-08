@@ -14,6 +14,8 @@ import std.stdio;
 import std.container;
 import std.algorithm;
 
+//TODO: get rid of that monster.
+
 /**
   This structure holds summary information regarding a duplication. It holds its start position and the length
   of its period, idenfying it in a unique manner. The data also holds the cost of the duplication as provided by
