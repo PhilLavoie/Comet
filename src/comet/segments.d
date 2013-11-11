@@ -597,4 +597,43 @@ unittest
         assert( false );   
     }  
   }
+  
+  //With an odd number of elements per sequence.
+  sequences = 
+    [ [ 0,  1,  2,  3,    3,  2,  1,  0,   -1 ],
+      [ 2,  4,  6,  8,   10, 12, 14, 16,   18 ],
+      [ 4,  7, 10, 13,   13, 10,  7,  4,    1 ],
+      [ 6, 10, 14, 18,   22, 26, 30, 34,   38 ] ];
+  auto sequencesLength = sequences[ 0 ].length;
+  
+  auto segLengths = segmentLengthsFor( sequences[].front.length, 1, size_t.max, 1 );
+  assert( ( sequencesLength / 2 ) == count( segLengths ) );
+  
+  foreach( segLength; segLengths ) {
+    auto segPairsForLength = sequences.segmentPairsForLength( segLength );
+    assert( ( sequencesLength - ( 2 * segLength ) + 1 ) == count( segPairsForLength ) );
+    
+    int leftSegmentStart = 0;  
+    foreach( segPairs; segPairsForLength ) {
+      assert( segPairs.leftSegmentStart == leftSegmentStart );
+      assert( segPairs.segmentsLength == segLength );
+      assert( segPairs.rightSegmentStart == leftSegmentStart + segLength );
+      
+      
+      auto columns = segPairs.columns;
+      auto noColumns = segLength;
+      assert( noColumns == count( columns ) );
+      
+      int columnIndex = leftSegmentStart;
+      foreach( column; columns ) {
+        assert( 8 == count( column ) );
+        assert( columnIndex == column.index );
+        auto xPected = chain( transversal( sequences, columnIndex ), transversal( sequences, columnIndex + segLength ) );
+        assertExpected( column, xPected, segLength, leftSegmentStart );             
+        ++columnIndex;
+      }
+      ++leftSegmentStart;
+    }  
+  }
+  
 }
