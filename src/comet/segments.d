@@ -7,151 +7,199 @@ module comet.segments;
 import std.range;
 import std.algorithm;
 import std.container;
+import std.typecons;
 
 /**
-  Returns true if the given type is a valid sequence, false otherwise.
-  So far, a valid sequence need to be random access and be able to provide its length.  
+  Generates all the possible segment length for segment pairs with the given parameters.
+  The length applies to a single segment, not to the whole pair.
+  Therefore, a range of 100 elements can have segments of length 0 ... 50 inclusively
+  (a pair of 50 element segments takes the whole range).
 */
-private template isSequence( T ) {
-  static if( isRandomAccessRange!T && hasLength!T ) {
-    enum isSequence = true;
-  } else {
-    enum isSequence = false;
-  }
-}
-
-/**
-  This structure holds a pair of sequences for the purposes of parallel processing.
-  It assumes that both segments be of the same length and satisfy the sequence interface.
-*/
-public struct SegmentPair( S ) if( isSequence!S ) {
+struct SegmentLengthsRange 
+{
 private:
-  S _left;  //Left sequence.
-  S _right; //Right sequence.
+  size_t _currentLength;  //The current length generated.
+  size_t _maxLength;      //Inclusive.
+  size_t _lengthStep;     //The jump between lengths. Not necessarily one.
   
-  this( S left, S right ) {
-    _left = left;
-    _right = right;
+  /**
+    Creates a segment length range with the given parameters. Both boundaries are inclusive.
+  */
+  this( size_t sequenceLength, size_t minLength, size_t maxLength, size_t lengthStep ) 
+  in 
+  {
+    debug
+    {
+      assert( 0 < minLength );
+      assert( 0 < lengthStep );
+      assert( 2 <= sequenceLength );    
+      assert( minLength <= maxLength );
+      assert( minLength % lengthStep == 0 );
+    }
+  } 
+  body 
+  {
+    _currentLength = minLength;
+    _maxLength = min( sequenceLength / 2, maxLength );
+    _lengthStep = lengthStep;    
   }
+  
+  /**
+    Returns the inclusive maximum boundary.
+  */
+  auto inclusiveMaxLength() 
+  { 
+    return _maxLength; 
+  }
+  
+  /**
+    Returns the exclusive maximum boundary.
+  */
+  auto exclusiveMaxLength() 
+  { 
+    return _maxLength + 1; 
+  }
+  
 public:
-  @property auto left() { return _left[]; }
-  alias first = left;
-  @property auto right() { return _right[]; }    
-  alias second = right;
+  @property auto front() { return _currentLength; }  
+  @property bool empty() { return _maxLength < _currentLength; }  
+  void popFront() {  _currentLength += _lengthStep; }      
 }
-
 /**
-  Factory functions for constructing a pair of equal length adjacent segments. Note that NO bounds checking is made, 
-  It uses a sequence as input. The pair's left segment starts on the index provided and is of the length provided.
-  The right segments starts right next to the previous segment's end and is of equal length.
-  
-  Make sure the sequence have enough elements to generate a valid segment pair.
+  Factory function for constructing a segment length range.
 */
-private auto segmentPairAt( S )( S sequence, size_t start, size_t length ) if( isSequence!S ) {
-  auto rightStart = start + length;
-  return SegmentPair!S( sequence[ start .. rightStart ], sequence[ rightStart .. rightStart + length ] );
-}
+auto segmentLengthsFor( size_t sequenceLength, size_t minLength, size_t maxLength, size_t lengthStep ) 
+{
+  return SegmentLengthsRange( sequenceLength, minLength, maxLength, lengthStep );
+}  
 
-struct ColumnRange( R ) {
-private:
-  size_t _index;
-  R _r;
-  
-  this( R r, size_t index ) {
-    _r = r;
-    _index = index;
+unittest 
+{
+  debug {
+    import std.stdio;
+    writeln( "running tests for segments length range..." );
+    scope( success ) {
+      writeln( "done" );
+    }
+    scope( failure ) {
+      writeln( "failed" );
+    }
   }
-public: 
-  void popFront() { _r.popFront(); }
-  auto front() { return _r.front; }
-  bool empty() { return _r.empty; }
-  auto index() { return _index; }
-}
-private auto columnRange( R )( R range, size_t index ) if( isInputRange!R ) {
-  return ColumnRange!R( range, index );
-}
-
-/**
-  A facility range that iterates over columns in order.
-  It requires a random access range of random access ranges.
-*/
-struct ColumnsRange( RoR ) if( isSequence!RoR && isSequence!( ElementType!RoR ) ) {
-private:
-  RoR _ror;       //Range of ranges holding the random access ranges. In other words, the range of rows.
-  size_t _start;  //Current index.
-  size_t _length; //Current length.
-   
-  this( RoR ror ) {
-    _ror = ror; 
-    _start = 0;
-    _length = _ror.front.length;
+  
+  auto minLength = 3u;
+  auto maxLength = size_t.max;
+  auto lengthStep = 3u;
+  auto sequenceLength = 100u;
+  
+  auto segmentLengths = segmentLengthsFor( sequenceLength, minLength, maxLength, lengthStep );
+  assert( segmentLengths.inclusiveMaxLength == 50 );
+  
+  auto index = 0u;
+  foreach( length; segmentLengths ) {
+    assert( length == minLength + index * lengthStep );
+    assert( length <= sequenceLength / 2 );
+    ++index;
   }  
-public:  
-  bool empty() const { return !_length; }
-  
-  auto front() { return this[ 0 ]; }
-  auto back() { return this[ $ - 1 ]; }
-  auto opIndex( size_t index ) { return columnRange( transversal!( TransverseOptions.assumeNotJagged )( _ror, _start + index  ), _start + index ); }
-  
-  void popFront() {
-    ++_start;
-    --_length;
-  }
-  
-  void popBack() {
-    --_length;
-  }
-  
-  size_t opDollar() const {
-    return _length;
-  }
-  alias length = opDollar;
 }
 
 /**
-  Factory functions for creating columns range.
+  This range generates all of the segment pairs possible on a given range of ranges with each segment
+  being of the specified length. The first pair starts at index 0 and the last pair
+  stops at position sequenceLength - ( 2 * segmentsLength ). So, for a range in which each range has 101 elements and 
+  both segments have a length of 50, the last position where pairs will be created is on 101 - 100 = 1. This boundary
+  is inclusive.
 */
-private auto columnsRange( RoR )( RoR ror ) if( isInputRange!RoR && isSequence!( ElementType!RoR ) ) {
-  return ColumnsRange!RoR( ror );
+struct SegmentPairsRange( RoR ) 
+{
+private:
+  RoR _sequences;             //The range of ranges.
+  size_t _segmentsLength;     //The length of every segment held by the associated segment pairs.
+  size_t _currentPairStart;   //The current position (inclusive) on which starts the leftmost segment.
+  size_t _lastPairStart;      //The last position (inclusive) on which starts the leftmost segment of the last segment pairs.
+  
+
+  /**
+    Creates a range constructing all the pairs with segments of the given length.
+  */
+  this( RoR sequences, size_t length ) 
+  {
+    _sequences = sequences;    
+    _segmentsLength = length;
+    _currentPairStart = 0;    //Starts on the beginning of the sequence.
+    _lastPairStart = _sequences.front.length - ( 2 * _segmentsLength );
+  }  
+  
+public:
+  @property bool empty() { return _lastPairStart < _currentPairStart; }
+  @property auto front() { return segmentPairsAt( _sequences, _currentPairStart, _segmentsLength ); }
+  void popFront() { ++_currentPairStart; }
 }
+/**
+  Returns a segment pairs range that generate all segments pairs of the given length for the given sequences.
+*/
+auto segmentPairsForLength( RoR )( RoR sequences, size_t length ) {
+  return SegmentPairsRange!RoR( sequences, length );
+}
+
+unittest {
+  //TODO: find good unittests????
+}
+
 
 /**
   This structure holds multiple segment pairs in parallel.
   It was made so that the user can easily traverse transversally a group of related
-  segment pairs. Note that this structure was meant to be built once, and
-  refilled multiple times in order to avoid memory waste.
+  segment pairs. For example:
   
-  It is expected that the NUMBER of segment pairs held will be determine at runtime,
-  but will never change through the course of the program. Therefore the segment pairs
-  holder should be constructed once but refilled multiple times.
+      Segment pairs of length 3 at position 3
+                    columns
+              left           right
+              0  1   2     0   1   2
+   0,  1, |  2,  3,  4, |  5,  6,  7, |  8,  9, 
+  10, 11, | 12, 13, 14, | 15, 16, 17, | 18, 19
+  20, 21, | 22, 23, 24, | 25, 26, 27, | 28, 29
+
+  The traversal of the first column of this segment pairs would yield: [ 2, 12, 22, 5, 15, 15 ].  
 */
-struct SegmentPairs( S ) {
+struct SegmentPairs( E ) 
+{
 private:
-  Array!( SegmentPair!( S ) ) _pairs; //The container where the pairs are stored.
-  size_t _index;                      //The actual index on the real sequences.
+  alias Sequences = E[][];
   
-  this( size_t pairsCount ) {
-    _pairs.length = pairsCount;
+  Sequences _sequences;
+  size_t _segmentsLength;                      
+  size_t _leftSegmentStart;
+  size_t _rightSegmentStart;
+    
+  this( Sequences sequences, size_t pairsStart, size_t segmentsLength ) 
+  in
+  {
+    debug 
+    {
+      import std.conv;
+      import std.stdio;
+      scope( failure ) {
+        writeln( typeof( this ).stringof ~ "( " ~ sequences.to!string() ~ ", " ~ pairsStart.to!string() ~ ", " ~ segmentsLength.to!string() ~ " )" );        
+      }
+      
+      assert( sequences.length );
+      assert( sequences.front.length );
+      assert( sequences.front.length >= ( pairsStart + ( 2  * segmentsLength ) ) );
+      assert( 1 <= segmentsLength );
+    }
+  } 
+  body
+  {
+    _sequences = sequences;
+    _leftSegmentStart = pairsStart;
+    _segmentsLength = segmentsLength;
+    _rightSegmentStart = _leftSegmentStart + _segmentsLength;
   }  
-  
-  /**
-    Template function returning the left or right segments held by the pairs
-    in a top/bottom fashion. If the range is for the left segments, then:
-      The range's first item is the first pair's left segment.
-      The second one is the second pair's left segment, etc...
-  */
-  auto segments( string s )() if( s == "left" || s == "right" ) {
-    return _pairs[].map!( pair => mixin( "pair." ~ s ) );
-  }  
-  
+    
   /**
     Template function returning a range iterating over the
-    segments columns from left to right. If the range is for
-    the left columns:
-      The first element is a range over the left segments first column. 
-      The second element is a range over the left segments second column, etc...
-    
-    This template also provides a range that iterates over both segments columns linearly.
+    segments columns from left to right. 
+    This template provides a range that iterates over both segments columns linearly.
     Take those three pairs:
       [ [ 1, 2, 3,  4, 5, 6    ],
         [ 2, 4, 6,  8, 10, 12  ],
@@ -162,49 +210,74 @@ private:
       [ 1, 2, 3, 4, 8, 12 ], [ 2, 4, 6, 5, 10, 15 ], [ 3, 6, 9, 6, 12 18 ].        
     
   */  
-  auto columns( string s )() if( s == "left" || s == "right" ) {
-    return columnsRange( segments!s );
-  }
-  auto columns( string s )() if( s == "" ) {
-    return columnsRange( chain( leftSegments, rightSegments ) );
-  }
+  auto columns() { return columnsRange(); }
   
-  alias leftSegments = segments!"left";
-  alias rightSegments = segments!"right";
-  alias leftColumns = columns!"left";
-  alias rightColumns = columns!"right";
+  auto columnsRange() { return ColumnsRange( _sequences, _leftSegmentStart, _segmentsLength ); }
   
 public:
+   
+  struct ColumnsRange 
+  {
+  private:
+    Sequences _sequences;
+    size_t _currentColumn;  //Current column index.     
+    size_t _segmentsLength;
+    size_t _rightSegmentsStart;
+    
+    this( Sequences sequences, size_t leftSegmentsStart, size_t segmentsLength ) {
+      _sequences = sequences;
+      _currentColumn = leftSegmentsStart;
+      _segmentsLength = segmentsLength;
+      _rightSegmentsStart = _currentColumn + _segmentsLength;
+    }
+    
+    private auto column( R )( R range, size_t index ) {
+      return Column!R( range, index );
+    }
+  public:
+    auto front() { return this[ 0 ]; }
+    auto back() { return this[ $ - 1 ]; }
+    //popBack?
+    auto empty() { return !length; }
+    void popFront() { ++_currentColumn;  }
+    
+    auto opIndex( size_t index ) { 
+      index += _currentColumn;
+      return column( chain( transversal( _sequences, index ), transversal( _sequences, index + _segmentsLength ) ), index ); 
+    }
+    auto opDollar() { return _rightSegmentsStart - _currentColumn; }    
+    alias length = opDollar;
+    
+    struct Column( R ) if( is( ElementType!R == E ) && isInputRange!R ) {
+    private:
+      R _range;
+      size_t _index;
+      this( R range, size_t index ) { _range = range; _index = index; }    
+    public:
+      auto index() { return _index; }
+      auto front() { return _range.front; }
+      void popFront() { _range.popFront(); }
+      auto empty() { return _range.empty; }
+    }
+  
+  }
+    
   /**
     Returns a range over both segments columns.
   */
-  alias byColumns = columns!"";
+  alias byColumns = columns;
   
-  size_t segmentsLength() {
-    return _pairs[ 0 ].left.length;
+  auto segmentsLength() {
+    return _segmentsLength;
   }
   
-  size_t indexOnSequences() {
-    return _index;
-  }
+  auto leftSegmentStart() {
+    return _leftSegmentStart;
+  }  
   
-  /**
-    Reset the sequence of pairs. Make sure you use the same amount as previously.
-  */
-  void set( Range )( Range sequences, size_t start, size_t length ) if( isSequence!Range && isSequence!( ElementType!Range ) ) {
-    _index = start;
-    size_t i = 0;
-    foreach( sequence; sequences ) {
-      _pairs[ i ] = segmentPairAt( sequence, start, length );
-      ++i;
-    }
+  auto rightSegmentStart() {
+    return _rightSegmentStart;
   }
-  
-  /**
-    Returns a range iterating over the segment pairs.
-  */
-  auto opSlice() { return _pairs[]; }
-  alias pairs = opSlice;
 }
 
 /**
@@ -216,59 +289,312 @@ public:
   This function should only be called once because it allocates. Reset the segment pairs directly instead of creating
   a new one for new segment pairs.
 */
-auto segmentPairsAt( Range )( Range sequences, size_t start, size_t length ) if( isSequence!Range && isSequence!( ElementType!Range ) ) {
-  alias Sequence = ElementType!Range;
-  auto pairs = SegmentPairs!( Sequence )( sequences.length );
-  pairs.set( sequences, start, length );
-  return pairs;
+private auto segmentPairsAt( E )( E[][] sequences, size_t start, size_t length ) {
+  return SegmentPairs!E( sequences, start, length );
 } 
 
-unittest {
+unittest 
+{
+  debug {
+    import std.stdio;
+    writeln( "running tests for segment pairs range..." );
+    scope( success ) {
+      writeln( "done" );
+    }
+    scope( failure ) {
+      writeln( "failed" );
+    }
+  }
   import std.conv;
-  
+ 
+  static void assertExpected( R1, R2 )( R1 column, R2 expected, size_t segLength, size_t segStart ) {
+    assert( 
+      column.equal( expected ), 
+      "length: " ~ segLength.to!string() ~ 
+      " segment pairs at: " ~ segStart.to!string() ~ 
+      " column: " ~ column.index.to!string() ~ 
+      " held: " ~ column.to!string() ~ 
+      " but expected: " ~ expected.to!string() 
+    );  
+  }
+ 
   auto sequences = 
-    [
-      [ 0, 1, 2, 3,   3, 2, 1, 0 ],
-      [ 2, 4, 6, 8,   10, 12, 14, 16 ]
-    ];
-  auto pairs = segmentPairsAt( sequences[], 0, 4 ); 
-  auto firstPair = pairs._pairs[ 0 ];
-  assert( firstPair.left.equal( [ 0, 1, 2, 3 ] ) );
-  assert( firstPair.right.equal( [ 3, 2, 1, 0 ] ) );
-  auto secondPair = pairs._pairs[ 1 ];
-  assert( secondPair.left.equal( [ 2, 4, 6, 8 ] ) );
-  assert( secondPair.right.equal( [ 10, 12, 14, 16 ] ) );
+    [ [ 0, 1,  2,  3,    3,  2,  1,  0 ],
+      [ 2, 4,  6,  8,   10, 12, 14, 16 ],
+      [ 4, 7, 10, 13,   13, 10,  7,  4 ] ];
+      
+  foreach( segLength; segmentLengthsFor( sequences[].front.length, 1, 100u, 1 ) ) 
+  {
+    int[] expected;
+    
+    switch( segLength ) 
+    {
+      case 1:
+        auto segPairsForLength = sequences.segmentPairsForLength( segLength );
+        assert( 7 == count( segPairsForLength ) );
+        foreach( segPairs; segPairsForLength ) 
+        {
+          auto columns = segPairs.byColumns;
+          assert( 1 == count( columns ) );
+          auto column = columns.front;
+          assert( column.index == segPairs.leftSegmentStart );
+          
+          switch( segPairs.leftSegmentStart )
+          {
+            case 0:            
+              expected = [ 0, 2, 4, 1, 4, 7 ];              
+              break;
+            case 1:
+              expected = [ 1, 4, 7, 2, 6, 10 ];              
+              break;
+            case 2:
+              expected = [ 2, 6, 10, 3, 8, 13 ];              
+              break;
+            case 3:
+              expected = [ 3, 8, 13, 3, 10, 13 ];                          
+              break;
+            case 4:
+              expected = [ 3, 10, 13, 2, 12, 10 ];              
+              break;
+            case 5:
+              expected = [ 2, 12, 10, 1, 14, 7 ];              
+              break;
+            case 6:
+              expected = [ 1, 14, 7, 0, 16, 4 ];              
+              break;
+            default:
+              assert( false );          
+          }
+          assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+        }     
+        break;
+        
+      case 2:    
+        auto segPairsForLength = sequences.segmentPairsForLength( segLength );
+        assert( 5 == count( segPairsForLength ) );
+        foreach( segPairs; segPairsForLength ) 
+        {
+          auto columns = segPairs.byColumns;
+          assert( 2 == count( columns ) );
+                    
+          switch( segPairs.leftSegmentStart )
+          {
+            case 0:            
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 0:
+                    expected = [ 0, 2, 4, 2, 6, 10 ];
+                    break;
+                  case 1:
+                    expected = [ 1, 4, 7, 3, 8, 13 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break;
+              
+            case 1:
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 1:
+                    expected = [ 1, 4, 7, 3, 8, 13 ];
+                    break;
+                  case 2:
+                    expected = [ 2, 6, 10, 3, 10, 13 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break;          
 
-  assert( pairs.leftSegments.equal( [ firstPair.left, secondPair.left ] ) );
-  assert( pairs.rightSegments.equal( [ firstPair.right, secondPair.right ] ) );
-  
-  auto leftColumns = pairs.leftColumns;
-  assert( 4 == count( leftColumns ), count( leftColumns ).to!string() );
-  assert( leftColumns.front.equal( [ 0, 2 ] ) );
-  leftColumns.popFront();
-  assert( leftColumns.front.equal( [ 1, 4 ] ) );
-  leftColumns.popFront();
-  assert( leftColumns.front.equal( [ 2, 6 ] ) );
-  leftColumns.popFront();
-  assert( leftColumns.front.equal( [ 3, 8 ] ) );
-  
-  auto rightColumns = pairs.rightColumns;
-  assert( 4 == count( rightColumns ) );
-  assert( rightColumns.front.equal( [ 3, 10 ] ) );
-  rightColumns.popFront();
-  assert( rightColumns.front.equal( [ 2, 12 ] ) );
-  rightColumns.popFront();
-  assert( rightColumns.front.equal( [ 1, 14 ] ) );
-  rightColumns.popFront();
-  assert( rightColumns.front.equal( [ 0, 16 ] ) );
-  
-  auto columns = pairs.byColumns;  
-  assert( 4 == count( columns ) );
-  assert( columns.front.equal( [ 0, 2, 3, 10 ] ) );
-  columns.popFront();
-  assert( columns.front.equal( [ 1, 4, 2, 12 ] ) );
-  columns.popFront();
-  assert( columns.front.equal( [ 2, 6, 1, 14 ] ) );
-  columns.popFront();
-  assert( columns.front.equal( [ 3, 8, 0, 16 ] ) );  
-}   
+            case 2:
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 2:
+                    expected = [ 2, 6, 10, 3, 10, 13 ];
+                    break;
+                  case 3:
+                    expected = [ 3, 8, 13, 2, 12, 10 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break;          
+
+            case 3:
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 3:
+                    expected = [ 3, 8, 13, 2, 12, 10 ];
+                    break;
+                  case 4:
+                    expected = [ 3, 10, 13, 1, 14, 7 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break;          
+
+            case 4:
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 4:
+                    expected = [ 3, 10, 13, 1, 14, 7 ];
+                    break;
+                  case 5:
+                    expected = [ 2, 12, 10, 0, 16, 4 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break; 
+              
+            default:
+              assert( false );             
+          }          
+        }     
+        break;
+
+      case 3:
+        auto segPairsForLength = sequences.segmentPairsForLength( segLength );
+        assert( 3 == count( segPairsForLength ) );
+        foreach( segPairs; segPairsForLength ) 
+        {
+          auto columns = segPairs.byColumns;
+          assert( 3 == count( columns ) );
+                    
+          switch( segPairs.leftSegmentStart )
+          {
+            case 0:
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 0:
+                    expected = [ 0, 2, 4, 3, 8, 13 ];
+                    break;
+                  case 1:
+                    expected = [ 1, 4, 7, 3, 10, 13 ];
+                    break;                  
+                  case 2:
+                    expected = [ 2, 6, 10, 2, 12, 10 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break; 
+              
+            case 1:
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 1:
+                    expected = [ 1, 4, 7, 3, 10, 13 ];
+                    break;                  
+                  case 2:
+                    expected = [ 2, 6, 10, 2, 12, 10 ];
+                    break;
+                  case 3:
+                    expected = [ 3, 8 , 13, 1, 14, 7 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break; 
+              
+            case 2: 
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 2:
+                    expected = [ 2, 6, 10, 2, 12, 10 ];
+                    break;
+                  case 3:
+                    expected = [ 3, 8 , 13, 1, 14, 7 ];
+                    break;
+                  case 4:
+                    expected = [ 3, 10, 13, 0, 16, 4 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break; 
+              
+            default:
+              assert( false );             
+          }          
+        }     
+        break;
+            
+      case 4:
+        auto segPairsForLength = sequences.segmentPairsForLength( segLength );
+        assert( 1 == count( segPairsForLength ) );
+        foreach( segPairs; segPairsForLength ) 
+        {
+          auto columns = segPairs.byColumns;
+          assert( 4 == count( columns ) );
+                    
+          switch( segPairs.leftSegmentStart )
+          {
+            case 0:
+              foreach( column; columns ) 
+              {
+                switch( column.index ) 
+                {
+                  case 0:
+                    expected = [ 0, 2, 4, 3, 10, 13 ];
+                    break;
+                  case 1:
+                    expected = [ 1, 4, 7, 2, 12, 10 ];
+                    break;                  
+                  case 2:
+                    expected = [ 2, 6, 10, 1, 14, 7 ];
+                    break;
+                  case 3:
+                    expected = [ 3, 8, 13, 0 , 16, 4 ];
+                    break;
+                  default:
+                    assert( false );               
+                }
+                assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
+              }              
+              break;              
+            default:
+              assert( false );             
+          }          
+        }     
+        break;
+      
+      default:
+        assert( false );   
+    }  
+  }
+}

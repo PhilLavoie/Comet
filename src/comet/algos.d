@@ -19,19 +19,19 @@ import range = std.range;
 /**
   This function constructs and returns an algorithm object based on the given parameters. 
 */
-AlgoI algorithmFor( U )( Algo algo, Sequence[] sequences, Nucleotide[] states, U mutationCosts ) {
+AlgoI algorithmFor( MutationCosts )( Algo algo, Sequence[] sequences, Nucleotide[] states, MutationCosts mutationCosts ) {
   final switch( algo ) {
     case Algo.standard:
-      return new Standard!U( sequences, states, mutationCosts );
+      return new Standard!MutationCosts( sequences, states, mutationCosts );
       break;
     case Algo.cache:
-      return new Cache!U( sequences, states, mutationCosts );
+      return new Cache!MutationCosts( sequences, states, mutationCosts );
       break;
     case Algo.patterns:
-      return new Patterns!U( sequences, states, mutationCosts );
+      return new Patterns!MutationCosts( sequences, states, mutationCosts );
       break;
     case Algo.cachePatterns:  
-      return new CachePatterns!U( sequences, states, mutationCosts );
+      return new CachePatterns!MutationCosts( sequences, states, mutationCosts );
       break;
   }
   assert( false );  
@@ -42,9 +42,76 @@ AlgoI algorithmFor( U )( Algo algo, Sequence[] sequences, Nucleotide[] states, U
 */
 interface AlgoI {
   void duplicationCost( ref Duplication );
-  Cost costFor( SegmentPairs!( Nucleotide[] ) pairs );
+  Cost costFor( SegmentPairs!( Nucleotide[][] ) pairs );
 }
 
+
+private mixin template standardColumnCost() {
+  private Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
+    //Start by extracting the states from the hierarchy: use them to set the
+    //the leaves of the smtree.
+    setLeaves( _smTree, column );
+    
+    //Process the state mutation algorithm then extract the preSpeciation cost.
+    //TODO: does the tree really need the states and mutation costs every time?
+    _smTree.update( _states, _mutationCosts );
+    return preSpeciationCost( _smTree, _mutationCosts );
+  }
+}
+
+private mixin template patternColumnCost() {
+  protected Cost[ Pattern ] _patternsCost;
+  private Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
+    auto pattern = Pattern( column ); 
+    if( pattern !in _patternsCost ) {
+      _patternsCost[ pattern ] = super.columnCost( column );
+    } 
+    return _patternsCost[ pattern ];    
+  }
+}
+
+private mixin template standardCostFor() {
+  public override Cost costFor( SegmentPairs!( Sequence[] ) pairs ) {
+    real sum = 0;
+    foreach( column; pairs.byColumns ) {
+      sum += columnCost( column );
+    }
+    //Normalized sum.
+    return sum / pairs.segmentsLength;
+  }
+}
+
+private mixin template cacheCostFor() {
+  protected Cost[] _cache;
+  protected real _costSum;
+  
+  //Relies on the fact that the outer loop is on period length.
+  //Relies on the face that the first duplication for a given length starts at position 0.
+  public override Cost costFor( SegmentPairs!( Sequence[] ) pairs ) {
+    //If those are the first segment pairs of a given length.
+    size_t segmentsStart = pairs.indexOnSequences;
+    if( segmentsStart == 0 ) {
+      _costSum = 0;
+      foreach( column; pairs.byColumns ) {      
+        auto posCost = columnCost( column );          
+        _cache[ segmentsStart + column.index ] = posCost;
+        _costSum += posCost;
+      }
+      return _costSum / pairs.segmentsLength;
+    } 
+    
+    //Remove the first column cost of the previously processed segment pairs.
+    _costSum -= _cache[ segmentsStart - 1 ];
+    //Calculate the cost of this segment pairs last column.
+    auto posCost = columnCost( pairs.byColumns[ $ - 1 ]  );
+    //Store it.    
+    _cache[ segmentsStart + pairs.segmentsLength - 1 ] = posCost;
+    //Add it to the current cost.
+    _costSum += posCost;
+    
+    return _costSum / pairs.segmentsLength;
+  }
+}
 
 class Standard( U ): AlgoI {
 protected:
@@ -73,16 +140,7 @@ protected:
     return preSpeciationCost( _smTree, _mutationCosts );
   }
     
-  Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
-    //Start by extracting the states from the hierarchy: use them to set the
-    //the leaves of the smtree.
-    setLeaves( _smTree, column );
-    
-    //Process the state mutation algorithm then extract the preSpeciation cost.
-    //TODO: does the tree really need the states and mutation costs every time?
-    _smTree.update( _states, _mutationCosts );
-    return preSpeciationCost( _smTree, _mutationCosts );
-  }
+  mixin standardColumnCost;
     
 public:
   override void duplicationCost( ref Duplication dup ) {
@@ -93,26 +151,19 @@ public:
     dup.cost = sum / dup.period;
   }  
   
-  override Cost costFor( SegmentPairs!( Nucleotide[] ) pairs ) {
-    real sum = 0;
-    foreach( column; pairs.byColumns ) {
-      sum += columnCost( column );
-    }
-    //Normalized sum.
-    return sum / pairs.segmentsLength;
-  }
+  mixin standardCostFor;  
 }
 
 class Cache( U ): Standard!( U ) {
 protected:
-  Cost[] _cache;
-  real _costSum;
   
   this( T... )( T args ) {
     super( args );
     _cache = new Cost[ _sequences[ 0 ].length ];
   }
 
+  mixin standardColumnCost;
+  
 public:      
   //Relies on the fact that the outer loop is on period length.
   //Relies on the face that the first duplication for a given length starts at position 0.
@@ -135,42 +186,20 @@ public:
       
     }
   }
-
-  //Relies on the fact that the outer loop is on period length.
-  //Relies on the face that the first duplication for a given length starts at position 0.
-  override Cost costFor( SegmentPairs!( Nucleotide[] ) pairs ) {
-    //If those are the first segment pairs of a given length.
-    size_t segmentsStart = pairs.indexOnSequences;
-    if( segmentsStart == 0 ) {
-      _costSum = 0;
-      foreach( column; pairs.byColumns ) {      
-        auto posCost = columnCost( column );          
-        _cache[ segmentsStart + column.index ] = posCost;
-        _costSum += posCost;
-      }
-      return _costSum / pairs.segmentsLength;
-    } 
+  
+  mixin cacheCostFor;
     
-    //Remove the first column cost of the previously processed segment pairs.
-    _costSum -= _cache[ segmentsStart - 1 ];
-    //Calculate the cost of this segment pairs last column.
-    auto posCost = columnCost( pairs.byColumns[ $ - 1 ]  );
-    //Store it.    
-    _cache[ segmentsStart + pairs.segmentsLength - 1 ] = posCost;
-    //Add it to the current cost.
-    _costSum += posCost;
-    
-    return _costSum / pairs.segmentsLength;
-  }  
 }
 
 class Patterns( U ): Standard!( U ) {
-protected:
-  Cost[ Pattern ] _patternsCost;  
+protected:    
   
   this( T... )( T args ) {
     super( args );
   }
+  
+  mixin patternColumnCost;
+  mixin standardCostFor;
   
   override Cost positionCost( size_t pos, size_t period ) { 
     auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); 
@@ -178,25 +207,42 @@ protected:
       _patternsCost[ pattern ] = super.positionCost( pos, period );
     } 
     return _patternsCost[ pattern ];    
-  }
+  } 
   
-  override Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
-    auto pattern = Pattern( column ); 
-    if( pattern !in _patternsCost ) {
-      _patternsCost[ pattern ] = super.columnCost( column );
-    } 
-    return _patternsCost[ pattern ];    
-  }
 }
 
-class CachePatterns( U ): Cache!( U ) {
+class CachePatterns( U ): Standard!( U ) {
 protected:
-  Cost[ Pattern ] _patternsCost;  
-
+  
   this( T... )( T args ) {
     super( args );
+    _cache = new Cost[ _sequences[ 0 ].length ];
   }
 
+  mixin patternColumnCost;
+  mixin cacheCostFor;
+  
+  //Copied from Cache algorithm.
+  override void duplicationCost( ref Duplication dup ) {
+    if( dup.start == 0 ) {
+      _costSum = 0;
+      foreach( current; dup.positions ) {      
+          auto posCost = positionCost( current, dup.period );          
+          _cache[ current ] = posCost;
+          _costSum += posCost;
+      }
+      dup.cost = _costSum / dup.period;
+    } else {
+      _costSum -= _cache[ dup.start - 1 ];
+      auto posCost = positionCost( dup.stop, dup.period );
+      _cache[ dup.stop ] = posCost;
+      _costSum += posCost;
+      
+      dup.cost = _costSum / dup.period;
+      
+    }
+  }
+  
   //Copied from Patterns algorithm.
   override Cost positionCost( size_t pos, size_t period ) { 
     auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); 
@@ -204,15 +250,7 @@ protected:
       _patternsCost[ pattern ] = super.positionCost( pos, period );
     } 
     return _patternsCost[ pattern ];    
-  }
-  
-  override Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
-    auto pattern = Pattern( column ); 
-    if( pattern !in _patternsCost ) {
-      _patternsCost[ pattern ] = super.columnCost( column );
-    } 
-    return _patternsCost[ pattern ];    
-  }
+  }  
 }
 
 /**

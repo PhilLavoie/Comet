@@ -2,6 +2,7 @@ module comet.pattern;
 
 import std.traits;
 import std.range;
+import std.algorithm;
 
 //TODO: try to avoid heap usage.
 
@@ -19,10 +20,14 @@ struct Pattern {
     Constructs the pattern and readies it for comparison.
     This is the only way a pattern should be constructed.
   */
-  this( Range )( Range data ) if( isInputRange!Range && __traits( compiles, data.length ) ) {
+  this( Range )( Range data ) if( isInputRange!Range && hasLength!Range ) {
     _data = new size_t[ data.length ];
     this.data( data );
-  }  
+  } 
+  this( Range )( Range data ) if( isInputRange!Range && !hasLength!Range ) {
+    _data = new size_t[ data.count ];
+    this.data( data );
+  }
   
   /**
     Returns the length of the pattern.
