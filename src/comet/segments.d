@@ -9,6 +9,59 @@ import std.algorithm;
 import std.container;
 import std.typecons;
 
+mixin template Length( string structName ) {
+  import std.string;
+  import std.uni;
+  mixin( 
+    "struct " ~ structName ~ " {
+      private size_t _value;
+      public mixin Proxy!_value;  
+      public @property auto value() { return _value; }
+      
+      this( size_t length ) {
+        
+        _value = length;
+        
+      }
+      
+      this( int length ) in {
+        
+        debug {
+          
+          assert( 1 <= length );
+          
+        }
+        
+      } body {
+      
+        _value = length;
+        
+      }
+      
+      debug {
+      
+        invariant() {
+        
+          assert( 1 <= _value );
+          
+        }
+        
+      } 
+    }
+    auto " ~ toLower( structName[ 0 .. 1 ] )  ~ structName[ 1 .. $ ] ~ "( T... )( T args ) {
+    
+      return " ~ structName ~ "( args );
+    
+    }"
+  );
+}
+
+mixin Length!"SequenceLength";
+mixin Length!"SegmentsLength";
+mixin Length!"MinLength";
+mixin Length!"MaxLength";
+mixin Length!"LengthStep";
+
 /**
   Generates all the possible segment length for segment pairs with the given parameters.
   The length applies to a single segment, not to the whole pair.
@@ -25,23 +78,27 @@ private:
   /**
     Creates a segment length range with the given parameters. Both boundaries are inclusive.
   */
-  this( size_t sequenceLength, size_t minLength, size_t maxLength, size_t lengthStep ) 
+  this
+  ( 
+    SequenceLength sequenceLength, 
+    MinLength minLength, 
+    MaxLength maxLength, 
+    LengthStep lengthStep 
+  ) 
   in 
   {
     debug
     {
-      assert( 0 < minLength );
-      assert( 0 < lengthStep );
       assert( 2 <= sequenceLength );    
       assert( minLength <= maxLength );
-      assert( minLength % lengthStep == 0 );
+      assert( minLength % lengthStep == 0 ); //Relax this constraint??
     }
   } 
   body 
   {
-    _currentLength = minLength;
-    _maxLength = min( sequenceLength / 2, maxLength );
-    _lengthStep = lengthStep;    
+    _currentLength = minLength.value;
+    _maxLength = min( sequenceLength.value / 2, maxLength.value );
+    _lengthStep = lengthStep.value;    
   }
   
   /**
@@ -61,14 +118,14 @@ private:
   }
   
 public:
-  @property auto front() { return _currentLength; }  
+  @property auto front() { return segmentsLength( _currentLength ); }  
   @property bool empty() { return _maxLength < _currentLength; }  
   void popFront() {  _currentLength += _lengthStep; }      
 }
 /**
   Factory function for constructing a segment length range.
 */
-auto segmentLengthsFor( size_t sequenceLength, size_t minLength, size_t maxLength, size_t lengthStep ) 
+auto segmentLengthsFor( SequenceLength sequenceLength, MinLength minLength, MaxLength maxLength, LengthStep lengthStep ) 
 {
   return SegmentLengthsRange( sequenceLength, minLength, maxLength, lengthStep );
 }  
@@ -91,7 +148,13 @@ unittest
   auto lengthStep = 3u;
   auto sequenceLength = 100u;
   
-  auto segmentLengths = segmentLengthsFor( sequenceLength, minLength, maxLength, lengthStep );
+  auto segmentLengths = 
+    segmentLengthsFor( 
+      SequenceLength( sequenceLength ), 
+      MinLength( minLength ), 
+      MaxLength( maxLength ), 
+      LengthStep( lengthStep ) 
+    );
   assert( segmentLengths.inclusiveMaxLength == 50 );
   
   auto index = 0u;
@@ -121,10 +184,10 @@ private:
   /**
     Creates a range constructing all the pairs with segments of the given length.
   */
-  this( RoR sequences, size_t length ) 
+  this( RoR sequences, SegmentsLength length ) 
   {
     _sequences = sequences;    
-    _segmentsLength = length;
+    _segmentsLength = length.value;
     _currentPairStart = 0;    //Starts on the beginning of the sequence.
     _lastPairStart = _sequences.front.length - ( 2 * _segmentsLength );
   }  
@@ -137,7 +200,7 @@ public:
 /**
   Returns a segment pairs range that generate all segments pairs of the given length for the given sequences.
 */
-auto segmentPairsForLength( RoR )( RoR sequences, size_t length ) {
+auto segmentPairsForLength( RoR )( RoR sequences, SegmentsLength length ) {
   return SegmentPairsRange!RoR( sequences, length );
 }
 
@@ -307,10 +370,10 @@ unittest
   }
   import std.conv;
  
-  static void assertExpected( R1, R2 )( R1 column, R2 expected, size_t segLength, size_t segStart ) {
+  static void assertExpected( R1, R2 )( R1 column, R2 expected, SegmentsLength segLength, size_t segStart ) {
     assert( 
       column.equal( expected ), 
-      "length: " ~ segLength.to!string() ~ 
+      "length: " ~ segLength.value.to!string() ~ 
       " segment pairs at: " ~ segStart.to!string() ~ 
       " column: " ~ column.index.to!string() ~ 
       " held: " ~ column.to!string() ~ 
@@ -323,50 +386,70 @@ unittest
       [ 2, 4,  6,  8,   10, 12, 14, 16 ],
       [ 4, 7, 10, 13,   13, 10,  7,  4 ] ];
       
-  foreach( segLength; segmentLengthsFor( sequences[].front.length, 1, 100u, 1 ) ) 
-  {
+  foreach( segLength; segmentLengthsFor( sequenceLength( sequences[].front.length ), minLength( 1 ), maxLength( 100u ), lengthStep( 1 ) ) ) {
+    
     int[] expected;
     
-    switch( segLength ) 
-    {
+    switch( segLength.value ) {
+    
       case 1:
+        
         auto segPairsForLength = sequences.segmentPairsForLength( segLength );
         assert( 7 == count( segPairsForLength ) );
-        foreach( segPairs; segPairsForLength ) 
-        {
+        foreach( segPairs; segPairsForLength ) {
+          
           auto columns = segPairs.byColumns;
           assert( 1 == count( columns ) );
           auto column = columns.front;
           assert( column.index == segPairs.leftSegmentStart );
           
-          switch( segPairs.leftSegmentStart )
-          {
+          switch( segPairs.leftSegmentStart ) {
+          
             case 0:            
+              
               expected = [ 0, 2, 4, 1, 4, 7 ];              
               break;
+              
             case 1:
+              
               expected = [ 1, 4, 7, 2, 6, 10 ];              
               break;
+              
             case 2:
+              
               expected = [ 2, 6, 10, 3, 8, 13 ];              
               break;
+              
             case 3:
+              
               expected = [ 3, 8, 13, 3, 10, 13 ];                          
               break;
+              
             case 4:
+              
               expected = [ 3, 10, 13, 2, 12, 10 ];              
               break;
+              
             case 5:
+              
               expected = [ 2, 12, 10, 1, 14, 7 ];              
               break;
+              
             case 6:
+              
               expected = [ 1, 14, 7, 0, 16, 4 ];              
               break;
+              
             default:
-              assert( false );          
+            
+              assert( false );        
+              
           }
+          
           assertExpected( column, expected, segLength, segPairs.leftSegmentStart );             
-        }     
+          
+        } 
+        
         break;
         
       case 2:    
@@ -606,7 +689,7 @@ unittest
       [ 6, 10, 14, 18,   22, 26, 30, 34,   38 ] ];
   auto sequencesLength = sequences[ 0 ].length;
   
-  auto segLengths = segmentLengthsFor( sequences[].front.length, 1, size_t.max, 1 );
+  auto segLengths = segmentLengthsFor( sequenceLength( sequences[].front.length ), minLength( 1 ), maxLength( size_t.max ), lengthStep( 1 ) );
   assert( ( sequencesLength / 2 ) == count( segLengths ) );
   
   foreach( segLength; segLengths ) {
