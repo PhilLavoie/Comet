@@ -42,7 +42,7 @@ AlgoI algorithmFor( MutationCosts )( Algo algo, Sequence[] sequences, Nucleotide
 */
 interface AlgoI {
   void duplicationCost( ref Duplication );
-  Cost costFor( SegmentPairs!( Nucleotide[][] ) pairs );
+  Cost costFor( SegmentPairs!( Nucleotide ) pairs );
 }
 
 
@@ -71,7 +71,7 @@ private mixin template patternColumnCost() {
 }
 
 private mixin template standardCostFor() {
-  public override Cost costFor( SegmentPairs!( Sequence[] ) pairs ) {
+  public override Cost costFor( SegmentPairs!( Nucleotide ) pairs ) {
     real sum = 0;
     foreach( column; pairs.byColumns ) {
       sum += columnCost( column );
@@ -87,9 +87,9 @@ private mixin template cacheCostFor() {
   
   //Relies on the fact that the outer loop is on period length.
   //Relies on the face that the first duplication for a given length starts at position 0.
-  public override Cost costFor( SegmentPairs!( Sequence[] ) pairs ) {
+  public override Cost costFor( SegmentPairs!( Nucleotide ) pairs ) {
     //If those are the first segment pairs of a given length.
-    size_t segmentsStart = pairs.indexOnSequences;
+    size_t segmentsStart = pairs.leftSegmentStart;
     if( segmentsStart == 0 ) {
       _costSum = 0;
       foreach( column; pairs.byColumns ) {      
@@ -420,6 +420,7 @@ unittest {
 }
 
 //TODO: find a better name.
+//TODO: remove
 struct SequenceLeaves {
 private:
   Sequence[] _sequences;

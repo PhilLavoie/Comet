@@ -8,10 +8,13 @@ import std.range;
 import std.algorithm;
 import std.container;
 import std.typecons;
+import std.string;
 
-mixin template Length( string structName ) {
-  import std.string;
-  import std.uni;
+/**
+  A mixin template for creating different types of length values.
+  Useful for creating new types to avoid confusion while passing parameters.
+*/
+private mixin template Length( string structName ) {  
   mixin( 
     "struct " ~ structName ~ " {
       private size_t _value;
@@ -56,10 +59,29 @@ mixin template Length( string structName ) {
   );
 }
 
+/**
+  This type holds the length of a sequence.
+*/
 mixin Length!"SequenceLength";
+
+/**
+  This type defines the length of segments inside sequences.
+*/
 mixin Length!"SegmentsLength";
+
+/**
+  This type holds the minimum length values for segments.
+*/
 mixin Length!"MinLength";
+
+/**
+  This type holds the maximum segments length.
+*/
 mixin Length!"MaxLength";
+
+/**
+  This type holds the value for the step between length jumps.
+*/
 mixin Length!"LengthStep";
 
 /**
@@ -68,9 +90,10 @@ mixin Length!"LengthStep";
   Therefore, a range of 100 elements can have segments of length 0 ... 50 inclusively
   (a pair of 50 element segments takes the whole range).
 */
-struct SegmentLengthsRange 
-{
+struct SegmentLengthsRange {
+
 private:
+
   size_t _currentLength;  //The current length generated.
   size_t _maxLength;      //Inclusive.
   size_t _lengthStep;     //The jump between lengths. Not necessarily one.
@@ -78,69 +101,86 @@ private:
   /**
     Creates a segment length range with the given parameters. Both boundaries are inclusive.
   */
-  this
-  ( 
+  this (
+
     SequenceLength sequenceLength, 
     MinLength minLength, 
     MaxLength maxLength, 
     LengthStep lengthStep 
-  ) 
-  in 
-  {
-    debug
-    {
+    
+  ) in {
+  
+    debug {
+    
       assert( 2 <= sequenceLength );    
       assert( minLength <= maxLength );
       assert( minLength % lengthStep == 0 ); //Relax this constraint??
+      
     }
-  } 
-  body 
-  {
+    
+  } body {
+    
     _currentLength = minLength.value;
     _maxLength = min( sequenceLength.value / 2, maxLength.value );
     _lengthStep = lengthStep.value;    
+    
   }
   
   /**
     Returns the inclusive maximum boundary.
   */
-  auto inclusiveMaxLength() 
-  { 
+  auto inclusiveMaxLength() { 
+    
     return _maxLength; 
+    
   }
   
   /**
     Returns the exclusive maximum boundary.
   */
-  auto exclusiveMaxLength() 
-  { 
+  auto exclusiveMaxLength() { 
+    
     return _maxLength + 1; 
+        
   }
   
 public:
+  
+  //Forward range properties.
   @property auto front() { return segmentsLength( _currentLength ); }  
   @property bool empty() { return _maxLength < _currentLength; }  
   void popFront() {  _currentLength += _lengthStep; }      
+  
 }
+
 /**
   Factory function for constructing a segment length range.
 */
-auto segmentLengthsFor( SequenceLength sequenceLength, MinLength minLength, MaxLength maxLength, LengthStep lengthStep ) 
-{
+auto segmentLengthsFor( SequenceLength sequenceLength, MinLength minLength, MaxLength maxLength, LengthStep lengthStep ) {
+
   return SegmentLengthsRange( sequenceLength, minLength, maxLength, lengthStep );
+  
 }  
 
-unittest 
-{
+unittest {
+  
   debug {
+  
     import std.stdio;
     writeln( "running tests for segments length range..." );
+    
     scope( success ) {
+    
       writeln( "done" );
+      
     }
+    
     scope( failure ) {
+    
       writeln( "failed" );
+      
     }
+    
   }
   
   auto minLength = 3u;
@@ -148,20 +188,25 @@ unittest
   auto lengthStep = 3u;
   auto sequenceLength = 100u;
   
-  auto segmentLengths = 
-    segmentLengthsFor( 
+  auto segmentLengths = segmentLengthsFor( 
+    
       SequenceLength( sequenceLength ), 
       MinLength( minLength ), 
       MaxLength( maxLength ), 
       LengthStep( lengthStep ) 
+      
     );
+    
   assert( segmentLengths.inclusiveMaxLength == 50 );
   
   auto index = 0u;
+  
   foreach( length; segmentLengths ) {
+  
     assert( length == minLength + index * lengthStep );
     assert( length <= sequenceLength / 2 );
     ++index;
+    
   }  
 }
 
@@ -172,8 +217,8 @@ unittest
   both segments have a length of 50, the last position where pairs will be created is on 101 - 100 = 1. This boundary
   is inclusive.
 */
-struct SegmentPairsRange( RoR ) 
-{
+struct SegmentPairsRange( RoR ) {
+
 private:
   RoR _sequences;             //The range of ranges.
   size_t _segmentsLength;     //The length of every segment held by the associated segment pairs.
@@ -204,10 +249,6 @@ auto segmentPairsForLength( RoR )( RoR sequences, SegmentsLength length ) {
   return SegmentPairsRange!RoR( sequences, length );
 }
 
-unittest {
-  //TODO: find good unittests????
-}
-
 
 /**
   This structure holds multiple segment pairs in parallel.
@@ -224,9 +265,10 @@ unittest {
 
   The traversal of the first column of this segment pairs would yield: [ 2, 12, 22, 5, 15, 15 ].  
 */
-struct SegmentPairs( E ) 
-{
+struct SegmentPairs( E ) {
+
 private:
+
   alias Sequences = E[][];
   
   Sequences _sequences;
@@ -234,31 +276,39 @@ private:
   size_t _leftSegmentStart;
   size_t _rightSegmentStart;
     
-  this( Sequences sequences, size_t pairsStart, size_t segmentsLength ) 
-  in
-  {
-    debug 
-    {
+  this( Sequences sequences, size_t pairsStart, size_t segmentsLength ) in {
+  
+    debug {
+      
       import std.conv;
       import std.stdio;
+      
       scope( failure ) {
+      
         writeln( typeof( this ).stringof ~ "( " ~ sequences.to!string() ~ ", " ~ pairsStart.to!string() ~ ", " ~ segmentsLength.to!string() ~ " )" );        
+        
       }
       
       assert( sequences.length );
       assert( sequences.front.length );
       assert( sequences.front.length >= ( pairsStart + ( 2  * segmentsLength ) ) );
       assert( 1 <= segmentsLength );
+      
     }
-  } 
-  body
-  {
+    
+  } body {
+  
     _sequences = sequences;
     _leftSegmentStart = pairsStart;
     _segmentsLength = segmentsLength;
     _rightSegmentStart = _leftSegmentStart + _segmentsLength;
-  }  
     
+  }  
+   
+  auto columnsRange() { return ColumnsRange( _sequences, _leftSegmentStart, _segmentsLength ); }
+  
+public:
+
   /**
     Template function returning a range iterating over the
     segments columns from left to right. 
@@ -274,10 +324,11 @@ private:
     
   */  
   auto columns() { return columnsRange(); }
-  
-  auto columnsRange() { return ColumnsRange( _sequences, _leftSegmentStart, _segmentsLength ); }
-  
-public:
+   
+  /**
+    Returns a range over both segments columns.
+  */
+  alias byColumns = columns;
    
   struct ColumnsRange 
   {
@@ -324,12 +375,7 @@ public:
     }
   
   }
-    
-  /**
-    Returns a range over both segments columns.
-  */
-  alias byColumns = columns;
-  
+   
   auto segmentsLength() {
     return _segmentsLength;
   }
@@ -353,23 +399,33 @@ public:
   a new one for new segment pairs.
 */
 private auto segmentPairsAt( E )( E[][] sequences, size_t start, size_t length ) {
+
   return SegmentPairs!E( sequences, start, length );
+  
 } 
 
-unittest 
-{
+unittest {
+  import std.conv;
+  
   debug {
+  
     import std.stdio;
     writeln( "running tests for segment pairs range..." );
+    
     scope( success ) {
+    
       writeln( "done" );
+      
     }
+    
     scope( failure ) {
+    
       writeln( "failed" );
+      
     }
+    
   }
-  import std.conv;
- 
+   
   static void assertExpected( R1, R2 )( R1 column, R2 expected, SegmentsLength segLength, size_t segStart ) {
     assert( 
       column.equal( expected ), 
