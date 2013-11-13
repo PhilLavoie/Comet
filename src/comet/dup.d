@@ -3,18 +3,7 @@
 */
 module comet.dup;
 
-import comet.sma;
-import comet.config;
-import comet.algos;
-
-import deimos.bio.dna;
-import deimos.containers.tree;
-
-import std.stdio;
-import std.container;
-import std.algorithm;
-
-//TODO: get rid of that monster.
+import comet.sma.cost;
 
 /**
   This structure holds summary information regarding a duplication. It holds its start position and the length

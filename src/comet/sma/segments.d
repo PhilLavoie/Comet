@@ -2,7 +2,7 @@
   Module defining a set of facilities for handling segment pairs in the context
   of parallel sequence processing.
 */  
-module comet.segments;
+module comet.sma.segments;
 
 import std.range;
 import std.algorithm;

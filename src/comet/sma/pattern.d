@@ -1,4 +1,4 @@
-module comet.pattern;
+module comet.sma.pattern;
 
 import std.traits;
 import std.range;

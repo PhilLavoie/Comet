@@ -2,16 +2,19 @@
   Module encapsulating logic regarding the calculation of segment pairs cost.
   It provides an interface to the user in the form of algorithms. 
 */
-module comet.algos;
+module comet.sma.algos;
 
 import deimos.bio.dna;
 
-import comet.sma;
-import comet.pattern;
+import comet.sma.cost;
+import comet.sma.pattern;
+import comet.sma.segments;
+import comet.sma.smtree;
+
+//TODO: get rid of config and ranges and duplications.
 import comet.config;
 import comet.ranges;
 public import comet.dup;
-import comet.segments;
 
 import std.algorithm;
 import range = std.range;

@@ -1,13 +1,13 @@
 /**
-  State Mutation Analysis (sma) module.
+  
 */
-module comet.sma;
+module comet.sma.smtree;
+
+import comet.sma.cost;
 
 import deimos.containers.tree;
 
 import std.algorithm;
-
-alias double Cost;
 
 /**
   Every state's associated information.

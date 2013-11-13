@@ -1,7 +1,7 @@
 module comet.results;
 
-import comet.sma;
-import comet.segments;
+import comet.sma.cost;
+import comet.sma.segments;
 
 import std.container;
 
