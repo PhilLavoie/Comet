@@ -1,14 +1,8 @@
 module comet.programs;
 
 import comet.sma.all;
-
 import comet.config;
-
-//TODO: get rid of ranges.
-import comet.ranges;
-
 import comet.results;
-
 
 import deimos.bio.dna;
 import deimos.containers.tree;
@@ -197,16 +191,6 @@ private auto sequentialDupCostsCalculation( Seq )( ref Results results, Seq[] se
   //For each period length, evaluate de duplication cost of every possible positions.
   size_t seqLength = sequences[ 0 ].length;
   
-  /*
-  foreach( period; cfg.periods( seqLength ) ) {
-    if( 2 <= cfg.verbosity ) { cfg.outFile.writeln( "Doing period: ", period.length ); }
-    foreach( dup; period.duplications() ) {
-      algorithm.duplicationCost( dup );
-      results.add( dup.toResult() );
-    }  
-  }
-  */
-  
   auto segmentsLengths = 
     segmentsLengthsFor( 
     
@@ -241,15 +225,3 @@ private auto sequentialDupCostsCalculation( Seq )( ref Results results, Seq[] se
   
   return results[];
 }
-
-//TODO remove eventually.
-auto toResult( ref Duplication dup ) {
-  return result( dup.start, dup.period, dup.cost );
-}
-
-/*
-auto parallelDupCostsCalculation() {
-  return void;
-}
-*/
-

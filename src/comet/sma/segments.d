@@ -14,7 +14,6 @@ import std.string;
   A mixin template for creating different types of length values.
   Useful for creating new types to avoid confusion while passing parameters.
 */
-//TODO: after repackaging sma, make the value property package.
 private mixin template Length( string structName ) {  
   mixin( 
     "struct " ~ structName ~ " {

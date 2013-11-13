@@ -11,10 +11,7 @@ import comet.sma.pattern;
 import comet.sma.segments;
 import comet.sma.smtree;
 
-//TODO: get rid of config and ranges and duplications.
-import comet.config;
-import comet.ranges;
-public import comet.dup;
+import comet.config: Algo;
 
 import std.algorithm;
 import range = std.range;
@@ -44,7 +41,7 @@ AlgoI algorithmFor( MutationCosts )( Algo algo, Sequence[] sequences, Nucleotide
   Formal definition of the algorithms interface.
 */
 interface AlgoI {
-  void duplicationCost( ref Duplication );
+  //void duplicationCost( ref Duplication );
   Cost costFor( SegmentPairs!( Nucleotide ) pairs );
 }
 
@@ -133,26 +130,9 @@ protected:
     phylogenize( _smTree, _sequences );    
   }
   
-  Cost positionCost( size_t pos, size_t period ) {
-    //Start by extracting the states from the hierarchy: use them to set the
-    //the leaves of the smtree.
-    setLeaves( _smTree, SequenceLeaves( _sequences, pos, period ) );
-    
-    //Process the state mutation algorithm then extract the preSpeciation cost.
-    _smTree.update( _states, _mutationCosts );
-    return preSpeciationCost( _smTree, _mutationCosts );
-  }
-    
   mixin standardColumnCost;
     
-public:
-  override void duplicationCost( ref Duplication dup ) {
-    real sum = 0;
-    foreach( current; dup.positions ) {      
-        sum += positionCost( current, dup.period );     
-    }
-    dup.cost = sum / dup.period;
-  }  
+public:  
   
   mixin standardCostFor;  
 }
@@ -167,28 +147,7 @@ protected:
 
   mixin standardColumnCost;
   
-public:      
-  //Relies on the fact that the outer loop is on period length.
-  //Relies on the face that the first duplication for a given length starts at position 0.
-  override void duplicationCost( ref Duplication dup ) {
-    if( dup.start == 0 ) {
-      _costSum = 0;
-      foreach( current; dup.positions ) {      
-          auto posCost = positionCost( current, dup.period );          
-          _cache[ current ] = posCost;
-          _costSum += posCost;
-      }
-      dup.cost = _costSum / dup.period;
-    } else {
-      _costSum -= _cache[ dup.start - 1 ];
-      auto posCost = positionCost( dup.stop, dup.period );
-      _cache[ dup.stop ] = posCost;
-      _costSum += posCost;
-      
-      dup.cost = _costSum / dup.period;
-      
-    }
-  }
+public:    
   
   mixin cacheCostFor;
     
@@ -202,15 +161,7 @@ protected:
   }
   
   mixin patternColumnCost;
-  mixin standardCostFor;
-  
-  override Cost positionCost( size_t pos, size_t period ) { 
-    auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); 
-    if( pattern !in _patternsCost ) {
-      _patternsCost[ pattern ] = super.positionCost( pos, period );
-    } 
-    return _patternsCost[ pattern ];    
-  } 
+  mixin standardCostFor; 
   
 }
 
@@ -225,35 +176,6 @@ protected:
   mixin patternColumnCost;
   mixin cacheCostFor;
   
-  //Copied from Cache algorithm.
-  override void duplicationCost( ref Duplication dup ) {
-    if( dup.start == 0 ) {
-      _costSum = 0;
-      foreach( current; dup.positions ) {      
-          auto posCost = positionCost( current, dup.period );          
-          _cache[ current ] = posCost;
-          _costSum += posCost;
-      }
-      dup.cost = _costSum / dup.period;
-    } else {
-      _costSum -= _cache[ dup.start - 1 ];
-      auto posCost = positionCost( dup.stop, dup.period );
-      _cache[ dup.stop ] = posCost;
-      _costSum += posCost;
-      
-      dup.cost = _costSum / dup.period;
-      
-    }
-  }
-  
-  //Copied from Patterns algorithm.
-  override Cost positionCost( size_t pos, size_t period ) { 
-    auto pattern = Pattern( SequenceLeaves( _sequences, pos, period ) ); 
-    if( pattern !in _patternsCost ) {
-      _patternsCost[ pattern ] = super.positionCost( pos, period );
-    } 
-    return _patternsCost[ pattern ];    
-  }  
 }
 
 /**
@@ -420,45 +342,4 @@ unittest {
   auto zeCost = preSpeciationCost( tree, mutationCosts );
   auto zeExpected = cast( Cost )10 / 14;
   assert( zeExpected - Cost.epsilon <= zeCost && zeCost <= zeExpected + Cost.epsilon );
-}
-
-//TODO: find a better name.
-//TODO: remove
-struct SequenceLeaves {
-private:
-  Sequence[] _sequences;
-  size_t _seqIndex;
-  size_t _maxIndex; //inclusive.
-  
-  size_t _currentPos;  
-  size_t _period;
-
-  public:
-  this( Sequence[] seqs, size_t current, size_t period ) {
-    _sequences = seqs;
-    _seqIndex = 0;
-    _maxIndex = 2 * seqs.length - 1;
-    _currentPos = current;    
-    _period = period;
-    
-  }
-
-  @property auto front() {
-    auto firstPass = _seqIndex < _sequences.length;
-    if( firstPass ) {
-      return _sequences[ _seqIndex ][ _currentPos ];
-    }
-    return _sequences[ _seqIndex - _sequences.length ][ _currentPos + _period ];
-  }
-  
-  @property bool empty() {
-    return _maxIndex < _seqIndex;
-  }
-  
-  void popFront() {
-    ++_seqIndex;
-  } 
-  
-  @property size_t length() { return _sequences.length * 2; }
-
 }
