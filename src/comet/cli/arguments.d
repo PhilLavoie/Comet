@@ -19,6 +19,7 @@ import std.typecons: Flag;
 
 //TODO add names for parser arguments somehow.
 //TODO maybe support mutually exclusive flagged and indexed?????????
+//TODO add support for "float" parsers that are tested in order against unrecognized tokens. Can be mandatory.
 
 enum Usage: bool {
   optional = true,
@@ -342,6 +343,8 @@ auto dir( string name, string description, ref string dir ) {
 }  
 
 
+alias DropFirst = std.typecons.Flag!"DropFirst";
+
 //TODO add flag names in exceptions.
 /**
   Command line parser.
@@ -357,7 +360,7 @@ protected:
   Array!Indexed _indexedRight;
   Array!Argument _mandatories;
   
-  protected auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
+  auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
     try {
       return mixin( "arg.parser." ~ method )( args );
     } catch( Exception e ) {
@@ -373,11 +376,30 @@ protected:
   }
   
   string[] takeIndexed( string s )( string[] tokens ) if( s == "left" || s == "right" ) {
-    static if( s == "left" ) {
-      auto container = _indexedLeft;
-    } else {
-      auto container = _indexedRight;
+      
+    debug( cli ) {
+    
+      writeln( "takeIndexed!" ~ s ~ "( " ~ tokens.to!string() ~ " )" );
+    
     }
+
+    
+    static if( s == "left" ) {
+    
+      auto container = _indexedLeft;     
+      
+    } else {
+    
+      auto container = _indexedRight;
+      
+    }
+    
+    debug( cli ) {
+      
+      writeln( "indexed: ", container[].to!string() );
+    
+    } 
+    
     foreach( indexed; container ) {
       auto previousTokens = tokens;
       tokens = argProxy!"take"( indexed, tokens );
@@ -389,6 +411,15 @@ protected:
   }
   
   string[] takeFlagged( string[] tokens ) {
+  
+    debug( cli ) {
+    
+      writeln( "takeFlagged( " ~ tokens.to!string() ~ " )" );
+      writeln( "flagged: ", _flags );
+    
+    }
+  
+  
     while( tokens.length && tokens[ 0 ] in _flags ) {
       auto f = flagOf( tokens[ 0 ] );
       enforceNotUsedBefore( f );
@@ -622,30 +653,60 @@ public:
     It parses the arguments using the internal list of known flags.    
     This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
     assigning any values.    
+    
+    By default, it drops the first argument received. The user has the possibility to
+    pass the tokens where the parsing begins immediately by specifying it.
+    
   */
-  public string[] parse( string[] tokens ) in {
-    assert( 0 < tokens.length  );
-  } body {
-    if( !name.length ) {
-      _name = commandName( tokens );
+  public string[] parse( DropFirst drop = DropFirst.yes )( string[] tokens ) in {
+    
+    static if( drop ) {
+      
+      debug {
+      
+        assert( tokens.length );
+        
+      }
+      
     }
+    
+  } body {
+  
+    if( !name.length ) {
+    
+      _name = commandName( tokens );
+      
+    }
+    
     resetAll();
-    tokens = tokens[ 1 .. $ ];    
+    
+    static if( drop ) {
+    
+      tokens = tokens[ 1 .. $ ];    
+      
+    }
     
     try {
+    
       tokens = take( tokens );
       store();
       assign();
+      
     } catch( HelpMenuRequested e ) {
+    
       e.msg = "";
       throw e;
+      
     } catch( Exception e ) {
+    
       _out.writeln( e.msg );
       _out.writeln( "use " ~ _helpFlag ~ " for help" );      
       //TODO: throw another exception that means program abortion.
       e.msg = "";
       throw e;
+      
     }
+    
     return tokens;
   }
   
@@ -673,6 +734,12 @@ public:
     }
     _out.writeln();
   }
+}
+
+auto parser() {
+
+  return new Parser();
+  
 }
 
 unittest {

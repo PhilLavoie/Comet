@@ -113,13 +113,13 @@ private void processFile( File seqFile, File resFile, Config cfg, Algo algo ) {
   
   //Extract sequences from file.
   auto sequences = loadSequences( seqFile );
-  size_t seqLength = sequences.length;
+  size_t seqLength = sequences[ 0 ].length;
   size_t midPosition = seqLength / 2;
   
   //Make sure the minimum period is within bounds.
   enforce( 
     cfg.minPeriod <= midPosition,
-    "The minimum period: " ~ cfg.minPeriod.to!string() ~ " is set beyond the midPosition sequence position: " ~ to!string( midPosition ) ~
+    "The minimum period: " ~ cfg.minPeriod.to!string() ~ " is set beyond the mid sequence position: " ~ to!string( midPosition ) ~
     " and is therefore invalid."
   );
   

@@ -47,7 +47,7 @@ static this() {
   The last mode is used to compare different measurements.
 */
 enum Mode {
-  normal,
+  standard,
   generateReferences,
   runTests,
   compileMeasures
@@ -163,35 +163,8 @@ protected:
     );
     _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
     _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
-    _script = indexedLeft( 
-      0u, 
-      "script", 
-      "This argument lets the user use a predefined script.", 
-      new class ParserI {
-        override string[] take( string[] args ) {
-          if( !args.length ) return args;
-          
-          switch( args[ 0 ] ) {
-            case "generate-references":
-              _mode = Mode.generateReferences;
-              
-              auto genRefParser = generateReferencesParser();           
-              return genRefParser.parse( args );
-              break;   
-            case "run-tests":
-              assert( false, "not implemented yet" );
-            default:
-              return args;
-          }     
-          assert( false );          
-        }
-        
-        override void store() {}
-        override void assign() {}
-      },
-      optional
-    );
     
+      
   }
 
   Parser runTestsParser() {
@@ -209,8 +182,37 @@ protected:
     return runTestsParser;  
   }
 
-  Parser generateReferencesParser() {
-    auto genRefParser = new Parser();
+  auto standardParser() {
+    
+    auto standardParser = parser();
+    standardParser.name = PROGRAM_NAME;
+    
+    standardParser.add(
+      _seqFileArg,
+      _verbosityLvlArg,
+      _outFileArg,
+      _printResultsArg,
+      _resFileArg,
+      _printTimeArg,
+      _timeFileArg,
+      _noResultsArg,
+      _minPeriodArg,
+      _maxPeriodArg,
+      _singleStepArg,
+      _printConfigArg,
+      _algorithmArg
+    );
+    
+    mutuallyExclusive( _printResultsArg, _resFileArg );
+    mutuallyExclusive( _printTimeArg, _timeFileArg );
+    
+    return standardParser;
+    
+  }
+  
+  auto generateReferencesParser() {
+    
+    auto genRefParser = parser;
     genRefParser.name = PROGRAM_NAME ~ " generate-references";    
     genRefParser.add(
       _verbosityLvlArg,
@@ -224,7 +226,7 @@ protected:
     return genRefParser;  
   }
     
-  private Mode _mode = Mode.normal;
+  private Mode _mode;
   @property public Mode mode() { return _mode; }
 
   private Array!File _sequencesFiles;
@@ -304,7 +306,7 @@ protected:
       writeln( "Print results: ", _printResults );
       writeln( "Number of results: ", _noResults );
       
-      if( _mode == Mode.normal ) {
+      if( _mode == Mode.standard ) {
         writeln( "Results file: ", _resultsFile.fileName() );
       } else {
         writeln( "Results dir: ", _resultsDir );
@@ -333,7 +335,12 @@ protected:
     This function not only throws on error, but also if the user asked for the
     help menu (-h).
   */
-  public void parse( string[] tokens ) {
+  public void parse( string[] tokens ) out {
+  
+    assert( _periodStep == 1 || _periodStep == 3 );
+    
+  } body {
+  
     //Run time defaults.
     _timeFile = stdout;
     _outFile = stdout;
@@ -342,37 +349,75 @@ protected:
     _algos.insertBack( Algo.standard );
     PROGRAM_NAME = commandName( tokens );
     
-    //Normal mode parser.
-    auto parser = new Parser();
-    parser.add(
-      _script,
-      _seqFileArg,
-      _verbosityLvlArg,
-      _outFileArg,
-      _printResultsArg,
-      _resFileArg,
-      _printTimeArg,
-      _timeFileArg,
-      _noResultsArg,
-      _minPeriodArg,
-      _maxPeriodArg,
-      _singleStepArg,
-      _printConfigArg,
-      _algorithmArg
-    );
+    Parser parser;
     
-    mutuallyExclusive( _printResultsArg, _resFileArg );
-    mutuallyExclusive( _printTimeArg, _timeFileArg );
+    auto script = indexedLeft( 
+      0u, 
+      "script", 
+      "This argument lets the user use a predefined script.", 
+      new class ParserI {
+      
+        override string[] take( string[] args ) out {
+        
+          assert( parser !is null );
+        
+        } body {
+        
+          if( args.length ) { 
+            
+            switch( args[ 0 ] ) {
+            
+              case "generate-references":
+                
+                _mode = Mode.generateReferences;              
+                parser = generateReferencesParser();           
+                tokens = tokens[ 1 .. $ ];
+                
+                break;   
+                
+              case "run-tests":
+              
+                assert( false, "not implemented yet" );
+                
+              default:
+              
+                _mode = Mode.standard;
+                parser = standardParser();
+                
+            }
+          
+          }
+            
+          //Whatever happens, don't parse anything else.
+          return [];
+            
+        }
+        
+        override void store() {}
+        override void assign() {}
+        
+      },      
+      Usage.optional
+      
+    );  
+    
+    auto probe = comet.cli.all.parser();
+    probe.add( script );
+    //Only parse the first token.
+    probe.parse( tokens[ 0 .. 2 ] );
     
     parser.parse( tokens );
     
+       
     //The minimum segment pair length must be below the maximum.
-    enforce( _minPeriod <= _maxPeriod, "The minimum period value: " ~ _minPeriod.to!string() ~ " is above the maximum: " ~ _maxPeriod.to!string() );  
-    assert( _periodStep == 1 || _periodStep == 3 );
-      
+    enforce( _minPeriod <= _maxPeriod, "The minimum length value: " ~ _minPeriod.to!string() ~ " is above the maximum length: " ~ _maxPeriod.to!string() );  
+          
     if( _printConfig ) {
+
       print();
-    }  
+
+    }
+    
   }
 }
 
