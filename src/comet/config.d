@@ -213,12 +213,12 @@ protected:
     auto genRefParser = new Parser();
     genRefParser.name = PROGRAM_NAME ~ " generate-references";    
     genRefParser.add(
-      _seqDirArg,
-      _resDirArg,
       _verbosityLvlArg,
       _outFileArg,
       _printTimeArg,
       _printConfigArg,
+      _seqDirArg,
+      _resDirArg
     );           
     
     return genRefParser;  
@@ -264,12 +264,15 @@ protected:
   
   private size_t _minPeriod = 3;
   @property public size_t minPeriod() const { return _minPeriod; }
+  public alias minLength = minPeriod;
   
   private size_t _maxPeriod = size_t.max;
   @property public size_t maxPeriod() const { return _maxPeriod; }
+  public alias maxLength = maxPeriod;
   
   private size_t _periodStep = 3;
   @property public size_t periodStep() const { return _periodStep; }
+  public alias lengthStep = periodStep;
   
   private size_t _noThreads = 1;
   @property public size_t noThreads() const { return _noThreads; }

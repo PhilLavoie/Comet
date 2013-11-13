@@ -1,19 +1,34 @@
 module comet.results;
 
 import comet.sma;
+import comet.segments;
 
 import std.container;
 
+
 struct Result {
-  size_t start;
-  size_t length;
-  Cost cost;
+
+private:
+
+  size_t _start;
+  size_t _length;
+  Cost _cost;
   
   this( size_t start, size_t length, Cost cost ) {
-    this.start = start;
-    this.length = length;
-    this.cost = cost;
+    _start = start;
+    _length = length;
+    _cost = cost;
   }
+  
+  @property void start( typeof( _start ) start ) { _start = start; }
+  @property void length( typeof( _length ) length ) { _length = length; }
+  @property void cost( typeof( _cost ) cost ) { _cost = cost; }
+  
+public:
+
+  @property auto start() { return _start; }
+  @property auto length() { return _length; }
+  @property auto cost() { return _cost; }
   
   int opCmp( Result rhs ) {
     if( cost < rhs.cost - Cost.epsilon ) { 
@@ -30,6 +45,9 @@ struct Result {
 }
 auto result( size_t start, size_t length, Cost cost ) {
   return Result( start, length, cost );
+}
+auto result( size_t start, SegmentsLength length, Cost cost ) {
+  return result( start, length.value, cost );
 }
 
 unittest {

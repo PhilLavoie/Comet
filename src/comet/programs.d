@@ -194,12 +194,46 @@ private auto sequentialDupCostsCalculation( Seq )( ref Results results, Seq[] se
   //For each period length, evaluate de duplication cost of every possible positions.
   size_t seqLength = sequences[ 0 ].length;
   
+  /*
   foreach( period; cfg.periods( seqLength ) ) {
     if( 2 <= cfg.verbosity ) { cfg.outFile.writeln( "Doing period: ", period.length ); }
     foreach( dup; period.duplications() ) {
       algorithm.duplicationCost( dup );
       results.add( dup.toResult() );
     }  
+  }
+  */
+  
+  auto segmentsLengths = 
+    segmentsLengthsFor( 
+    
+      sequenceLength( seqLength ), 
+      minLength( cfg.minLength ), 
+      maxLength( cfg.maxLength ), 
+      lengthStep( cfg.lengthStep ) 
+    
+    );
+    
+  auto nucleotides = new Nucleotide[][ sequences.length ];
+  for( int i = 0; i < nucleotides.length; ++i ) {
+  
+    nucleotides[ i ] = sequences[ i ].nucleotides;
+    
+  }
+  
+  foreach( segmentsLength; segmentsLengths ) {
+    
+    if( 2 <= cfg.verbosity ) { cfg.outFile.writeln( "Processing segments of length: ", segmentsLength ); }
+  
+    auto segmentsPairsRange = nucleotides.segmentPairsForLength( segmentsLength );
+    
+    foreach( segmentsPairs; segmentsPairsRange ) {
+    
+      auto cost = algorithm.costFor( segmentsPairs );
+      results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
+      
+    }  
+  
   }
   
   return results[];

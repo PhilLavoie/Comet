@@ -14,6 +14,7 @@ import std.string;
   A mixin template for creating different types of length values.
   Useful for creating new types to avoid confusion while passing parameters.
 */
+//TODO: after repackaging sma, make the value property package.
 private mixin template Length( string structName ) {  
   mixin( 
     "struct " ~ structName ~ " {
@@ -90,7 +91,7 @@ mixin Length!"LengthStep";
   Therefore, a range of 100 elements can have segments of length 0 ... 50 inclusively
   (a pair of 50 element segments takes the whole range).
 */
-struct SegmentLengthsRange {
+struct SegmentsLengthsRange {
 
 private:
 
@@ -156,15 +157,15 @@ public:
 /**
   Factory function for constructing a segment length range.
 */
-auto segmentLengthsFor( SequenceLength sequenceLength, MinLength minLength, MaxLength maxLength, LengthStep lengthStep ) {
+auto segmentsLengthsFor( SequenceLength sequenceLength, MinLength minLength, MaxLength maxLength, LengthStep lengthStep ) {
 
-  return SegmentLengthsRange( sequenceLength, minLength, maxLength, lengthStep );
+  return SegmentsLengthsRange( sequenceLength, minLength, maxLength, lengthStep );
   
 }  
 
 unittest {
   
-  debug {
+  debug( 2 ) {
   
     import std.stdio;
     writeln( "running tests for segments length range..." );
@@ -188,7 +189,7 @@ unittest {
   auto lengthStep = 3u;
   auto sequenceLength = 100u;
   
-  auto segmentLengths = segmentLengthsFor( 
+  auto segmentLengths = segmentsLengthsFor( 
     
       SequenceLength( sequenceLength ), 
       MinLength( minLength ), 
@@ -407,7 +408,7 @@ private auto segmentPairsAt( E )( E[][] sequences, size_t start, size_t length )
 unittest {
   import std.conv;
   
-  debug {
+  debug( 2 ) {
   
     import std.stdio;
     writeln( "running tests for segment pairs range..." );
@@ -442,7 +443,7 @@ unittest {
       [ 2, 4,  6,  8,   10, 12, 14, 16 ],
       [ 4, 7, 10, 13,   13, 10,  7,  4 ] ];
       
-  foreach( segLength; segmentLengthsFor( sequenceLength( sequences[].front.length ), minLength( 1 ), maxLength( 100u ), lengthStep( 1 ) ) ) {
+  foreach( segLength; segmentsLengthsFor( sequenceLength( sequences[].front.length ), minLength( 1 ), maxLength( 100u ), lengthStep( 1 ) ) ) {
     
     int[] expected;
     
@@ -745,7 +746,7 @@ unittest {
       [ 6, 10, 14, 18,   22, 26, 30, 34,   38 ] ];
   auto sequencesLength = sequences[ 0 ].length;
   
-  auto segLengths = segmentLengthsFor( sequenceLength( sequences[].front.length ), minLength( 1 ), maxLength( size_t.max ), lengthStep( 1 ) );
+  auto segLengths = segmentsLengthsFor( sequenceLength( sequences[].front.length ), minLength( 1 ), maxLength( size_t.max ), lengthStep( 1 ) );
   assert( ( sequencesLength / 2 ) == count( segLengths ) );
   
   foreach( segLength; segLengths ) {
