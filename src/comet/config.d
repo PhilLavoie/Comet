@@ -49,6 +49,7 @@ static this() {
 enum Mode {
   standard,
   generateReferences,
+  compareResults,
   runTests,
   compileMeasures
 }
@@ -65,6 +66,72 @@ public:
   }
 
 protected:
+
+  Mode _mode;
+  @property public Mode mode() { return _mode; }
+
+  Array!File _sequencesFiles;
+    
+  ubyte _verbosity = 0;  
+  @property public ubyte verbosity() { return _verbosity; }
+  
+  File _outFile;
+  @property public File outFile() { return _outFile; }
+  
+  bool _printResults = true;
+  @property public bool printResults() { return _printResults; }
+  
+  size_t _noResults = 1000;    
+  @property public size_t noResults() { return _noResults; }
+  
+  File _resultsFile;
+  string _resultsDir;
+  
+  public File resultsFileFor( File sequencesFile ) {
+    import std.path;
+    
+    switch( mode ) {
+      case Mode.generateReferences:
+        return File( _resultsDir ~ sequencesFile.name().baseName().stripExtension() ~ ".reference", "w" );
+      default:
+        return _resultsFile;
+    }
+  }
+  
+  
+  bool _printTime = true;
+  @property public bool printTime() const { return _printTime; }
+  
+  File _timeFile;
+  @property public File timeFile() { return _timeFile; }
+  
+  size_t _minPeriod = 3;
+  @property public size_t minPeriod() const { return _minPeriod; }
+  public alias minLength = minPeriod;
+  
+  size_t _maxPeriod = size_t.max;
+  @property public size_t maxPeriod() const { return _maxPeriod; }
+  public alias maxLength = maxPeriod;
+  
+  size_t _periodStep = 3;
+  @property public size_t periodStep() const { return _periodStep; }
+  public alias lengthStep = periodStep;
+  
+  size_t _noThreads = 1;
+  @property public size_t noThreads() const { return _noThreads; }
+  
+  Array!Algo _algos;  
+  @property public auto algos() { return _algos[]; }
+  
+  bool _printConfig = false;  
+  @property public bool printConfig() const { return _printConfig; }
+  
+  //Used when in compare results mode.
+  Array!File _resultsToCompare;
+  double _epsilon;
+  public @property auto epsilon() { return _epsilon; }
+
+
   string PROGRAM_NAME;
   
   protected this( string[] args ) {
@@ -84,11 +151,13 @@ protected:
   Flagged _printConfigArg;
   Flagged _printTimeArg;
   Flagged _printResultsArg;
-  Flagged _algorithmArg;    
-  
+  Flagged _algorithmArg;   
+  Flagged _epsilonArg;
+    
   IndexedRight _seqDirArg;
   IndexedRight _resDirArg;
   IndexedRight _refDirArg;
+  IndexedRight _filesToCompareArg;
   
   Flagged _outFileArg;
   
@@ -226,66 +295,11 @@ protected:
     return genRefParser;  
   }
     
-  private Mode _mode;
-  @property public Mode mode() { return _mode; }
-
-  private Array!File _sequencesFiles;
-    
-  private ubyte _verbosity = 0;  
-  @property public ubyte verbosity() { return _verbosity; }
+  auto compareResultsParser() {
   
-  private File _outFile;
-  @property public File outFile() { return _outFile; }
-  
-  private bool _printResults = true;
-  @property public bool printResults() { return _printResults; }
-  
-  private size_t _noResults = 1000;    
-  @property public size_t noResults() { return _noResults; }
-  
-  private File _resultsFile;
-  private string _resultsDir;
-  
-  public File resultsFileFor( File sequencesFile ) {
-    import std.path;
-    
-    switch( mode ) {
-      case Mode.generateReferences:
-        return File( _resultsDir ~ sequencesFile.name().baseName().stripExtension() ~ ".reference", "w" );
-      default:
-        return _resultsFile;
-    }
   }
-  
-  
-  private bool _printTime = true;
-  @property public bool printTime() const { return _printTime; }
-  
-  private File _timeFile;
-  @property public File timeFile() { return _timeFile; }
-  
-  private size_t _minPeriod = 3;
-  @property public size_t minPeriod() const { return _minPeriod; }
-  public alias minLength = minPeriod;
-  
-  private size_t _maxPeriod = size_t.max;
-  @property public size_t maxPeriod() const { return _maxPeriod; }
-  public alias maxLength = maxPeriod;
-  
-  private size_t _periodStep = 3;
-  @property public size_t periodStep() const { return _periodStep; }
-  public alias lengthStep = periodStep;
-  
-  private size_t _noThreads = 1;
-  @property public size_t noThreads() const { return _noThreads; }
-  
-  private Array!Algo _algos;  
-  @property public auto algos() { return _algos[]; }
-  
-  private bool _printConfig = false;  
-  @property public bool printConfig() const { return _printConfig; }
- 
-  
+    
+public: 
  
   /**
     Prints the program configuration to the standard output.

@@ -1,1000 +1,1001 @@
-Duplication{ start: 46, length: 12, cost: 0 }
-Duplication{ start: 47, length: 12, cost: 0 }
-Duplication{ start: 48, length: 12, cost: 0 }
-Duplication{ start: 231, length: 12, cost: 0 }
-Duplication{ start: 232, length: 12, cost: 0 }
-Duplication{ start: 233, length: 12, cost: 0 }
-Duplication{ start: 56, length: 9, cost: 0 }
-Duplication{ start: 185, length: 9, cost: 0 }
-Duplication{ start: 208, length: 9, cost: 0 }
-Duplication{ start: 221, length: 9, cost: 0 }
-Duplication{ start: 238, length: 9, cost: 0 }
-Duplication{ start: 239, length: 9, cost: 0 }
-Duplication{ start: 240, length: 9, cost: 0 }
-Duplication{ start: 241, length: 9, cost: 0 }
-Duplication{ start: 242, length: 9, cost: 0 }
-Duplication{ start: 243, length: 9, cost: 0 }
-Duplication{ start: 28, length: 6, cost: 0 }
-Duplication{ start: 29, length: 6, cost: 0 }
-Duplication{ start: 30, length: 6, cost: 0 }
-Duplication{ start: 31, length: 6, cost: 0 }
-Duplication{ start: 32, length: 6, cost: 0 }
-Duplication{ start: 33, length: 6, cost: 0 }
-Duplication{ start: 34, length: 6, cost: 0 }
-Duplication{ start: 35, length: 6, cost: 0 }
-Duplication{ start: 36, length: 6, cost: 0 }
-Duplication{ start: 45, length: 6, cost: 0 }
-Duplication{ start: 46, length: 6, cost: 0 }
-Duplication{ start: 47, length: 6, cost: 0 }
-Duplication{ start: 48, length: 6, cost: 0 }
-Duplication{ start: 49, length: 6, cost: 0 }
-Duplication{ start: 50, length: 6, cost: 0 }
-Duplication{ start: 51, length: 6, cost: 0 }
-Duplication{ start: 89, length: 6, cost: 0 }
-Duplication{ start: 90, length: 6, cost: 0 }
-Duplication{ start: 91, length: 6, cost: 0 }
-Duplication{ start: 92, length: 6, cost: 0 }
-Duplication{ start: 102, length: 6, cost: 0 }
-Duplication{ start: 103, length: 6, cost: 0 }
-Duplication{ start: 104, length: 6, cost: 0 }
-Duplication{ start: 105, length: 6, cost: 0 }
-Duplication{ start: 138, length: 6, cost: 0 }
-Duplication{ start: 139, length: 6, cost: 0 }
-Duplication{ start: 140, length: 6, cost: 0 }
-Duplication{ start: 141, length: 6, cost: 0 }
-Duplication{ start: 171, length: 6, cost: 0 }
-Duplication{ start: 172, length: 6, cost: 0 }
-Duplication{ start: 173, length: 6, cost: 0 }
-Duplication{ start: 174, length: 6, cost: 0 }
-Duplication{ start: 175, length: 6, cost: 0 }
-Duplication{ start: 231, length: 6, cost: 0 }
-Duplication{ start: 232, length: 6, cost: 0 }
-Duplication{ start: 0, length: 3, cost: 0 }
-Duplication{ start: 8, length: 3, cost: 0 }
-Duplication{ start: 9, length: 3, cost: 0 }
-Duplication{ start: 15, length: 3, cost: 0 }
-Duplication{ start: 20, length: 3, cost: 0 }
-Duplication{ start: 21, length: 3, cost: 0 }
-Duplication{ start: 25, length: 3, cost: 0 }
-Duplication{ start: 40, length: 3, cost: 0 }
-Duplication{ start: 44, length: 3, cost: 0 }
-Duplication{ start: 45, length: 3, cost: 0 }
-Duplication{ start: 52, length: 3, cost: 0 }
-Duplication{ start: 53, length: 3, cost: 0 }
-Duplication{ start: 59, length: 3, cost: 0 }
-Duplication{ start: 60, length: 3, cost: 0 }
-Duplication{ start: 64, length: 3, cost: 0 }
-Duplication{ start: 65, length: 3, cost: 0 }
-Duplication{ start: 66, length: 3, cost: 0 }
-Duplication{ start: 83, length: 3, cost: 0 }
-Duplication{ start: 84, length: 3, cost: 0 }
-Duplication{ start: 85, length: 3, cost: 0 }
-Duplication{ start: 91, length: 3, cost: 0 }
-Duplication{ start: 92, length: 3, cost: 0 }
-Duplication{ start: 104, length: 3, cost: 0 }
-Duplication{ start: 105, length: 3, cost: 0 }
-Duplication{ start: 106, length: 3, cost: 0 }
-Duplication{ start: 107, length: 3, cost: 0 }
-Duplication{ start: 108, length: 3, cost: 0 }
-Duplication{ start: 113, length: 3, cost: 0 }
-Duplication{ start: 121, length: 3, cost: 0 }
-Duplication{ start: 122, length: 3, cost: 0 }
-Duplication{ start: 123, length: 3, cost: 0 }
-Duplication{ start: 124, length: 3, cost: 0 }
-Duplication{ start: 125, length: 3, cost: 0 }
-Duplication{ start: 135, length: 3, cost: 0 }
-Duplication{ start: 136, length: 3, cost: 0 }
-Duplication{ start: 137, length: 3, cost: 0 }
-Duplication{ start: 156, length: 3, cost: 0 }
-Duplication{ start: 165, length: 3, cost: 0 }
-Duplication{ start: 166, length: 3, cost: 0 }
-Duplication{ start: 167, length: 3, cost: 0 }
-Duplication{ start: 168, length: 3, cost: 0 }
-Duplication{ start: 169, length: 3, cost: 0 }
-Duplication{ start: 179, length: 3, cost: 0 }
-Duplication{ start: 188, length: 3, cost: 0 }
-Duplication{ start: 189, length: 3, cost: 0 }
-Duplication{ start: 190, length: 3, cost: 0 }
-Duplication{ start: 191, length: 3, cost: 0 }
-Duplication{ start: 192, length: 3, cost: 0 }
-Duplication{ start: 193, length: 3, cost: 0 }
-Duplication{ start: 197, length: 3, cost: 0 }
-Duplication{ start: 198, length: 3, cost: 0 }
-Duplication{ start: 199, length: 3, cost: 0 }
-Duplication{ start: 200, length: 3, cost: 0 }
-Duplication{ start: 201, length: 3, cost: 0 }
-Duplication{ start: 202, length: 3, cost: 0 }
-Duplication{ start: 203, length: 3, cost: 0 }
-Duplication{ start: 204, length: 3, cost: 0 }
-Duplication{ start: 208, length: 3, cost: 0 }
-Duplication{ start: 212, length: 3, cost: 0 }
-Duplication{ start: 216, length: 3, cost: 0 }
-Duplication{ start: 221, length: 3, cost: 0 }
-Duplication{ start: 229, length: 3, cost: 0 }
-Duplication{ start: 235, length: 3, cost: 0 }
-Duplication{ start: 236, length: 3, cost: 0 }
-Duplication{ start: 237, length: 3, cost: 0 }
-Duplication{ start: 238, length: 3, cost: 0 }
-Duplication{ start: 250, length: 3, cost: 0 }
-Duplication{ start: 254, length: 3, cost: 0 }
-Duplication{ start: 258, length: 3, cost: 0 }
-Duplication{ start: 259, length: 3, cost: 0 }
-Duplication{ start: 260, length: 3, cost: 0 }
-Duplication{ start: 264, length: 3, cost: 0 }
-Duplication{ start: 265, length: 3, cost: 0 }
-Duplication{ start: 266, length: 3, cost: 0 }
-Duplication{ start: 267, length: 3, cost: 0 }
-Duplication{ start: 271, length: 3, cost: 0 }
-Duplication{ start: 272, length: 3, cost: 0 }
-Duplication{ start: 273, length: 3, cost: 0 }
-Duplication{ start: 274, length: 3, cost: 0 }
-Duplication{ start: 275, length: 3, cost: 0 }
-Duplication{ start: 276, length: 3, cost: 0 }
-Duplication{ start: 277, length: 3, cost: 0 }
-Duplication{ start: 278, length: 3, cost: 0 }
-Duplication{ start: 279, length: 3, cost: 0 }
-Duplication{ start: 280, length: 3, cost: 0 }
-Duplication{ start: 290, length: 3, cost: 0 }
-Duplication{ start: 291, length: 3, cost: 0 }
-Duplication{ start: 292, length: 3, cost: 0 }
-Duplication{ start: 293, length: 3, cost: 0 }
-Duplication{ start: 294, length: 3, cost: 0 }
-Duplication{ start: 240, length: 24, cost: 0.0333333 }
-Duplication{ start: 183, length: 18, cost: 0.0444444 }
-Duplication{ start: 24, length: 15, cost: 0.0533333 }
-Duplication{ start: 25, length: 15, cost: 0.0533333 }
-Duplication{ start: 26, length: 15, cost: 0.0533333 }
-Duplication{ start: 42, length: 15, cost: 0.0533333 }
-Duplication{ start: 43, length: 15, cost: 0.0533333 }
-Duplication{ start: 151, length: 15, cost: 0.0533333 }
-Duplication{ start: 152, length: 15, cost: 0.0533333 }
-Duplication{ start: 154, length: 15, cost: 0.0533333 }
-Duplication{ start: 155, length: 15, cost: 0.0533333 }
-Duplication{ start: 156, length: 15, cost: 0.0533333 }
-Duplication{ start: 157, length: 15, cost: 0.0533333 }
-Duplication{ start: 158, length: 15, cost: 0.0533333 }
-Duplication{ start: 159, length: 15, cost: 0.0533333 }
-Duplication{ start: 160, length: 15, cost: 0.0533333 }
-Duplication{ start: 161, length: 15, cost: 0.0533333 }
-Duplication{ start: 162, length: 15, cost: 0.0533333 }
-Duplication{ start: 163, length: 15, cost: 0.0533333 }
-Duplication{ start: 164, length: 15, cost: 0.0533333 }
-Duplication{ start: 165, length: 15, cost: 0.0533333 }
-Duplication{ start: 166, length: 15, cost: 0.0533333 }
-Duplication{ start: 184, length: 18, cost: 0.0555555 }
-Duplication{ start: 185, length: 18, cost: 0.0555555 }
-Duplication{ start: 186, length: 18, cost: 0.0555555 }
-Duplication{ start: 187, length: 18, cost: 0.0555555 }
-Duplication{ start: 188, length: 18, cost: 0.0555555 }
-Duplication{ start: 45, length: 12, cost: 0.0555555 }
-Duplication{ start: 234, length: 12, cost: 0.0555555 }
-Duplication{ start: 235, length: 12, cost: 0.0555555 }
-Duplication{ start: 236, length: 12, cost: 0.0555555 }
-Duplication{ start: 237, length: 24, cost: 0.0611111 }
-Duplication{ start: 238, length: 24, cost: 0.0611111 }
-Duplication{ start: 239, length: 24, cost: 0.0611111 }
-Duplication{ start: 241, length: 24, cost: 0.0666666 }
-Duplication{ start: 242, length: 24, cost: 0.0666666 }
-Duplication{ start: 243, length: 24, cost: 0.0666666 }
-Duplication{ start: 244, length: 24, cost: 0.0666666 }
-Duplication{ start: 20, length: 12, cost: 0.0666666 }
-Duplication{ start: 21, length: 12, cost: 0.0666666 }
-Duplication{ start: 49, length: 12, cost: 0.0666666 }
-Duplication{ start: 50, length: 12, cost: 0.0666666 }
-Duplication{ start: 138, length: 12, cost: 0.0666666 }
-Duplication{ start: 139, length: 12, cost: 0.0666666 }
-Duplication{ start: 226, length: 12, cost: 0.0666666 }
-Duplication{ start: 227, length: 12, cost: 0.0666666 }
-Duplication{ start: 228, length: 12, cost: 0.0666666 }
-Duplication{ start: 229, length: 12, cost: 0.0666666 }
-Duplication{ start: 230, length: 12, cost: 0.0666666 }
-Duplication{ start: 275, length: 12, cost: 0.0666666 }
-Duplication{ start: 276, length: 12, cost: 0.0666666 }
-Duplication{ start: 243, length: 21, cost: 0.0698412 }
-Duplication{ start: 244, length: 21, cost: 0.0698412 }
-Duplication{ start: 245, length: 21, cost: 0.0698412 }
-Duplication{ start: 247, length: 21, cost: 0.0698412 }
-Duplication{ start: 248, length: 21, cost: 0.0698412 }
-Duplication{ start: 249, length: 21, cost: 0.0698412 }
-Duplication{ start: 250, length: 21, cost: 0.0698412 }
-Duplication{ start: 34, length: 9, cost: 0.074074 }
-Duplication{ start: 35, length: 9, cost: 0.074074 }
-Duplication{ start: 36, length: 9, cost: 0.074074 }
-Duplication{ start: 55, length: 9, cost: 0.074074 }
-Duplication{ start: 84, length: 9, cost: 0.074074 }
-Duplication{ start: 85, length: 9, cost: 0.074074 }
-Duplication{ start: 177, length: 9, cost: 0.074074 }
-Duplication{ start: 178, length: 9, cost: 0.074074 }
-Duplication{ start: 179, length: 9, cost: 0.074074 }
-Duplication{ start: 180, length: 9, cost: 0.074074 }
-Duplication{ start: 181, length: 9, cost: 0.074074 }
-Duplication{ start: 182, length: 9, cost: 0.074074 }
-Duplication{ start: 183, length: 9, cost: 0.074074 }
-Duplication{ start: 184, length: 9, cost: 0.074074 }
-Duplication{ start: 186, length: 9, cost: 0.074074 }
-Duplication{ start: 209, length: 9, cost: 0.074074 }
-Duplication{ start: 210, length: 9, cost: 0.074074 }
-Duplication{ start: 211, length: 9, cost: 0.074074 }
-Duplication{ start: 266, length: 9, cost: 0.074074 }
-Duplication{ start: 158, length: 30, cost: 0.08 }
-Duplication{ start: 159, length: 30, cost: 0.08 }
-Duplication{ start: 168, length: 36, cost: 0.0814814 }
-Duplication{ start: 170, length: 36, cost: 0.0814814 }
-Duplication{ start: 171, length: 36, cost: 0.0814814 }
-Duplication{ start: 118, length: 18, cost: 0.0814814 }
-Duplication{ start: 119, length: 18, cost: 0.0814814 }
-Duplication{ start: 181, length: 18, cost: 0.0814814 }
-Duplication{ start: 182, length: 18, cost: 0.0814814 }
-Duplication{ start: 144, length: 33, cost: 0.0848484 }
-Duplication{ start: 145, length: 33, cost: 0.0848484 }
-Duplication{ start: 9, length: 9, cost: 0.0888888 }
-Duplication{ start: 10, length: 9, cost: 0.0888888 }
-Duplication{ start: 11, length: 9, cost: 0.0888888 }
-Duplication{ start: 32, length: 9, cost: 0.0888888 }
-Duplication{ start: 101, length: 9, cost: 0.0888888 }
-Duplication{ start: 102, length: 9, cost: 0.0888888 }
-Duplication{ start: 103, length: 9, cost: 0.0888888 }
-Duplication{ start: 156, length: 9, cost: 0.0888888 }
-Duplication{ start: 157, length: 9, cost: 0.0888888 }
-Duplication{ start: 158, length: 9, cost: 0.0888888 }
-Duplication{ start: 174, length: 9, cost: 0.0888888 }
-Duplication{ start: 175, length: 9, cost: 0.0888888 }
-Duplication{ start: 207, length: 9, cost: 0.0888888 }
-Duplication{ start: 218, length: 9, cost: 0.0888888 }
-Duplication{ start: 219, length: 9, cost: 0.0888888 }
-Duplication{ start: 220, length: 9, cost: 0.0888888 }
-Duplication{ start: 222, length: 9, cost: 0.0888888 }
-Duplication{ start: 223, length: 9, cost: 0.0888888 }
-Duplication{ start: 224, length: 9, cost: 0.0888888 }
-Duplication{ start: 225, length: 9, cost: 0.0888888 }
-Duplication{ start: 226, length: 9, cost: 0.0888888 }
-Duplication{ start: 227, length: 9, cost: 0.0888888 }
-Duplication{ start: 228, length: 9, cost: 0.0888888 }
-Duplication{ start: 231, length: 9, cost: 0.0888888 }
-Duplication{ start: 232, length: 9, cost: 0.0888888 }
-Duplication{ start: 233, length: 9, cost: 0.0888888 }
-Duplication{ start: 234, length: 9, cost: 0.0888888 }
-Duplication{ start: 235, length: 9, cost: 0.0888888 }
-Duplication{ start: 236, length: 9, cost: 0.0888888 }
-Duplication{ start: 237, length: 9, cost: 0.0888888 }
-Duplication{ start: 244, length: 9, cost: 0.0888888 }
-Duplication{ start: 261, length: 9, cost: 0.0888888 }
-Duplication{ start: 262, length: 9, cost: 0.0888888 }
-Duplication{ start: 189, length: 18, cost: 0.0925925 }
-Duplication{ start: 138, length: 24, cost: 0.0944444 }
-Duplication{ start: 139, length: 24, cost: 0.0944444 }
-Duplication{ start: 140, length: 24, cost: 0.0944444 }
-Duplication{ start: 141, length: 24, cost: 0.0944444 }
-Duplication{ start: 142, length: 24, cost: 0.0944444 }
-Duplication{ start: 143, length: 24, cost: 0.0944444 }
-Duplication{ start: 232, length: 24, cost: 0.0944444 }
-Duplication{ start: 233, length: 24, cost: 0.0944444 }
-Duplication{ start: 234, length: 24, cost: 0.0944444 }
-Duplication{ start: 235, length: 24, cost: 0.0944444 }
-Duplication{ start: 236, length: 24, cost: 0.0944444 }
-Duplication{ start: 21, length: 15, cost: 0.0977777 }
-Duplication{ start: 22, length: 15, cost: 0.0977777 }
-Duplication{ start: 23, length: 15, cost: 0.0977777 }
-Duplication{ start: 27, length: 15, cost: 0.0977777 }
-Duplication{ start: 32, length: 15, cost: 0.0977777 }
-Duplication{ start: 33, length: 15, cost: 0.0977777 }
-Duplication{ start: 34, length: 15, cost: 0.0977777 }
-Duplication{ start: 35, length: 15, cost: 0.0977777 }
-Duplication{ start: 36, length: 15, cost: 0.0977777 }
-Duplication{ start: 37, length: 15, cost: 0.0977777 }
-Duplication{ start: 38, length: 15, cost: 0.0977777 }
-Duplication{ start: 39, length: 15, cost: 0.0977777 }
-Duplication{ start: 40, length: 15, cost: 0.0977777 }
-Duplication{ start: 41, length: 15, cost: 0.0977777 }
-Duplication{ start: 44, length: 15, cost: 0.0977777 }
-Duplication{ start: 150, length: 15, cost: 0.0977777 }
-Duplication{ start: 168, length: 15, cost: 0.0977777 }
-Duplication{ start: 231, length: 15, cost: 0.0977777 }
-Duplication{ start: 232, length: 15, cost: 0.0977777 }
-Duplication{ start: 233, length: 15, cost: 0.0977777 }
-Duplication{ start: 234, length: 15, cost: 0.0977777 }
-Duplication{ start: 235, length: 15, cost: 0.0977777 }
-Duplication{ start: 236, length: 15, cost: 0.0977777 }
-Duplication{ start: 237, length: 15, cost: 0.0977777 }
-Duplication{ start: 238, length: 15, cost: 0.0977777 }
-Duplication{ start: 244, length: 15, cost: 0.0977777 }
-Duplication{ start: 169, length: 36, cost: 0.1 }
-Duplication{ start: 245, length: 24, cost: 0.1 }
-Duplication{ start: 246, length: 24, cost: 0.1 }
-Duplication{ start: 247, length: 24, cost: 0.1 }
-Duplication{ start: 222, length: 18, cost: 0.1 }
-Duplication{ start: 240, length: 21, cost: 0.101587 }
-Duplication{ start: 241, length: 21, cost: 0.101587 }
-Duplication{ start: 242, length: 21, cost: 0.101587 }
-Duplication{ start: 140, length: 30, cost: 0.102222 }
-Duplication{ start: 141, length: 30, cost: 0.102222 }
-Duplication{ start: 164, length: 36, cost: 0.103704 }
-Duplication{ start: 165, length: 36, cost: 0.103704 }
-Duplication{ start: 166, length: 36, cost: 0.103704 }
-Duplication{ start: 167, length: 36, cost: 0.103704 }
-Duplication{ start: 172, length: 36, cost: 0.103704 }
-Duplication{ start: 173, length: 36, cost: 0.103704 }
-Duplication{ start: 174, length: 36, cost: 0.103704 }
-Duplication{ start: 146, length: 33, cost: 0.105051 }
-Duplication{ start: 147, length: 33, cost: 0.105051 }
-Duplication{ start: 148, length: 33, cost: 0.105051 }
-Duplication{ start: 152, length: 33, cost: 0.105051 }
-Duplication{ start: 153, length: 33, cost: 0.105051 }
-Duplication{ start: 154, length: 30, cost: 0.106667 }
-Duplication{ start: 155, length: 30, cost: 0.106667 }
-Duplication{ start: 156, length: 30, cost: 0.106667 }
-Duplication{ start: 157, length: 30, cost: 0.106667 }
-Duplication{ start: 160, length: 30, cost: 0.106667 }
-Duplication{ start: 161, length: 30, cost: 0.106667 }
-Duplication{ start: 162, length: 30, cost: 0.106667 }
-Duplication{ start: 153, length: 15, cost: 0.106667 }
-Duplication{ start: 167, length: 15, cost: 0.106667 }
-Duplication{ start: 236, length: 21, cost: 0.107937 }
-Duplication{ start: 237, length: 21, cost: 0.107937 }
-Duplication{ start: 246, length: 21, cost: 0.107937 }
-Duplication{ start: 251, length: 21, cost: 0.107937 }
-Duplication{ start: 252, length: 21, cost: 0.107937 }
-Duplication{ start: 253, length: 21, cost: 0.107937 }
-Duplication{ start: 137, length: 33, cost: 0.109091 }
-Duplication{ start: 138, length: 33, cost: 0.109091 }
-Duplication{ start: 139, length: 33, cost: 0.109091 }
-Duplication{ start: 140, length: 33, cost: 0.109091 }
-Duplication{ start: 141, length: 33, cost: 0.109091 }
-Duplication{ start: 142, length: 33, cost: 0.109091 }
-Duplication{ start: 143, length: 33, cost: 0.109091 }
-Duplication{ start: 208, length: 18, cost: 0.111111 }
-Duplication{ start: 209, length: 18, cost: 0.111111 }
-Duplication{ start: 210, length: 18, cost: 0.111111 }
-Duplication{ start: 44, length: 12, cost: 0.111111 }
-Duplication{ start: 7, length: 9, cost: 0.111111 }
-Duplication{ start: 8, length: 9, cost: 0.111111 }
-Duplication{ start: 57, length: 9, cost: 0.111111 }
-Duplication{ start: 58, length: 9, cost: 0.111111 }
-Duplication{ start: 59, length: 9, cost: 0.111111 }
-Duplication{ start: 159, length: 9, cost: 0.111111 }
-Duplication{ start: 160, length: 9, cost: 0.111111 }
-Duplication{ start: 161, length: 9, cost: 0.111111 }
-Duplication{ start: 162, length: 9, cost: 0.111111 }
-Duplication{ start: 163, length: 9, cost: 0.111111 }
-Duplication{ start: 26, length: 6, cost: 0.111111 }
-Duplication{ start: 27, length: 6, cost: 0.111111 }
-Duplication{ start: 43, length: 6, cost: 0.111111 }
-Duplication{ start: 44, length: 6, cost: 0.111111 }
-Duplication{ start: 52, length: 6, cost: 0.111111 }
-Duplication{ start: 53, length: 6, cost: 0.111111 }
-Duplication{ start: 60, length: 6, cost: 0.111111 }
-Duplication{ start: 85, length: 6, cost: 0.111111 }
-Duplication{ start: 86, length: 6, cost: 0.111111 }
-Duplication{ start: 87, length: 6, cost: 0.111111 }
-Duplication{ start: 88, length: 6, cost: 0.111111 }
-Duplication{ start: 100, length: 6, cost: 0.111111 }
-Duplication{ start: 101, length: 6, cost: 0.111111 }
-Duplication{ start: 119, length: 6, cost: 0.111111 }
-Duplication{ start: 164, length: 6, cost: 0.111111 }
-Duplication{ start: 183, length: 6, cost: 0.111111 }
-Duplication{ start: 233, length: 6, cost: 0.111111 }
-Duplication{ start: 234, length: 6, cost: 0.111111 }
-Duplication{ start: 261, length: 6, cost: 0.111111 }
-Duplication{ start: 262, length: 6, cost: 0.111111 }
-Duplication{ start: 288, length: 6, cost: 0.111111 }
-Duplication{ start: 182, length: 36, cost: 0.112963 }
-Duplication{ start: 22, length: 21, cost: 0.114286 }
-Duplication{ start: 23, length: 21, cost: 0.114286 }
-Duplication{ start: 123, length: 33, cost: 0.117172 }
-Duplication{ start: 124, length: 33, cost: 0.117172 }
-Duplication{ start: 125, length: 33, cost: 0.117172 }
-Duplication{ start: 126, length: 33, cost: 0.117172 }
-Duplication{ start: 127, length: 33, cost: 0.117172 }
-Duplication{ start: 162, length: 45, cost: 0.118519 }
-Duplication{ start: 115, length: 18, cost: 0.118519 }
-Duplication{ start: 116, length: 18, cost: 0.118519 }
-Duplication{ start: 117, length: 18, cost: 0.118519 }
-Duplication{ start: 173, length: 18, cost: 0.118519 }
-Duplication{ start: 174, length: 18, cost: 0.118519 }
-Duplication{ start: 175, length: 18, cost: 0.118519 }
-Duplication{ start: 176, length: 18, cost: 0.118519 }
-Duplication{ start: 177, length: 18, cost: 0.118519 }
-Duplication{ start: 178, length: 18, cost: 0.118519 }
-Duplication{ start: 179, length: 18, cost: 0.118519 }
-Duplication{ start: 180, length: 18, cost: 0.118519 }
-Duplication{ start: 202, length: 18, cost: 0.118519 }
-Duplication{ start: 99, length: 33, cost: 0.119192 }
-Duplication{ start: 164, length: 45, cost: 0.12 }
-Duplication{ start: 90, length: 51, cost: 0.121569 }
-Duplication{ start: 91, length: 51, cost: 0.121569 }
-Duplication{ start: 92, length: 51, cost: 0.121569 }
-Duplication{ start: 93, length: 51, cost: 0.121569 }
-Duplication{ start: 13, length: 24, cost: 0.122222 }
-Duplication{ start: 14, length: 24, cost: 0.122222 }
-Duplication{ start: 15, length: 24, cost: 0.122222 }
-Duplication{ start: 16, length: 24, cost: 0.122222 }
-Duplication{ start: 17, length: 24, cost: 0.122222 }
-Duplication{ start: 147, length: 24, cost: 0.122222 }
-Duplication{ start: 148, length: 24, cost: 0.122222 }
-Duplication{ start: 149, length: 24, cost: 0.122222 }
-Duplication{ start: 150, length: 24, cost: 0.122222 }
-Duplication{ start: 151, length: 24, cost: 0.122222 }
-Duplication{ start: 152, length: 24, cost: 0.122222 }
-Duplication{ start: 231, length: 24, cost: 0.122222 }
-Duplication{ start: 22, length: 12, cost: 0.122222 }
-Duplication{ start: 23, length: 12, cost: 0.122222 }
-Duplication{ start: 24, length: 12, cost: 0.122222 }
-Duplication{ start: 25, length: 12, cost: 0.122222 }
-Duplication{ start: 83, length: 12, cost: 0.122222 }
-Duplication{ start: 84, length: 12, cost: 0.122222 }
-Duplication{ start: 85, length: 12, cost: 0.122222 }
-Duplication{ start: 86, length: 12, cost: 0.122222 }
-Duplication{ start: 154, length: 12, cost: 0.122222 }
-Duplication{ start: 155, length: 12, cost: 0.122222 }
-Duplication{ start: 156, length: 12, cost: 0.122222 }
-Duplication{ start: 157, length: 12, cost: 0.122222 }
-Duplication{ start: 158, length: 12, cost: 0.122222 }
-Duplication{ start: 218, length: 12, cost: 0.122222 }
-Duplication{ start: 220, length: 12, cost: 0.122222 }
-Duplication{ start: 221, length: 12, cost: 0.122222 }
-Duplication{ start: 222, length: 12, cost: 0.122222 }
-Duplication{ start: 223, length: 12, cost: 0.122222 }
-Duplication{ start: 224, length: 12, cost: 0.122222 }
-Duplication{ start: 225, length: 12, cost: 0.122222 }
-Duplication{ start: 237, length: 12, cost: 0.122222 }
-Duplication{ start: 238, length: 12, cost: 0.122222 }
-Duplication{ start: 239, length: 12, cost: 0.122222 }
-Duplication{ start: 240, length: 12, cost: 0.122222 }
-Duplication{ start: 163, length: 45, cost: 0.122963 }
-Duplication{ start: 138, length: 30, cost: 0.124444 }
-Duplication{ start: 139, length: 30, cost: 0.124444 }
-Duplication{ start: 149, length: 33, cost: 0.125253 }
-Duplication{ start: 98, length: 54, cost: 0.125926 }
-Duplication{ start: 160, length: 36, cost: 0.125926 }
-Duplication{ start: 161, length: 36, cost: 0.125926 }
-Duplication{ start: 162, length: 36, cost: 0.125926 }
-Duplication{ start: 163, length: 36, cost: 0.125926 }
-Duplication{ start: 154, length: 18, cost: 0.125926 }
-Duplication{ start: 188, length: 42, cost: 0.126984 }
-Duplication{ start: 189, length: 42, cost: 0.126984 }
-Duplication{ start: 190, length: 42, cost: 0.126984 }
-Duplication{ start: 113, length: 33, cost: 0.127273 }
-Duplication{ start: 114, length: 33, cost: 0.127273 }
-Duplication{ start: 115, length: 33, cost: 0.127273 }
-Duplication{ start: 116, length: 33, cost: 0.127273 }
-Duplication{ start: 117, length: 33, cost: 0.127273 }
-Duplication{ start: 137, length: 24, cost: 0.127778 }
-Duplication{ start: 144, length: 24, cost: 0.127778 }
-Duplication{ start: 145, length: 24, cost: 0.127778 }
-Duplication{ start: 205, length: 24, cost: 0.127778 }
-Duplication{ start: 248, length: 24, cost: 0.127778 }
-Duplication{ start: 249, length: 24, cost: 0.127778 }
-Duplication{ start: 250, length: 24, cost: 0.127778 }
-Duplication{ start: 251, length: 24, cost: 0.127778 }
-Duplication{ start: 252, length: 24, cost: 0.127778 }
-Duplication{ start: 172, length: 54, cost: 0.128395 }
-Duplication{ start: 173, length: 54, cost: 0.128395 }
-Duplication{ start: 174, length: 54, cost: 0.128395 }
-Duplication{ start: 175, length: 54, cost: 0.128395 }
-Duplication{ start: 168, length: 42, cost: 0.128571 }
-Duplication{ start: 169, length: 42, cost: 0.128571 }
-Duplication{ start: 170, length: 42, cost: 0.128571 }
-Duplication{ start: 171, length: 42, cost: 0.128571 }
-Duplication{ start: 172, length: 42, cost: 0.128571 }
-Duplication{ start: 173, length: 42, cost: 0.128571 }
-Duplication{ start: 142, length: 30, cost: 0.128889 }
-Duplication{ start: 143, length: 30, cost: 0.128889 }
-Duplication{ start: 144, length: 30, cost: 0.128889 }
-Duplication{ start: 145, length: 30, cost: 0.128889 }
-Duplication{ start: 146, length: 30, cost: 0.128889 }
-Duplication{ start: 163, length: 30, cost: 0.128889 }
-Duplication{ start: 164, length: 30, cost: 0.128889 }
-Duplication{ start: 165, length: 30, cost: 0.128889 }
-Duplication{ start: 166, length: 30, cost: 0.128889 }
-Duplication{ start: 167, length: 30, cost: 0.128889 }
-Duplication{ start: 168, length: 30, cost: 0.128889 }
-Duplication{ start: 151, length: 33, cost: 0.129293 }
-Duplication{ start: 154, length: 33, cost: 0.129293 }
-Duplication{ start: 85, length: 90, cost: 0.131111 }
-Duplication{ start: 86, length: 90, cost: 0.131111 }
-Duplication{ start: 175, length: 36, cost: 0.131481 }
-Duplication{ start: 176, length: 36, cost: 0.131481 }
-Duplication{ start: 177, length: 36, cost: 0.131481 }
-Duplication{ start: 178, length: 36, cost: 0.131481 }
-Duplication{ start: 179, length: 36, cost: 0.131481 }
-Duplication{ start: 180, length: 36, cost: 0.131481 }
-Duplication{ start: 181, length: 36, cost: 0.131481 }
-Duplication{ start: 183, length: 36, cost: 0.131481 }
-Duplication{ start: 184, length: 36, cost: 0.131481 }
-Duplication{ start: 185, length: 36, cost: 0.131481 }
-Duplication{ start: 186, length: 36, cost: 0.131481 }
-Duplication{ start: 187, length: 36, cost: 0.131481 }
-Duplication{ start: 188, length: 36, cost: 0.131481 }
-Duplication{ start: 30, length: 45, cost: 0.133333 }
-Duplication{ start: 31, length: 45, cost: 0.133333 }
-Duplication{ start: 161, length: 45, cost: 0.133333 }
-Duplication{ start: 208, length: 39, cost: 0.133333 }
-Duplication{ start: 209, length: 39, cost: 0.133333 }
-Duplication{ start: 133, length: 33, cost: 0.133333 }
-Duplication{ start: 134, length: 33, cost: 0.133333 }
-Duplication{ start: 135, length: 33, cost: 0.133333 }
-Duplication{ start: 136, length: 33, cost: 0.133333 }
-Duplication{ start: 161, length: 33, cost: 0.133333 }
-Duplication{ start: 151, length: 30, cost: 0.133333 }
-Duplication{ start: 152, length: 30, cost: 0.133333 }
-Duplication{ start: 153, length: 30, cost: 0.133333 }
-Duplication{ start: 88, length: 27, cost: 0.133333 }
-Duplication{ start: 92, length: 27, cost: 0.133333 }
-Duplication{ start: 145, length: 18, cost: 0.133333 }
-Duplication{ start: 146, length: 18, cost: 0.133333 }
-Duplication{ start: 147, length: 18, cost: 0.133333 }
-Duplication{ start: 148, length: 18, cost: 0.133333 }
-Duplication{ start: 149, length: 18, cost: 0.133333 }
-Duplication{ start: 150, length: 18, cost: 0.133333 }
-Duplication{ start: 51, length: 12, cost: 0.133333 }
-Duplication{ start: 81, length: 12, cost: 0.133333 }
-Duplication{ start: 137, length: 12, cost: 0.133333 }
-Duplication{ start: 179, length: 12, cost: 0.133333 }
-Duplication{ start: 180, length: 12, cost: 0.133333 }
-Duplication{ start: 181, length: 12, cost: 0.133333 }
-Duplication{ start: 182, length: 12, cost: 0.133333 }
-Duplication{ start: 1, length: 6, cost: 0.133333 }
-Duplication{ start: 2, length: 6, cost: 0.133333 }
-Duplication{ start: 3, length: 6, cost: 0.133333 }
-Duplication{ start: 4, length: 6, cost: 0.133333 }
-Duplication{ start: 5, length: 6, cost: 0.133333 }
-Duplication{ start: 6, length: 6, cost: 0.133333 }
-Duplication{ start: 7, length: 6, cost: 0.133333 }
-Duplication{ start: 8, length: 6, cost: 0.133333 }
-Duplication{ start: 37, length: 6, cost: 0.133333 }
-Duplication{ start: 38, length: 6, cost: 0.133333 }
-Duplication{ start: 58, length: 6, cost: 0.133333 }
-Duplication{ start: 93, length: 6, cost: 0.133333 }
-Duplication{ start: 106, length: 6, cost: 0.133333 }
-Duplication{ start: 107, length: 6, cost: 0.133333 }
-Duplication{ start: 121, length: 6, cost: 0.133333 }
-Duplication{ start: 122, length: 6, cost: 0.133333 }
-Duplication{ start: 126, length: 6, cost: 0.133333 }
-Duplication{ start: 136, length: 6, cost: 0.133333 }
-Duplication{ start: 137, length: 6, cost: 0.133333 }
-Duplication{ start: 142, length: 6, cost: 0.133333 }
-Duplication{ start: 143, length: 6, cost: 0.133333 }
-Duplication{ start: 144, length: 6, cost: 0.133333 }
-Duplication{ start: 154, length: 6, cost: 0.133333 }
-Duplication{ start: 155, length: 6, cost: 0.133333 }
-Duplication{ start: 156, length: 6, cost: 0.133333 }
-Duplication{ start: 157, length: 6, cost: 0.133333 }
-Duplication{ start: 158, length: 6, cost: 0.133333 }
-Duplication{ start: 159, length: 6, cost: 0.133333 }
-Duplication{ start: 160, length: 6, cost: 0.133333 }
-Duplication{ start: 167, length: 6, cost: 0.133333 }
-Duplication{ start: 168, length: 6, cost: 0.133333 }
-Duplication{ start: 169, length: 6, cost: 0.133333 }
-Duplication{ start: 170, length: 6, cost: 0.133333 }
-Duplication{ start: 176, length: 6, cost: 0.133333 }
-Duplication{ start: 212, length: 6, cost: 0.133333 }
-Duplication{ start: 213, length: 6, cost: 0.133333 }
-Duplication{ start: 216, length: 6, cost: 0.133333 }
-Duplication{ start: 220, length: 6, cost: 0.133333 }
-Duplication{ start: 221, length: 6, cost: 0.133333 }
-Duplication{ start: 230, length: 6, cost: 0.133333 }
-Duplication{ start: 256, length: 6, cost: 0.133333 }
-Duplication{ start: 257, length: 6, cost: 0.133333 }
-Duplication{ start: 264, length: 6, cost: 0.133333 }
-Duplication{ start: 265, length: 6, cost: 0.133333 }
-Duplication{ start: 266, length: 6, cost: 0.133333 }
-Duplication{ start: 267, length: 6, cost: 0.133333 }
-Duplication{ start: 268, length: 6, cost: 0.133333 }
-Duplication{ start: 269, length: 6, cost: 0.133333 }
-Duplication{ start: 270, length: 6, cost: 0.133333 }
-Duplication{ start: 271, length: 6, cost: 0.133333 }
-Duplication{ start: 272, length: 6, cost: 0.133333 }
-Duplication{ start: 279, length: 6, cost: 0.133333 }
-Duplication{ start: 280, length: 6, cost: 0.133333 }
-Duplication{ start: 87, length: 51, cost: 0.134641 }
-Duplication{ start: 88, length: 51, cost: 0.134641 }
-Duplication{ start: 89, length: 51, cost: 0.134641 }
-Duplication{ start: 94, length: 51, cost: 0.134641 }
-Duplication{ start: 165, length: 45, cost: 0.134815 }
-Duplication{ start: 166, length: 45, cost: 0.134815 }
-Duplication{ start: 167, length: 45, cost: 0.134815 }
-Duplication{ start: 168, length: 45, cost: 0.134815 }
-Duplication{ start: 111, length: 36, cost: 0.135185 }
-Duplication{ start: 112, length: 36, cost: 0.135185 }
-Duplication{ start: 113, length: 36, cost: 0.135185 }
-Duplication{ start: 114, length: 36, cost: 0.135185 }
-Duplication{ start: 115, length: 36, cost: 0.135185 }
-Duplication{ start: 49, length: 90, cost: 0.135556 }
-Duplication{ start: 50, length: 90, cost: 0.135556 }
-Duplication{ start: 51, length: 90, cost: 0.135556 }
-Duplication{ start: 52, length: 90, cost: 0.135556 }
-Duplication{ start: 138, length: 42, cost: 0.136508 }
-Duplication{ start: 139, length: 42, cost: 0.136508 }
-Duplication{ start: 140, length: 42, cost: 0.136508 }
-Duplication{ start: 141, length: 42, cost: 0.136508 }
-Duplication{ start: 120, length: 18, cost: 0.137037 }
-Duplication{ start: 121, length: 18, cost: 0.137037 }
-Duplication{ start: 190, length: 18, cost: 0.137037 }
-Duplication{ start: 191, length: 18, cost: 0.137037 }
-Duplication{ start: 192, length: 18, cost: 0.137037 }
-Duplication{ start: 193, length: 18, cost: 0.137037 }
-Duplication{ start: 194, length: 18, cost: 0.137037 }
-Duplication{ start: 195, length: 18, cost: 0.137037 }
-Duplication{ start: 196, length: 18, cost: 0.137037 }
-Duplication{ start: 197, length: 18, cost: 0.137037 }
-Duplication{ start: 198, length: 18, cost: 0.137037 }
-Duplication{ start: 199, length: 18, cost: 0.137037 }
-Duplication{ start: 200, length: 18, cost: 0.137037 }
-Duplication{ start: 221, length: 18, cost: 0.137037 }
-Duplication{ start: 223, length: 18, cost: 0.137037 }
-Duplication{ start: 224, length: 18, cost: 0.137037 }
-Duplication{ start: 128, length: 33, cost: 0.137374 }
-Duplication{ start: 129, length: 33, cost: 0.137374 }
-Duplication{ start: 130, length: 33, cost: 0.137374 }
-Duplication{ start: 131, length: 33, cost: 0.137374 }
-Duplication{ start: 132, length: 33, cost: 0.137374 }
-Duplication{ start: 99, length: 54, cost: 0.138272 }
-Duplication{ start: 94, length: 27, cost: 0.138272 }
-Duplication{ start: 95, length: 27, cost: 0.138272 }
-Duplication{ start: 206, length: 39, cost: 0.138462 }
-Duplication{ start: 207, length: 39, cost: 0.138462 }
-Duplication{ start: 85, length: 33, cost: 0.139394 }
-Duplication{ start: 86, length: 33, cost: 0.139394 }
-Duplication{ start: 87, length: 33, cost: 0.139394 }
-Duplication{ start: 32, length: 21, cost: 0.139683 }
-Duplication{ start: 233, length: 21, cost: 0.139683 }
-Duplication{ start: 234, length: 21, cost: 0.139683 }
-Duplication{ start: 235, length: 21, cost: 0.139683 }
-Duplication{ start: 238, length: 21, cost: 0.139683 }
-Duplication{ start: 239, length: 21, cost: 0.139683 }
-Duplication{ start: 84, length: 90, cost: 0.14 }
-Duplication{ start: 87, length: 90, cost: 0.14 }
-Duplication{ start: 88, length: 90, cost: 0.14 }
-Duplication{ start: 89, length: 90, cost: 0.14 }
-Duplication{ start: 90, length: 90, cost: 0.14 }
-Duplication{ start: 96, length: 90, cost: 0.14 }
-Duplication{ start: 97, length: 90, cost: 0.14 }
-Duplication{ start: 155, length: 57, cost: 0.140351 }
-Duplication{ start: 156, length: 57, cost: 0.140351 }
-Duplication{ start: 157, length: 57, cost: 0.140351 }
-Duplication{ start: 160, length: 57, cost: 0.140351 }
-Duplication{ start: 94, length: 54, cost: 0.140741 }
-Duplication{ start: 95, length: 54, cost: 0.140741 }
-Duplication{ start: 96, length: 54, cost: 0.140741 }
-Duplication{ start: 97, length: 54, cost: 0.140741 }
-Duplication{ start: 156, length: 54, cost: 0.140741 }
-Duplication{ start: 169, length: 54, cost: 0.140741 }
-Duplication{ start: 170, length: 54, cost: 0.140741 }
-Duplication{ start: 171, length: 54, cost: 0.140741 }
-Duplication{ start: 117, length: 36, cost: 0.140741 }
-Duplication{ start: 118, length: 36, cost: 0.140741 }
-Duplication{ start: 79, length: 51, cost: 0.141176 }
-Duplication{ start: 149, length: 15, cost: 0.142222 }
-Duplication{ start: 169, length: 15, cost: 0.142222 }
-Duplication{ start: 170, length: 15, cost: 0.142222 }
-Duplication{ start: 171, length: 15, cost: 0.142222 }
-Duplication{ start: 239, length: 15, cost: 0.142222 }
-Duplication{ start: 240, length: 15, cost: 0.142222 }
-Duplication{ start: 241, length: 15, cost: 0.142222 }
-Duplication{ start: 242, length: 15, cost: 0.142222 }
-Duplication{ start: 243, length: 15, cost: 0.142222 }
-Duplication{ start: 202, length: 42, cost: 0.142857 }
-Duplication{ start: 48, length: 90, cost: 0.142963 }
-Duplication{ start: 53, length: 90, cost: 0.142963 }
-Duplication{ start: 54, length: 90, cost: 0.142963 }
-Duplication{ start: 55, length: 90, cost: 0.142963 }
-Duplication{ start: 160, length: 54, cost: 0.14321 }
-Duplication{ start: 161, length: 54, cost: 0.14321 }
-Duplication{ start: 162, length: 54, cost: 0.14321 }
-Duplication{ start: 163, length: 54, cost: 0.14321 }
-Duplication{ start: 176, length: 54, cost: 0.14321 }
-Duplication{ start: 177, length: 54, cost: 0.14321 }
-Duplication{ start: 178, length: 54, cost: 0.14321 }
-Duplication{ start: 179, length: 54, cost: 0.14321 }
-Duplication{ start: 100, length: 33, cost: 0.143434 }
-Duplication{ start: 101, length: 33, cost: 0.143434 }
-Duplication{ start: 102, length: 33, cost: 0.143434 }
-Duplication{ start: 103, length: 33, cost: 0.143434 }
-Duplication{ start: 101, length: 54, cost: 0.144444 }
-Duplication{ start: 104, length: 54, cost: 0.144444 }
-Duplication{ start: 105, length: 54, cost: 0.144444 }
-Duplication{ start: 157, length: 42, cost: 0.144444 }
-Duplication{ start: 158, length: 36, cost: 0.144444 }
-Duplication{ start: 159, length: 36, cost: 0.144444 }
-Duplication{ start: 0, length: 33, cost: 0.145455 }
-Duplication{ start: 1, length: 33, cost: 0.145455 }
-Duplication{ start: 5, length: 33, cost: 0.145455 }
-Duplication{ start: 6, length: 33, cost: 0.145455 }
-Duplication{ start: 191, length: 42, cost: 0.146032 }
-Duplication{ start: 192, length: 42, cost: 0.146032 }
-Duplication{ start: 193, length: 42, cost: 0.146032 }
-Duplication{ start: 194, length: 42, cost: 0.146032 }
-Duplication{ start: 195, length: 42, cost: 0.146032 }
-Duplication{ start: 196, length: 42, cost: 0.146032 }
-Duplication{ start: 197, length: 42, cost: 0.146032 }
-Duplication{ start: 198, length: 42, cost: 0.146032 }
-Duplication{ start: 199, length: 42, cost: 0.146032 }
-Duplication{ start: 200, length: 42, cost: 0.146032 }
-Duplication{ start: 25, length: 21, cost: 0.146032 }
-Duplication{ start: 26, length: 21, cost: 0.146032 }
-Duplication{ start: 27, length: 21, cost: 0.146032 }
-Duplication{ start: 28, length: 21, cost: 0.146032 }
-Duplication{ start: 29, length: 21, cost: 0.146032 }
-Duplication{ start: 30, length: 21, cost: 0.146032 }
-Duplication{ start: 31, length: 21, cost: 0.146032 }
-Duplication{ start: 254, length: 21, cost: 0.146032 }
-Duplication{ start: 255, length: 21, cost: 0.146032 }
-Duplication{ start: 256, length: 21, cost: 0.146032 }
-Duplication{ start: 231, length: 30, cost: 0.146667 }
-Duplication{ start: 91, length: 90, cost: 0.147407 }
-Duplication{ start: 92, length: 90, cost: 0.147407 }
-Duplication{ start: 93, length: 90, cost: 0.147407 }
-Duplication{ start: 94, length: 90, cost: 0.147407 }
-Duplication{ start: 95, length: 90, cost: 0.147407 }
-Duplication{ start: 107, length: 33, cost: 0.147475 }
-Duplication{ start: 108, length: 33, cost: 0.147475 }
-Duplication{ start: 109, length: 33, cost: 0.147475 }
-Duplication{ start: 110, length: 33, cost: 0.147475 }
-Duplication{ start: 112, length: 33, cost: 0.147475 }
-Duplication{ start: 118, length: 33, cost: 0.147475 }
-Duplication{ start: 121, length: 33, cost: 0.147475 }
-Duplication{ start: 122, length: 33, cost: 0.147475 }
-Duplication{ start: 163, length: 42, cost: 0.147619 }
-Duplication{ start: 164, length: 42, cost: 0.147619 }
-Duplication{ start: 165, length: 42, cost: 0.147619 }
-Duplication{ start: 166, length: 42, cost: 0.147619 }
-Duplication{ start: 167, length: 42, cost: 0.147619 }
-Duplication{ start: 174, length: 42, cost: 0.147619 }
-Duplication{ start: 176, length: 42, cost: 0.147619 }
-Duplication{ start: 177, length: 42, cost: 0.147619 }
-Duplication{ start: 157, length: 45, cost: 0.148148 }
-Duplication{ start: 158, length: 45, cost: 0.148148 }
-Duplication{ start: 159, length: 45, cost: 0.148148 }
-Duplication{ start: 160, length: 45, cost: 0.148148 }
-Duplication{ start: 211, length: 36, cost: 0.148148 }
-Duplication{ start: 187, length: 9, cost: 0.148148 }
-Duplication{ start: 188, length: 9, cost: 0.148148 }
-Duplication{ start: 189, length: 9, cost: 0.148148 }
-Duplication{ start: 267, length: 9, cost: 0.148148 }
-Duplication{ start: 268, length: 9, cost: 0.148148 }
-Duplication{ start: 83, length: 90, cost: 0.148889 }
-Duplication{ start: 98, length: 90, cost: 0.148889 }
-Duplication{ start: 99, length: 90, cost: 0.148889 }
-Duplication{ start: 91, length: 33, cost: 0.149495 }
-Duplication{ start: 92, length: 33, cost: 0.149495 }
-Duplication{ start: 93, length: 33, cost: 0.149495 }
-Duplication{ start: 94, length: 33, cost: 0.149495 }
-Duplication{ start: 95, length: 33, cost: 0.149495 }
-Duplication{ start: 96, length: 33, cost: 0.149495 }
-Duplication{ start: 97, length: 33, cost: 0.149495 }
-Duplication{ start: 98, length: 33, cost: 0.149495 }
-Duplication{ start: 150, length: 33, cost: 0.149495 }
-Duplication{ start: 138, length: 45, cost: 0.14963 }
-Duplication{ start: 139, length: 45, cost: 0.14963 }
-Duplication{ start: 169, length: 45, cost: 0.14963 }
-Duplication{ start: 170, length: 45, cost: 0.14963 }
-Duplication{ start: 142, length: 72, cost: 0.15 }
-Duplication{ start: 9, length: 24, cost: 0.15 }
-Duplication{ start: 10, length: 24, cost: 0.15 }
-Duplication{ start: 11, length: 24, cost: 0.15 }
-Duplication{ start: 12, length: 24, cost: 0.15 }
-Duplication{ start: 18, length: 12, cost: 0.15 }
-Duplication{ start: 19, length: 12, cost: 0.15 }
-Duplication{ start: 140, length: 12, cost: 0.15 }
-Duplication{ start: 141, length: 12, cost: 0.15 }
-Duplication{ start: 142, length: 12, cost: 0.15 }
-Duplication{ start: 271, length: 12, cost: 0.15 }
-Duplication{ start: 272, length: 12, cost: 0.15 }
-Duplication{ start: 273, length: 12, cost: 0.15 }
-Duplication{ start: 274, length: 12, cost: 0.15 }
-Duplication{ start: 84, length: 51, cost: 0.150327 }
-Duplication{ start: 85, length: 51, cost: 0.150327 }
-Duplication{ start: 86, length: 51, cost: 0.150327 }
-Duplication{ start: 95, length: 51, cost: 0.150327 }
-Duplication{ start: 56, length: 90, cost: 0.15037 }
-Duplication{ start: 190, length: 54, cost: 0.150617 }
-Duplication{ start: 184, length: 42, cost: 0.150794 }
-Duplication{ start: 185, length: 42, cost: 0.150794 }
-Duplication{ start: 186, length: 42, cost: 0.150794 }
-Duplication{ start: 187, length: 42, cost: 0.150794 }
-Duplication{ start: 29, length: 45, cost: 0.151111 }
-Duplication{ start: 32, length: 45, cost: 0.151111 }
-Duplication{ start: 14, length: 15, cost: 0.151111 }
-Duplication{ start: 15, length: 15, cost: 0.151111 }
-Duplication{ start: 16, length: 15, cost: 0.151111 }
-Duplication{ start: 17, length: 15, cost: 0.151111 }
-Duplication{ start: 18, length: 15, cost: 0.151111 }
-Duplication{ start: 19, length: 15, cost: 0.151111 }
-Duplication{ start: 20, length: 15, cost: 0.151111 }
-Duplication{ start: 28, length: 15, cost: 0.151111 }
-Duplication{ start: 29, length: 15, cost: 0.151111 }
-Duplication{ start: 30, length: 15, cost: 0.151111 }
-Duplication{ start: 31, length: 15, cost: 0.151111 }
-Duplication{ start: 45, length: 15, cost: 0.151111 }
-Duplication{ start: 230, length: 15, cost: 0.151111 }
-Duplication{ start: 245, length: 15, cost: 0.151111 }
-Duplication{ start: 247, length: 15, cost: 0.151111 }
-Duplication{ start: 248, length: 15, cost: 0.151111 }
-Duplication{ start: 254, length: 15, cost: 0.151111 }
-Duplication{ start: 43, length: 90, cost: 0.151852 }
-Duplication{ start: 44, length: 90, cost: 0.151852 }
-Duplication{ start: 45, length: 90, cost: 0.151852 }
-Duplication{ start: 46, length: 90, cost: 0.151852 }
-Duplication{ start: 47, length: 90, cost: 0.151852 }
-Duplication{ start: 154, length: 57, cost: 0.152047 }
-Duplication{ start: 158, length: 57, cost: 0.152047 }
-Duplication{ start: 159, length: 57, cost: 0.152047 }
-Duplication{ start: 164, length: 57, cost: 0.152047 }
-Duplication{ start: 142, length: 42, cost: 0.152381 }
-Duplication{ start: 143, length: 42, cost: 0.152381 }
-Duplication{ start: 144, length: 42, cost: 0.152381 }
-Duplication{ start: 19, length: 21, cost: 0.152381 }
-Duplication{ start: 20, length: 21, cost: 0.152381 }
-Duplication{ start: 21, length: 21, cost: 0.152381 }
-Duplication{ start: 24, length: 21, cost: 0.152381 }
-Duplication{ start: 156, length: 21, cost: 0.152381 }
-Duplication{ start: 140, length: 45, cost: 0.152593 }
-Duplication{ start: 85, length: 54, cost: 0.153086 }
-Duplication{ start: 86, length: 54, cost: 0.153086 }
-Duplication{ start: 87, length: 54, cost: 0.153086 }
-Duplication{ start: 88, length: 54, cost: 0.153086 }
-Duplication{ start: 89, length: 54, cost: 0.153086 }
-Duplication{ start: 90, length: 54, cost: 0.153086 }
-Duplication{ start: 91, length: 54, cost: 0.153086 }
-Duplication{ start: 92, length: 54, cost: 0.153086 }
-Duplication{ start: 93, length: 54, cost: 0.153086 }
-Duplication{ start: 168, length: 54, cost: 0.153086 }
-Duplication{ start: 155, length: 33, cost: 0.153535 }
-Duplication{ start: 156, length: 33, cost: 0.153535 }
-Duplication{ start: 157, length: 33, cost: 0.153535 }
-Duplication{ start: 158, length: 33, cost: 0.153535 }
-Duplication{ start: 159, length: 33, cost: 0.153535 }
-Duplication{ start: 160, length: 33, cost: 0.153535 }
-Duplication{ start: 162, length: 33, cost: 0.153535 }
-Duplication{ start: 163, length: 33, cost: 0.153535 }
-Duplication{ start: 189, length: 36, cost: 0.153704 }
-Duplication{ start: 190, length: 36, cost: 0.153704 }
-Duplication{ start: 191, length: 36, cost: 0.153704 }
-Duplication{ start: 192, length: 36, cost: 0.153704 }
-Duplication{ start: 202, length: 36, cost: 0.153704 }
-Duplication{ start: 208, length: 36, cost: 0.153704 }
-Duplication{ start: 209, length: 36, cost: 0.153704 }
-Duplication{ start: 210, length: 36, cost: 0.153704 }
-Duplication{ start: 210, length: 39, cost: 0.153846 }
-Duplication{ start: 211, length: 39, cost: 0.153846 }
-Duplication{ start: 220, length: 39, cost: 0.153846 }
-Duplication{ start: 221, length: 39, cost: 0.153846 }
-Duplication{ start: 80, length: 51, cost: 0.154248 }
-Duplication{ start: 161, length: 57, cost: 0.154386 }
-Duplication{ start: 99, length: 60, cost: 0.154444 }
-Duplication{ start: 66, length: 90, cost: 0.155556 }
-Duplication{ start: 154, length: 54, cost: 0.155556 }
-Duplication{ start: 155, length: 54, cost: 0.155556 }
-Duplication{ start: 157, length: 54, cost: 0.155556 }
-Duplication{ start: 158, length: 54, cost: 0.155556 }
-Duplication{ start: 159, length: 54, cost: 0.155556 }
-Duplication{ start: 164, length: 54, cost: 0.155556 }
-Duplication{ start: 165, length: 54, cost: 0.155556 }
-Duplication{ start: 166, length: 54, cost: 0.155556 }
-Duplication{ start: 167, length: 54, cost: 0.155556 }
-Duplication{ start: 135, length: 42, cost: 0.155556 }
-Duplication{ start: 136, length: 42, cost: 0.155556 }
-Duplication{ start: 137, length: 42, cost: 0.155556 }
-Duplication{ start: 205, length: 39, cost: 0.155556 }
-Duplication{ start: 147, length: 30, cost: 0.155556 }
-Duplication{ start: 148, length: 30, cost: 0.155556 }
-Duplication{ start: 149, length: 30, cost: 0.155556 }
-Duplication{ start: 150, length: 30, cost: 0.155556 }
-Duplication{ start: 169, length: 30, cost: 0.155556 }
-Duplication{ start: 8, length: 24, cost: 0.155556 }
-Duplication{ start: 18, length: 24, cost: 0.155556 }
-Duplication{ start: 106, length: 24, cost: 0.155556 }
-Duplication{ start: 107, length: 24, cost: 0.155556 }
-Duplication{ start: 146, length: 24, cost: 0.155556 }
-Duplication{ start: 153, length: 24, cost: 0.155556 }
-Duplication{ start: 154, length: 24, cost: 0.155556 }
-Duplication{ start: 155, length: 24, cost: 0.155556 }
-Duplication{ start: 197, length: 24, cost: 0.155556 }
-Duplication{ start: 198, length: 24, cost: 0.155556 }
-Duplication{ start: 211, length: 24, cost: 0.155556 }
-Duplication{ start: 212, length: 24, cost: 0.155556 }
-Duplication{ start: 223, length: 24, cost: 0.155556 }
-Duplication{ start: 224, length: 24, cost: 0.155556 }
-Duplication{ start: 225, length: 24, cost: 0.155556 }
-Duplication{ start: 226, length: 24, cost: 0.155556 }
-Duplication{ start: 230, length: 24, cost: 0.155556 }
-Duplication{ start: 154, length: 21, cost: 0.155556 }
-Duplication{ start: 33, length: 18, cost: 0.155556 }
-Duplication{ start: 36, length: 18, cost: 0.155556 }
-Duplication{ start: 164, length: 18, cost: 0.155556 }
-Duplication{ start: 170, length: 18, cost: 0.155556 }
-Duplication{ start: 171, length: 18, cost: 0.155556 }
-Duplication{ start: 172, length: 18, cost: 0.155556 }
-Duplication{ start: 203, length: 18, cost: 0.155556 }
-Duplication{ start: 207, length: 18, cost: 0.155556 }
-Duplication{ start: 261, length: 15, cost: 0.155556 }
-Duplication{ start: 262, length: 15, cost: 0.155556 }
-Duplication{ start: 100, length: 90, cost: 0.156296 }
-Duplication{ start: 102, length: 90, cost: 0.156296 }
-Duplication{ start: 103, length: 90, cost: 0.156296 }
-Duplication{ start: 105, length: 90, cost: 0.156296 }
-Duplication{ start: 106, length: 90, cost: 0.156296 }
-Duplication{ start: 112, length: 90, cost: 0.156296 }
-Duplication{ start: 113, length: 90, cost: 0.156296 }
-Duplication{ start: 114, length: 90, cost: 0.156296 }
-Duplication{ start: 156, length: 72, cost: 0.156481 }
-Duplication{ start: 10, length: 54, cost: 0.15679 }
-Duplication{ start: 11, length: 54, cost: 0.15679 }
-Duplication{ start: 12, length: 54, cost: 0.15679 }
-Duplication{ start: 13, length: 54, cost: 0.15679 }
-Duplication{ start: 14, length: 54, cost: 0.15679 }
-Duplication{ start: 15, length: 54, cost: 0.15679 }
-Duplication{ start: 16, length: 54, cost: 0.15679 }
-Duplication{ start: 17, length: 54, cost: 0.15679 }
-Duplication{ start: 18, length: 54, cost: 0.15679 }
-Duplication{ start: 20, length: 54, cost: 0.15679 }
-Duplication{ start: 21, length: 54, cost: 0.15679 }
-Duplication{ start: 22, length: 54, cost: 0.15679 }
-Duplication{ start: 100, length: 54, cost: 0.15679 }
-Duplication{ start: 106, length: 54, cost: 0.15679 }
-Duplication{ start: 107, length: 54, cost: 0.15679 }
-Duplication{ start: 108, length: 54, cost: 0.15679 }
-Duplication{ start: 109, length: 54, cost: 0.15679 }
-Duplication{ start: 110, length: 54, cost: 0.15679 }
-Duplication{ start: 111, length: 54, cost: 0.15679 }
-Duplication{ start: 112, length: 54, cost: 0.15679 }
-Duplication{ start: 113, length: 54, cost: 0.15679 }
-Duplication{ start: 114, length: 54, cost: 0.15679 }
-Duplication{ start: 78, length: 51, cost: 0.156863 }
-Duplication{ start: 108, length: 36, cost: 0.157407 }
-Duplication{ start: 109, length: 36, cost: 0.157407 }
-Duplication{ start: 110, length: 36, cost: 0.157407 }
-Duplication{ start: 205, length: 36, cost: 0.157407 }
-Duplication{ start: 80, length: 90, cost: 0.157778 }
-Duplication{ start: 81, length: 90, cost: 0.157778 }
-Duplication{ start: 82, length: 90, cost: 0.157778 }
-Duplication{ start: 119, length: 30, cost: 0.157778 }
-Duplication{ start: 120, length: 30, cost: 0.157778 }
-Duplication{ start: 135, length: 30, cost: 0.157778 }
-Duplication{ start: 136, length: 30, cost: 0.157778 }
-Duplication{ start: 137, length: 30, cost: 0.157778 }
-Duplication{ start: 223, length: 30, cost: 0.157778 }
-Duplication{ start: 224, length: 30, cost: 0.157778 }
-Duplication{ start: 151, length: 57, cost: 0.157895 }
-Duplication{ start: 152, length: 57, cost: 0.157895 }
-Duplication{ start: 180, length: 54, cost: 0.158025 }
-Duplication{ start: 85, length: 27, cost: 0.158025 }
-Duplication{ start: 86, length: 27, cost: 0.158025 }
-Duplication{ start: 87, length: 27, cost: 0.158025 }
-Duplication{ start: 89, length: 27, cost: 0.158025 }
-Duplication{ start: 90, length: 27, cost: 0.158025 }
-Duplication{ start: 91, length: 27, cost: 0.158025 }
-Duplication{ start: 172, length: 27, cost: 0.158025 }
-Duplication{ start: 173, length: 27, cost: 0.158025 }
-Duplication{ start: 174, length: 27, cost: 0.158025 }
-Duplication{ start: 107, length: 90, cost: 0.158519 }
-Duplication{ start: 108, length: 90, cost: 0.158519 }
-Duplication{ start: 34, length: 63, cost: 0.15873 }
-Duplication{ start: 35, length: 63, cost: 0.15873 }
-Duplication{ start: 36, length: 63, cost: 0.15873 }
-Duplication{ start: 37, length: 63, cost: 0.15873 }
-Duplication{ start: 85, length: 63, cost: 0.15873 }
-Duplication{ start: 86, length: 63, cost: 0.15873 }
-Duplication{ start: 87, length: 63, cost: 0.15873 }
-Duplication{ start: 88, length: 63, cost: 0.15873 }
-Duplication{ start: 91, length: 63, cost: 0.15873 }
-Duplication{ start: 92, length: 63, cost: 0.15873 }
-Duplication{ start: 104, length: 63, cost: 0.15873 }
-Duplication{ start: 133, length: 42, cost: 0.15873 }
-Duplication{ start: 57, length: 90, cost: 0.159259 }
-Duplication{ start: 58, length: 90, cost: 0.159259 }
-Duplication{ start: 137, length: 72, cost: 0.159259 }
-Duplication{ start: 138, length: 72, cost: 0.159259 }
-Duplication{ start: 139, length: 72, cost: 0.159259 }
-Duplication{ start: 140, length: 72, cost: 0.159259 }
-Duplication{ start: 141, length: 72, cost: 0.159259 }
-Duplication{ start: 102, length: 54, cost: 0.159259 }
-Duplication{ start: 103, length: 54, cost: 0.159259 }
-Duplication{ start: 119, length: 36, cost: 0.159259 }
-Duplication{ start: 8, length: 15, cost: 0.16 }
-Duplication{ start: 184, length: 15, cost: 0.16 }
-Duplication{ start: 185, length: 15, cost: 0.16 }
-Duplication{ start: 186, length: 15, cost: 0.16 }
-Duplication{ start: 187, length: 15, cost: 0.16 }
-Duplication{ start: 188, length: 15, cost: 0.16 }
-Duplication{ start: 189, length: 15, cost: 0.16 }
+       start      length        cost
+          46          12  0.00000000
+          47          12  0.00000000
+          48          12  0.00000000
+         231          12  0.00000000
+         232          12  0.00000000
+         233          12  0.00000000
+          56           9  0.00000000
+         185           9  0.00000000
+         208           9  0.00000000
+         221           9  0.00000000
+         238           9  0.00000000
+         239           9  0.00000000
+         240           9  0.00000000
+         241           9  0.00000000
+         242           9  0.00000000
+         243           9  0.00000000
+          28           6  0.00000000
+          29           6  0.00000000
+          30           6  0.00000000
+          31           6  0.00000000
+          32           6  0.00000000
+          33           6  0.00000000
+          34           6  0.00000000
+          35           6  0.00000000
+          36           6  0.00000000
+          45           6  0.00000000
+          46           6  0.00000000
+          47           6  0.00000000
+          48           6  0.00000000
+          49           6  0.00000000
+          50           6  0.00000000
+          51           6  0.00000000
+          89           6  0.00000000
+          90           6  0.00000000
+          91           6  0.00000000
+          92           6  0.00000000
+         102           6  0.00000000
+         103           6  0.00000000
+         104           6  0.00000000
+         105           6  0.00000000
+         138           6  0.00000000
+         139           6  0.00000000
+         140           6  0.00000000
+         141           6  0.00000000
+         171           6  0.00000000
+         172           6  0.00000000
+         173           6  0.00000000
+         174           6  0.00000000
+         175           6  0.00000000
+         231           6  0.00000000
+         232           6  0.00000000
+           0           3  0.00000000
+           8           3  0.00000000
+           9           3  0.00000000
+          15           3  0.00000000
+          20           3  0.00000000
+          21           3  0.00000000
+          25           3  0.00000000
+          40           3  0.00000000
+          44           3  0.00000000
+          45           3  0.00000000
+          52           3  0.00000000
+          53           3  0.00000000
+          59           3  0.00000000
+          60           3  0.00000000
+          64           3  0.00000000
+          65           3  0.00000000
+          66           3  0.00000000
+          83           3  0.00000000
+          84           3  0.00000000
+          85           3  0.00000000
+          91           3  0.00000000
+          92           3  0.00000000
+         104           3  0.00000000
+         105           3  0.00000000
+         106           3  0.00000000
+         107           3  0.00000000
+         108           3  0.00000000
+         113           3  0.00000000
+         121           3  0.00000000
+         122           3  0.00000000
+         123           3  0.00000000
+         124           3  0.00000000
+         125           3  0.00000000
+         135           3  0.00000000
+         136           3  0.00000000
+         137           3  0.00000000
+         156           3  0.00000000
+         165           3  0.00000000
+         166           3  0.00000000
+         167           3  0.00000000
+         168           3  0.00000000
+         169           3  0.00000000
+         179           3  0.00000000
+         188           3  0.00000000
+         189           3  0.00000000
+         190           3  0.00000000
+         191           3  0.00000000
+         192           3  0.00000000
+         193           3  0.00000000
+         197           3  0.00000000
+         198           3  0.00000000
+         199           3  0.00000000
+         200           3  0.00000000
+         201           3  0.00000000
+         202           3  0.00000000
+         203           3  0.00000000
+         204           3  0.00000000
+         208           3  0.00000000
+         212           3  0.00000000
+         216           3  0.00000000
+         221           3  0.00000000
+         229           3  0.00000000
+         235           3  0.00000000
+         236           3  0.00000000
+         237           3  0.00000000
+         238           3  0.00000000
+         250           3  0.00000000
+         254           3  0.00000000
+         258           3  0.00000000
+         259           3  0.00000000
+         260           3  0.00000000
+         264           3  0.00000000
+         265           3  0.00000000
+         266           3  0.00000000
+         267           3  0.00000000
+         271           3  0.00000000
+         272           3  0.00000000
+         273           3  0.00000000
+         274           3  0.00000000
+         275           3  0.00000000
+         276           3  0.00000000
+         277           3  0.00000000
+         278           3  0.00000000
+         279           3  0.00000000
+         280           3  0.00000000
+         290           3  0.00000000
+         291           3  0.00000000
+         292           3  0.00000000
+         293           3  0.00000000
+         294           3  0.00000000
+         240          24  0.03333333
+         183          18  0.04444444
+          24          15  0.05333333
+          25          15  0.05333333
+          26          15  0.05333333
+          42          15  0.05333333
+          43          15  0.05333333
+         151          15  0.05333333
+         152          15  0.05333333
+         154          15  0.05333333
+         155          15  0.05333333
+         156          15  0.05333333
+         157          15  0.05333333
+         158          15  0.05333333
+         159          15  0.05333333
+         160          15  0.05333333
+         161          15  0.05333333
+         162          15  0.05333333
+         163          15  0.05333333
+         164          15  0.05333333
+         165          15  0.05333333
+         166          15  0.05333333
+         184          18  0.05555555
+         185          18  0.05555555
+         186          18  0.05555555
+         187          18  0.05555555
+         188          18  0.05555555
+          45          12  0.05555555
+         234          12  0.05555555
+         235          12  0.05555555
+         236          12  0.05555555
+         237          24  0.06111111
+         238          24  0.06111111
+         239          24  0.06111111
+         241          24  0.06666666
+         242          24  0.06666666
+         243          24  0.06666666
+         244          24  0.06666666
+          20          12  0.06666666
+          21          12  0.06666666
+          49          12  0.06666666
+          50          12  0.06666666
+         138          12  0.06666666
+         139          12  0.06666666
+         226          12  0.06666666
+         227          12  0.06666666
+         228          12  0.06666666
+         229          12  0.06666666
+         230          12  0.06666666
+         275          12  0.06666666
+         276          12  0.06666666
+         243          21  0.06984127
+         244          21  0.06984127
+         245          21  0.06984127
+         247          21  0.06984127
+         248          21  0.06984127
+         249          21  0.06984127
+         250          21  0.06984127
+          34           9  0.07407407
+          35           9  0.07407407
+          36           9  0.07407407
+          55           9  0.07407407
+          84           9  0.07407407
+          85           9  0.07407407
+         177           9  0.07407407
+         178           9  0.07407407
+         179           9  0.07407407
+         180           9  0.07407407
+         181           9  0.07407407
+         182           9  0.07407407
+         183           9  0.07407407
+         184           9  0.07407407
+         186           9  0.07407407
+         209           9  0.07407407
+         210           9  0.07407407
+         211           9  0.07407407
+         266           9  0.07407407
+         158          30  0.08000000
+         159          30  0.08000000
+         168          36  0.08148148
+         170          36  0.08148148
+         171          36  0.08148148
+         118          18  0.08148148
+         119          18  0.08148148
+         181          18  0.08148148
+         182          18  0.08148148
+         144          33  0.08484848
+         145          33  0.08484848
+           9           9  0.08888888
+          10           9  0.08888888
+          11           9  0.08888888
+          32           9  0.08888888
+         101           9  0.08888888
+         102           9  0.08888888
+         103           9  0.08888888
+         156           9  0.08888888
+         157           9  0.08888888
+         158           9  0.08888888
+         174           9  0.08888888
+         175           9  0.08888888
+         207           9  0.08888888
+         218           9  0.08888888
+         219           9  0.08888888
+         220           9  0.08888888
+         222           9  0.08888888
+         223           9  0.08888888
+         224           9  0.08888888
+         225           9  0.08888888
+         226           9  0.08888888
+         227           9  0.08888888
+         228           9  0.08888888
+         231           9  0.08888888
+         232           9  0.08888888
+         233           9  0.08888888
+         234           9  0.08888888
+         235           9  0.08888888
+         236           9  0.08888888
+         237           9  0.08888888
+         244           9  0.08888888
+         261           9  0.08888888
+         262           9  0.08888888
+         189          18  0.09259259
+         138          24  0.09444444
+         139          24  0.09444444
+         140          24  0.09444444
+         141          24  0.09444444
+         142          24  0.09444444
+         143          24  0.09444444
+         232          24  0.09444444
+         233          24  0.09444444
+         234          24  0.09444444
+         235          24  0.09444444
+         236          24  0.09444444
+          21          15  0.09777777
+          22          15  0.09777777
+          23          15  0.09777777
+          27          15  0.09777777
+          32          15  0.09777777
+          33          15  0.09777777
+          34          15  0.09777777
+          35          15  0.09777777
+          36          15  0.09777777
+          37          15  0.09777777
+          38          15  0.09777777
+          39          15  0.09777777
+          40          15  0.09777777
+          41          15  0.09777777
+          44          15  0.09777777
+         150          15  0.09777777
+         168          15  0.09777777
+         231          15  0.09777777
+         232          15  0.09777777
+         233          15  0.09777777
+         234          15  0.09777777
+         235          15  0.09777777
+         236          15  0.09777777
+         237          15  0.09777777
+         238          15  0.09777777
+         244          15  0.09777777
+         169          36  0.10000000
+         245          24  0.10000000
+         246          24  0.10000000
+         247          24  0.10000000
+         222          18  0.10000000
+         240          21  0.10158730
+         241          21  0.10158730
+         242          21  0.10158730
+         140          30  0.10222222
+         141          30  0.10222222
+         164          36  0.10370370
+         165          36  0.10370370
+         166          36  0.10370370
+         167          36  0.10370370
+         172          36  0.10370370
+         173          36  0.10370370
+         174          36  0.10370370
+         146          33  0.10505051
+         147          33  0.10505051
+         148          33  0.10505051
+         152          33  0.10505051
+         153          33  0.10505051
+         154          30  0.10666667
+         155          30  0.10666667
+         156          30  0.10666667
+         157          30  0.10666667
+         160          30  0.10666667
+         161          30  0.10666667
+         162          30  0.10666667
+         153          15  0.10666667
+         167          15  0.10666667
+         236          21  0.10793651
+         237          21  0.10793651
+         246          21  0.10793651
+         251          21  0.10793651
+         252          21  0.10793651
+         253          21  0.10793651
+         137          33  0.10909091
+         138          33  0.10909091
+         139          33  0.10909091
+         140          33  0.10909091
+         141          33  0.10909091
+         142          33  0.10909091
+         143          33  0.10909091
+         208          18  0.11111111
+         209          18  0.11111111
+         210          18  0.11111111
+          44          12  0.11111111
+           7           9  0.11111111
+           8           9  0.11111111
+          57           9  0.11111111
+          58           9  0.11111111
+          59           9  0.11111111
+         159           9  0.11111111
+         160           9  0.11111111
+         161           9  0.11111111
+         162           9  0.11111111
+         163           9  0.11111111
+          26           6  0.11111111
+          27           6  0.11111111
+          43           6  0.11111111
+          44           6  0.11111111
+          52           6  0.11111111
+          53           6  0.11111111
+          60           6  0.11111111
+          85           6  0.11111111
+          86           6  0.11111111
+          87           6  0.11111111
+          88           6  0.11111111
+         100           6  0.11111111
+         101           6  0.11111111
+         119           6  0.11111111
+         164           6  0.11111111
+         183           6  0.11111111
+         233           6  0.11111111
+         234           6  0.11111111
+         261           6  0.11111111
+         262           6  0.11111111
+         288           6  0.11111111
+         182          36  0.11296296
+          22          21  0.11428571
+          23          21  0.11428571
+         123          33  0.11717172
+         124          33  0.11717172
+         125          33  0.11717172
+         126          33  0.11717172
+         127          33  0.11717172
+         162          45  0.11851852
+         115          18  0.11851852
+         116          18  0.11851852
+         117          18  0.11851852
+         173          18  0.11851852
+         174          18  0.11851852
+         175          18  0.11851852
+         176          18  0.11851852
+         177          18  0.11851852
+         178          18  0.11851852
+         179          18  0.11851852
+         180          18  0.11851852
+         202          18  0.11851852
+          99          33  0.11919192
+         164          45  0.12000000
+          90          51  0.12156863
+          91          51  0.12156863
+          92          51  0.12156863
+          93          51  0.12156863
+          13          24  0.12222222
+          14          24  0.12222222
+          15          24  0.12222222
+          16          24  0.12222222
+          17          24  0.12222222
+         147          24  0.12222222
+         148          24  0.12222222
+         149          24  0.12222222
+         150          24  0.12222222
+         151          24  0.12222222
+         152          24  0.12222222
+         231          24  0.12222222
+          22          12  0.12222222
+          23          12  0.12222222
+          24          12  0.12222222
+          25          12  0.12222222
+          83          12  0.12222222
+          84          12  0.12222222
+          85          12  0.12222222
+          86          12  0.12222222
+         154          12  0.12222222
+         155          12  0.12222222
+         156          12  0.12222222
+         157          12  0.12222222
+         158          12  0.12222222
+         218          12  0.12222222
+         220          12  0.12222222
+         221          12  0.12222222
+         222          12  0.12222222
+         223          12  0.12222222
+         224          12  0.12222222
+         225          12  0.12222222
+         237          12  0.12222222
+         238          12  0.12222222
+         239          12  0.12222222
+         240          12  0.12222222
+         163          45  0.12296296
+         138          30  0.12444444
+         139          30  0.12444444
+         149          33  0.12525253
+          98          54  0.12592593
+         160          36  0.12592593
+         161          36  0.12592593
+         162          36  0.12592593
+         163          36  0.12592593
+         154          18  0.12592593
+         188          42  0.12698413
+         189          42  0.12698413
+         190          42  0.12698413
+         113          33  0.12727273
+         114          33  0.12727273
+         115          33  0.12727273
+         116          33  0.12727273
+         117          33  0.12727273
+         137          24  0.12777778
+         144          24  0.12777778
+         145          24  0.12777778
+         205          24  0.12777778
+         248          24  0.12777778
+         249          24  0.12777778
+         250          24  0.12777778
+         251          24  0.12777778
+         252          24  0.12777778
+         172          54  0.12839506
+         173          54  0.12839506
+         174          54  0.12839506
+         175          54  0.12839506
+         168          42  0.12857143
+         169          42  0.12857143
+         170          42  0.12857143
+         171          42  0.12857143
+         172          42  0.12857143
+         173          42  0.12857143
+         142          30  0.12888889
+         143          30  0.12888889
+         144          30  0.12888889
+         145          30  0.12888889
+         146          30  0.12888889
+         163          30  0.12888889
+         164          30  0.12888889
+         165          30  0.12888889
+         166          30  0.12888889
+         167          30  0.12888889
+         168          30  0.12888889
+         151          33  0.12929293
+         154          33  0.12929293
+          85          90  0.13111111
+          86          90  0.13111111
+         175          36  0.13148148
+         176          36  0.13148148
+         177          36  0.13148148
+         178          36  0.13148148
+         179          36  0.13148148
+         180          36  0.13148148
+         181          36  0.13148148
+         183          36  0.13148148
+         184          36  0.13148148
+         185          36  0.13148148
+         186          36  0.13148148
+         187          36  0.13148148
+         188          36  0.13148148
+          30          45  0.13333333
+          31          45  0.13333333
+         161          45  0.13333333
+         208          39  0.13333333
+         209          39  0.13333333
+         133          33  0.13333333
+         134          33  0.13333333
+         135          33  0.13333333
+         136          33  0.13333333
+         161          33  0.13333333
+         151          30  0.13333333
+         152          30  0.13333333
+         153          30  0.13333333
+          88          27  0.13333333
+          92          27  0.13333333
+         145          18  0.13333333
+         146          18  0.13333333
+         147          18  0.13333333
+         148          18  0.13333333
+         149          18  0.13333333
+         150          18  0.13333333
+          51          12  0.13333333
+          81          12  0.13333333
+         137          12  0.13333333
+         179          12  0.13333333
+         180          12  0.13333333
+         181          12  0.13333333
+         182          12  0.13333333
+           1           6  0.13333333
+           2           6  0.13333333
+           3           6  0.13333333
+           4           6  0.13333333
+           5           6  0.13333333
+           6           6  0.13333333
+           7           6  0.13333333
+           8           6  0.13333333
+          37           6  0.13333333
+          38           6  0.13333333
+          58           6  0.13333333
+          93           6  0.13333333
+         106           6  0.13333333
+         107           6  0.13333333
+         121           6  0.13333333
+         122           6  0.13333333
+         126           6  0.13333333
+         136           6  0.13333333
+         137           6  0.13333333
+         142           6  0.13333333
+         143           6  0.13333333
+         144           6  0.13333333
+         154           6  0.13333333
+         155           6  0.13333333
+         156           6  0.13333333
+         157           6  0.13333333
+         158           6  0.13333333
+         159           6  0.13333333
+         160           6  0.13333333
+         167           6  0.13333333
+         168           6  0.13333333
+         169           6  0.13333333
+         170           6  0.13333333
+         176           6  0.13333333
+         212           6  0.13333333
+         213           6  0.13333333
+         216           6  0.13333333
+         220           6  0.13333333
+         221           6  0.13333333
+         230           6  0.13333333
+         256           6  0.13333333
+         257           6  0.13333333
+         264           6  0.13333333
+         265           6  0.13333333
+         266           6  0.13333333
+         267           6  0.13333333
+         268           6  0.13333333
+         269           6  0.13333333
+         270           6  0.13333333
+         271           6  0.13333333
+         272           6  0.13333333
+         279           6  0.13333333
+         280           6  0.13333333
+          87          51  0.13464052
+          88          51  0.13464052
+          89          51  0.13464052
+          94          51  0.13464052
+         165          45  0.13481481
+         166          45  0.13481481
+         167          45  0.13481481
+         168          45  0.13481481
+         111          36  0.13518519
+         112          36  0.13518519
+         113          36  0.13518519
+         114          36  0.13518519
+         115          36  0.13518519
+          49          90  0.13555556
+          50          90  0.13555556
+          51          90  0.13555556
+          52          90  0.13555556
+         138          42  0.13650794
+         139          42  0.13650794
+         140          42  0.13650794
+         141          42  0.13650794
+         120          18  0.13703704
+         121          18  0.13703704
+         190          18  0.13703704
+         191          18  0.13703704
+         192          18  0.13703704
+         193          18  0.13703704
+         194          18  0.13703704
+         195          18  0.13703704
+         196          18  0.13703704
+         197          18  0.13703704
+         198          18  0.13703704
+         199          18  0.13703704
+         200          18  0.13703704
+         221          18  0.13703704
+         223          18  0.13703704
+         224          18  0.13703704
+         128          33  0.13737374
+         129          33  0.13737374
+         130          33  0.13737374
+         131          33  0.13737374
+         132          33  0.13737374
+          99          54  0.13827160
+          94          27  0.13827160
+          95          27  0.13827160
+         206          39  0.13846154
+         207          39  0.13846154
+          85          33  0.13939394
+          86          33  0.13939394
+          87          33  0.13939394
+          32          21  0.13968254
+         233          21  0.13968254
+         234          21  0.13968254
+         235          21  0.13968254
+         238          21  0.13968254
+         239          21  0.13968254
+          84          90  0.14000000
+          87          90  0.14000000
+          88          90  0.14000000
+          89          90  0.14000000
+          90          90  0.14000000
+          96          90  0.14000000
+          97          90  0.14000000
+         155          57  0.14035088
+         156          57  0.14035088
+         157          57  0.14035088
+         160          57  0.14035088
+          94          54  0.14074074
+          95          54  0.14074074
+          96          54  0.14074074
+          97          54  0.14074074
+         156          54  0.14074074
+         169          54  0.14074074
+         170          54  0.14074074
+         171          54  0.14074074
+         117          36  0.14074074
+         118          36  0.14074074
+          79          51  0.14117647
+         149          15  0.14222222
+         169          15  0.14222222
+         170          15  0.14222222
+         171          15  0.14222222
+         239          15  0.14222222
+         240          15  0.14222222
+         241          15  0.14222222
+         242          15  0.14222222
+         243          15  0.14222222
+         202          42  0.14285714
+          48          90  0.14296296
+          53          90  0.14296296
+          54          90  0.14296296
+          55          90  0.14296296
+         160          54  0.14320988
+         161          54  0.14320988
+         162          54  0.14320988
+         163          54  0.14320988
+         176          54  0.14320988
+         177          54  0.14320988
+         178          54  0.14320988
+         179          54  0.14320988
+         100          33  0.14343434
+         101          33  0.14343434
+         102          33  0.14343434
+         103          33  0.14343434
+         101          54  0.14444444
+         104          54  0.14444444
+         105          54  0.14444444
+         157          42  0.14444444
+         158          36  0.14444444
+         159          36  0.14444444
+           0          33  0.14545455
+           1          33  0.14545455
+           5          33  0.14545455
+           6          33  0.14545455
+         191          42  0.14603175
+         192          42  0.14603175
+         193          42  0.14603175
+         194          42  0.14603175
+         195          42  0.14603175
+         196          42  0.14603175
+         197          42  0.14603175
+         198          42  0.14603175
+         199          42  0.14603175
+         200          42  0.14603175
+          25          21  0.14603175
+          26          21  0.14603175
+          27          21  0.14603175
+          28          21  0.14603175
+          29          21  0.14603175
+          30          21  0.14603175
+          31          21  0.14603175
+         254          21  0.14603175
+         255          21  0.14603175
+         256          21  0.14603175
+         231          30  0.14666667
+          91          90  0.14740741
+          92          90  0.14740741
+          93          90  0.14740741
+          94          90  0.14740741
+          95          90  0.14740741
+         107          33  0.14747475
+         108          33  0.14747475
+         109          33  0.14747475
+         110          33  0.14747475
+         112          33  0.14747475
+         118          33  0.14747475
+         121          33  0.14747475
+         122          33  0.14747475
+         163          42  0.14761905
+         164          42  0.14761905
+         165          42  0.14761905
+         166          42  0.14761905
+         167          42  0.14761905
+         174          42  0.14761905
+         176          42  0.14761905
+         177          42  0.14761905
+         157          45  0.14814815
+         158          45  0.14814815
+         159          45  0.14814815
+         160          45  0.14814815
+         211          36  0.14814815
+         187           9  0.14814815
+         188           9  0.14814815
+         189           9  0.14814815
+         267           9  0.14814815
+         268           9  0.14814815
+          83          90  0.14888889
+          98          90  0.14888889
+          99          90  0.14888889
+          91          33  0.14949495
+          92          33  0.14949495
+          93          33  0.14949495
+          94          33  0.14949495
+          95          33  0.14949495
+          96          33  0.14949495
+          97          33  0.14949495
+          98          33  0.14949495
+         150          33  0.14949495
+         138          45  0.14962963
+         139          45  0.14962963
+         169          45  0.14962963
+         170          45  0.14962963
+         142          72  0.15000000
+           9          24  0.15000000
+          10          24  0.15000000
+          11          24  0.15000000
+          12          24  0.15000000
+          18          12  0.15000000
+          19          12  0.15000000
+         140          12  0.15000000
+         141          12  0.15000000
+         142          12  0.15000000
+         271          12  0.15000000
+         272          12  0.15000000
+         273          12  0.15000000
+         274          12  0.15000000
+          84          51  0.15032680
+          85          51  0.15032680
+          86          51  0.15032680
+          95          51  0.15032680
+          56          90  0.15037037
+         190          54  0.15061728
+         184          42  0.15079365
+         185          42  0.15079365
+         186          42  0.15079365
+         187          42  0.15079365
+          29          45  0.15111111
+          32          45  0.15111111
+          14          15  0.15111111
+          15          15  0.15111111
+          16          15  0.15111111
+          17          15  0.15111111
+          18          15  0.15111111
+          19          15  0.15111111
+          20          15  0.15111111
+          28          15  0.15111111
+          29          15  0.15111111
+          30          15  0.15111111
+          31          15  0.15111111
+          45          15  0.15111111
+         230          15  0.15111111
+         245          15  0.15111111
+         247          15  0.15111111
+         248          15  0.15111111
+         254          15  0.15111111
+          43          90  0.15185185
+          44          90  0.15185185
+          45          90  0.15185185
+          46          90  0.15185185
+          47          90  0.15185185
+         154          57  0.15204678
+         158          57  0.15204678
+         159          57  0.15204678
+         164          57  0.15204678
+         142          42  0.15238095
+         143          42  0.15238095
+         144          42  0.15238095
+          19          21  0.15238095
+          20          21  0.15238095
+          21          21  0.15238095
+          24          21  0.15238095
+         156          21  0.15238095
+         140          45  0.15259259
+          85          54  0.15308642
+          86          54  0.15308642
+          87          54  0.15308642
+          88          54  0.15308642
+          89          54  0.15308642
+          90          54  0.15308642
+          91          54  0.15308642
+          92          54  0.15308642
+          93          54  0.15308642
+         168          54  0.15308642
+         155          33  0.15353535
+         156          33  0.15353535
+         157          33  0.15353535
+         158          33  0.15353535
+         159          33  0.15353535
+         160          33  0.15353535
+         162          33  0.15353535
+         163          33  0.15353535
+         189          36  0.15370370
+         190          36  0.15370370
+         191          36  0.15370370
+         192          36  0.15370370
+         202          36  0.15370370
+         208          36  0.15370370
+         209          36  0.15370370
+         210          36  0.15370370
+         210          39  0.15384615
+         211          39  0.15384615
+         220          39  0.15384615
+         221          39  0.15384615
+          80          51  0.15424837
+         161          57  0.15438596
+          99          60  0.15444444
+          66          90  0.15555556
+         154          54  0.15555556
+         155          54  0.15555556
+         157          54  0.15555556
+         158          54  0.15555556
+         159          54  0.15555556
+         164          54  0.15555556
+         165          54  0.15555556
+         166          54  0.15555556
+         167          54  0.15555556
+         135          42  0.15555556
+         136          42  0.15555556
+         137          42  0.15555556
+         205          39  0.15555556
+         147          30  0.15555556
+         148          30  0.15555556
+         149          30  0.15555556
+         150          30  0.15555556
+         169          30  0.15555556
+           8          24  0.15555556
+          18          24  0.15555556
+         106          24  0.15555556
+         107          24  0.15555556
+         146          24  0.15555556
+         153          24  0.15555556
+         154          24  0.15555556
+         155          24  0.15555556
+         197          24  0.15555556
+         198          24  0.15555556
+         211          24  0.15555556
+         212          24  0.15555556
+         223          24  0.15555556
+         224          24  0.15555556
+         225          24  0.15555556
+         226          24  0.15555556
+         230          24  0.15555556
+         154          21  0.15555556
+          33          18  0.15555556
+          36          18  0.15555556
+         164          18  0.15555556
+         170          18  0.15555556
+         171          18  0.15555556
+         172          18  0.15555556
+         203          18  0.15555556
+         207          18  0.15555556
+         261          15  0.15555556
+         262          15  0.15555556
+         100          90  0.15629630
+         102          90  0.15629630
+         103          90  0.15629630
+         105          90  0.15629630
+         106          90  0.15629630
+         112          90  0.15629630
+         113          90  0.15629630
+         114          90  0.15629630
+         156          72  0.15648148
+          10          54  0.15679012
+          11          54  0.15679012
+          12          54  0.15679012
+          13          54  0.15679012
+          14          54  0.15679012
+          15          54  0.15679012
+          16          54  0.15679012
+          17          54  0.15679012
+          18          54  0.15679012
+          20          54  0.15679012
+          21          54  0.15679012
+          22          54  0.15679012
+         100          54  0.15679012
+         106          54  0.15679012
+         107          54  0.15679012
+         108          54  0.15679012
+         109          54  0.15679012
+         110          54  0.15679012
+         111          54  0.15679012
+         112          54  0.15679012
+         113          54  0.15679012
+         114          54  0.15679012
+          78          51  0.15686275
+         108          36  0.15740741
+         109          36  0.15740741
+         110          36  0.15740741
+         205          36  0.15740741
+          80          90  0.15777778
+          81          90  0.15777778
+          82          90  0.15777778
+         119          30  0.15777778
+         120          30  0.15777778
+         135          30  0.15777778
+         136          30  0.15777778
+         137          30  0.15777778
+         223          30  0.15777778
+         224          30  0.15777778
+         151          57  0.15789474
+         152          57  0.15789474
+         180          54  0.15802469
+          85          27  0.15802469
+          86          27  0.15802469
+          87          27  0.15802469
+          89          27  0.15802469
+          90          27  0.15802469
+          91          27  0.15802469
+         172          27  0.15802469
+         173          27  0.15802469
+         174          27  0.15802469
+         107          90  0.15851852
+         108          90  0.15851852
+          34          63  0.15873016
+          35          63  0.15873016
+          36          63  0.15873016
+          37          63  0.15873016
+          85          63  0.15873016
+          86          63  0.15873016
+          87          63  0.15873016
+          88          63  0.15873016
+          91          63  0.15873016
+          92          63  0.15873016
+         104          63  0.15873016
+         133          42  0.15873016
+          57          90  0.15925926
+          58          90  0.15925926
+         137          72  0.15925926
+         138          72  0.15925926
+         139          72  0.15925926
+         140          72  0.15925926
+         141          72  0.15925926
+         102          54  0.15925926
+         103          54  0.15925926
+         119          36  0.15925926
+           8          15  0.16000000
+         184          15  0.16000000
+         185          15  0.16000000
+         186          15  0.16000000
+         187          15  0.16000000
+         188          15  0.16000000
+         189          15  0.16000000

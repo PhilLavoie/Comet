@@ -31,17 +31,24 @@ public:
   @property auto cost() { return _cost; }
   
   int opCmp( Result rhs ) {
-    if( cost < rhs.cost - Cost.epsilon ) { 
+    if( _cost < rhs._cost - Cost.epsilon ) { 
       return -1; 
-    } else if( rhs.cost + Cost.epsilon < cost ) {
+    } else if( rhs._cost + Cost.epsilon < _cost ) {
       return 1;
     }
     //If the cost is equals, then the longer period wins.
-    auto cmp = rhs.length - length;
+    auto cmp = rhs._length - _length;
     if( cmp ) { return cmp; }
     //Arbitrary ordering otherwise.
-    return start - rhs.start;
+    return _start - rhs._start;
   }
+  
+  bool isEquavalentTo( Result rhs, Cost epsilon = Cost.epsilon ) {
+  
+    return ( ( _cost - epsilon <= rhs._cost && rhs._cost + epsilon <= _cost ) );  
+  
+  }
+  
 }
 auto result( size_t start, size_t length, Cost cost ) {
   return Result( start, length, cost );

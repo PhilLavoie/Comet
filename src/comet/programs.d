@@ -70,7 +70,15 @@ private class ReferencesGeneration {
 
 }
 
+private class CompareResults {
+
+}
+
 private class TestsRun {
+
+  override void run() {
+    //foreach( files; std.range.zip( filesToCompare,  ) 
+  }
 
 }
 
@@ -132,13 +140,53 @@ private void processFile( File seqFile, File resFile, Config cfg, Algo algo ) {
   if( cfg.printResults ) { resFile.printResults( bestResults ); }
 }
 
-/**
-  Prints the results to the standard output in the given order.
-*/
-private void printResults( Range )( File output, Range results ) if( isForwardRange!Range ) {
-  foreach( result; results ) {
-    output.writeln( "Duplication{ start: ", result.start, ", length: ", result.length, ", cost: ", result.cost, " }" );
+
+private {
+  import std.format;
+  
+  string RESULTS_HEADER_FORMAT = "%12s%12s%12s\n";
+  string RESULT_FORMAT = "%12d%12d%12.8f\n";
+
+  /**
+    Prints the results to the standard output in the given order.
+  */
+  private void printResults( Range )( File output, Range results ) if( isForwardRange!Range ) {
+    output.writef( RESULTS_HEADER_FORMAT, "start", "length", "cost" );
+    
+    foreach( result; results ) {
+      output.printResult( result );
+    }
   }
+
+  private void printResult( File output, Result result ) {
+    output.writef( RESULT_FORMAT, result.start, result.length, result.cost );
+  }
+
+  struct FileResultsRange {
+    private:
+    
+      File _input;
+    
+    public:
+    
+      this( File input ) { 
+        _input = input;
+        input.readln(); //Get rid of the header.
+      }
+    
+      auto front() {
+        Result res;
+        auto couldRead = _input.readf( RESULT_FORMAT, &res.start, &res.length, &res.cost );
+        assert( 3 == couldRead, "unable to parse results" );
+        return res;
+      }
+      
+      void popFront() {}
+      
+      bool empty() { return _input.eof; }  
+  }
+  
+  
 }
 
 /**
