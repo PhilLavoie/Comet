@@ -24,7 +24,7 @@ package {
     private std.stdio.File _sequencesFile;  
     mixin getter!_sequencesFile;
         
-    mixin defaultSetter!( identifier!_sequencesFile, "std.stdio.stdout" );
+    mixin defaultSetter!( identifier!_sequencesFile, identifier!_sequencesFile ~ " = std.stdio.stdout;" );
         
     mixin argumentMixin!(
       _sequencesFile,
@@ -82,7 +82,7 @@ package {
     private std.stdio.File _resultsFile;
     mixin getter!_resultsFile;
     
-    mixin defaultSetter!( identifier!_resultsFile, "std.stdio.stdout" );  
+    mixin defaultSetter!( identifier!_resultsFile, identifier!_resultsFile ~ " = std.stdio.stdout;" );  
     
     mixin argumentMixin!(
       _resultsFile,
@@ -124,7 +124,7 @@ package {
     private std.stdio.File _outFile;
     mixin getter!_outFile;
     
-    mixin defaultSetter!( identifier!_outFile, "std.stdio.stdout" );
+    mixin defaultSetter!( identifier!_outFile, identifier!_outFile ~ " = std.stdio.stdout;" );
     
     mixin argumentMixin!( 
       _outFile, 
@@ -294,6 +294,8 @@ package {
 
     private std.container.Array!Algo _algos;  
     public @property auto algos() { return _algos[]; }
+    
+    mixin defaultSetter!( identifier!_algos, identifier!_algos ~ ".insertBack( Algo.standard );" );
     
     //TODO: add the possibility to support more than one algorithm at once.
     mixin argumentMixin!(
@@ -551,11 +553,11 @@ package {
   }
   
   /**
-    Generate a default runtime value setter for the given symbol and runtime value.
+    Generate a default runtime value setter for the given symbol mixes in the given statement.
     
     It enforces that the given symbol name starts with "_".
   */
-  mixin template defaultSetter( string var, string value ) {
+  mixin template defaultSetter( string var, string statement ) {
   
     debug( mixins ) {
     
@@ -565,7 +567,7 @@ package {
   
     private void setDefault( string s )() if( s == var ) {
     
-      mixin( var ~ " = " ~ value ~ ";" );
+      mixin( statement );
     
     }
   
@@ -594,7 +596,8 @@ package {
     int someVar = 0;
     enum id = identifier!someVar;
     
-    mixin defaultSetter!( id, "5" );
+    //mixin defaultSetter!( id, "5" ); compiles????
+    mixin defaultSetter!( id, id ~ " = 5;" );
     mixin hasDefaultSetter!id;
     
     static assert( hasDefaultSetter, defaultSetterFor!id );
