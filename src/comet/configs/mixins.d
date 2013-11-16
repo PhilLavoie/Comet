@@ -5,9 +5,6 @@ module comet.configs.mixins;
 
 import comet.cli.all;
 
-/**
-  Dummy template created to determine if a template argument can be used as a compile time string.
-*/
 package {
 
   /*********************************************************************************************************
@@ -26,6 +23,8 @@ package {
         
     private std.stdio.File _sequencesFile;  
     mixin getter!_sequencesFile;
+        
+    mixin defaultSetter!( identifier!_sequencesFile, "std.stdio.stdout" );
         
     mixin argumentMixin!(
       _sequencesFile,
@@ -73,18 +72,7 @@ package {
     ); 
     
   }
-
-  //Workaround for bug: 11522.
-  mixin template resultsFileInitMixin() {
-
-    private void initResultsFile() {
-    
-      _resultsFile = std.stdio.stdout;
-    
-    }
-
-  }
-
+  
   /**
     A mixin that generate an optional flagged argument on the command line for specifying where to put the results.
     Note that this argument should only be used when processing a single file.
@@ -94,7 +82,7 @@ package {
     private std.stdio.File _resultsFile;
     mixin getter!_resultsFile;
     
-    mixin resultsFileInitMixin;  
+    mixin defaultSetter!( identifier!_resultsFile, "std.stdio.stdout" );  
     
     mixin argumentMixin!(
       _resultsFile,
@@ -133,10 +121,10 @@ package {
   */
   mixin template outFileMixin() {
     
-    import std.stdio;
-
     private std.stdio.File _outFile;
     mixin getter!_outFile;
+    
+    mixin defaultSetter!( identifier!_outFile, "std.stdio.stdout" );
     
     mixin argumentMixin!( 
       _outFile, 
@@ -350,21 +338,12 @@ package {
       
       foreach( member; __traits( allMembers, typeof( this ) ) ) {
       
-        debug( mixins ) {
-        
-          pragma( msg, "processing member " ~ member );
-        
-        }
-      
         enum call = "init!( \"" ~ member ~ "\" )()";
         enum hasInit = __traits( compiles, mixin( call ) );
         
-        debug( mixins ) {
         
-          pragma( msg, "has init? " ~ std.conv.to!string( hasInit ) );
-        
-        }
-        
+        //Runtime intialization for command line arguments. Expected that
+        //every argument has one.
         static if( hasInit ) {
         
           mixin( call ~ ";" );
@@ -372,6 +351,15 @@ package {
         } else {
         
           static assert( !isArgumentName!member, member );
+        
+        }
+        
+        //Runtime defaults for variables such as files.
+        mixin hasDefaultSetter!member;
+        
+        static if( hasDefaultSetter ) {
+        
+          mixin( defaultSetterFor!member ~ ";" );
         
         }
       
@@ -382,10 +370,13 @@ package {
   }
   
   unittest {
+  
+    import std.stdio;
 
     struct Toto {
 
       mixin sequencesFileMixin;
+      mixin outFileMixin;
       mixin printConfigMixin;
       mixin algosMixin;
       mixin resultsFileMixin;
@@ -398,9 +389,16 @@ package {
     t.initAll();
     
     assert( t._sequencesFileArg !is null );
+    assert( t._sequencesFile == stdout );
+    
+    assert( t._outFileArg !is null );
+    assert( t._outFile == stdout );
+    
     assert( t._algosArg !is null );
+    
     assert( t._printConfigArg !is null );
-    assert( t._resultsFile == std.stdio.stdout ); //Fails because no support for field runtime defaults so far.
+    
+    assert( t._resultsFile == stdout ); 
     assert( t._resultsFileArg !is null );
     
   }  
@@ -410,7 +408,9 @@ package {
     Utilities.
   *********************************************************************************************************/
 
-
+  /**
+    Dummy template created to determine if a template argument can be used as a compile time string.
+  */
   template dummy( string s ) {}
 
   /**
@@ -434,11 +434,14 @@ package {
 
 
   unittest {
+    
     static assert( isStringLiteral!"toto" );
     static assert( !isStringLiteral!int );
+    
     string toto = "";
     static assert( !isStringLiteral!toto );
     static assert( identifier!toto == "toto" );
+    
   }
 
   /**
@@ -537,7 +540,7 @@ package {
     Generates a getter function for the given variable. The variable must hold the symbol and not be a string
     (a way to ensure the variable exists).
     
-    It assumes that the given symbol name starts with "_".
+    It enforces that the given symbol name starts with "_".
   */
   mixin template getter( alias var ) {
     
@@ -545,6 +548,61 @@ package {
     
     mixin( "public @property auto " ~ ( identifier!( var ) )[ 1 .. $ ] ~ "() { return " ~ identifier!var ~ "; } " );
     
+  }
+  
+  /**
+    Generate a default runtime value setter for the given symbol and runtime value.
+    
+    It enforces that the given symbol name starts with "_".
+  */
+  mixin template defaultSetter( string var, string value ) {
+  
+    debug( mixins ) {
+    
+      pragma( msg, "generating default runtime setter for " ~ var );
+    
+    }
+  
+    private void setDefault( string s )() if( s == var ) {
+    
+      mixin( var ~ " = " ~ value ~ ";" );
+    
+    }
+  
+  }
+  
+  /**
+    Returns true if the member has a default runtime initializer, false otherwise.
+  */
+  mixin template hasDefaultSetter( string member ) {
+  
+    enum hasDefaultSetter = __traits( compiles, mixin( defaultSetterFor!member ) );
+  
+  }
+  
+  /**
+    Returns the default setter call string for the given member.
+  */
+  template defaultSetterFor( string member ) {
+    
+    enum defaultSetterFor = "setDefault!( \"" ~ member ~ "\" )()";
+  
+  }
+  
+  unittest {
+  
+    int someVar = 0;
+    enum id = identifier!someVar;
+    
+    mixin defaultSetter!( id, "5" );
+    mixin hasDefaultSetter!id;
+    
+    static assert( hasDefaultSetter, defaultSetterFor!id );
+    
+    mixin( defaultSetterFor!id ~ ";" );
+    
+    assert( someVar == 5 );
+  
   }
   
 }
