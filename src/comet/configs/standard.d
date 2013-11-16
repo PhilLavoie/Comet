@@ -6,7 +6,7 @@ import comet.cli.all;
 class Config {
 
   //There is only one file so maybe change that shit.
-  mixin sequencesFilesMixin;
+  mixin sequencesFileMixin;
   
   mixin verbosityMixin;
   mixin outFileMixin;

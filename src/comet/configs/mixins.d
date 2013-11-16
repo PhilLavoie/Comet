@@ -1,719 +1,553 @@
+/**
+  Module providing mixin code for creating reusable configuration fields and command line arguments.
+*/
 module comet.configs.mixins;
-
-
 
 import comet.cli.all;
 
-public import std.conv;
-import std.stdio;
-import std.string;
-
-
-private template dummy( string s ) {}
-
-template isStringLiteral( alias s ) {
-  enum isStringLiteral = __traits( compiles, dummy!s );
-}
-template isStringLiteral( T ) {
-  enum isStringLiteral = false;
-}
-
 /**
-  Up to now, supports strings and variable symbols.
+  Dummy template created to determine if a template argument can be used as a compile time string.
 */
-template identifier( alias var ) {
-  static if( isStringLiteral!var ) {
-    enum identifier = var;
-  } else{
-    enum identifier = __traits( identifier, var );
-  }
-}
+package {
 
-
-unittest {
-  static assert( isStringLiteral!"toto" );
-  static assert( !isStringLiteral!int );
-  string toto = "";
-  static assert( !isStringLiteral!toto );
-  static assert( identifier!toto == "toto" );
-}
-
-
-mixin template argumentMixin( alias name, string factoryFunction ) {
- 
-  mixin argumentMixinT!( argumentNameOf!( identifier!name ), mixin( "typeof( " ~ factoryFunction ~ " )" ), factoryFunction );
+  /*********************************************************************************************************
+    Argument and variable mixin sections, to be used directly by the user.
+  *********************************************************************************************************/
   
-}
-
-
-mixin template argumentMixinT( string name, T, string factoryFunction ) {
-  mixin( "private T " ~ name ~ ";" );
-  
-  debug( mixins ) {
-  
-    pragma( msg, "generating init for " ~ name );
-  
-  }
-  
-  private void init( string s )() if( s == name ) {
-    
-    mixin( name ~ " = " ~ factoryFunction ~ ";" );
-  
-  }
-
-}
-
-template argumentNameOf( string member ) {
-  static if( isArgumentName!( member ) ) {
-    enum argumentNameOf = member;
-  } else {
-    enum argumentNameOf = member ~ "Arg";
-  }
-}
-template isArgumentName( string name ) {
-  enum isArgumentName = name.endsWith( "Arg" );
-}
-
-
-
-/**
-  Assumes that it starts with _
-*/
-mixin template getter( alias var ) {
-  mixin( "public @property auto " ~ ( identifier!( var ) )[ 1 .. $ ] ~ "() { return " ~ identifier!var ~ "; } " );
-}
-
-mixin template sequencesFilesMixin() {
-  import std.container;
-  import std.stdio;
-  
-  private Array!File _sequencesFiles;  
-
-  public @property auto sequencesFiles() { return _sequencesFiles[]; }
-  
-  mixin argumentMixin!(
-    _sequencesFiles,
-    "indexedRight( 
-      0u,
-      \"sequencesFile\", 
-      \"This argument is the file holding the sequences to process.\", 
-      commonParser( fileConverter( \"r\" ), ( File f ) { _sequencesFiles.insertBack( f );  } )
-    )"    
-  ); 
-  
-}
-
-mixin template sequencesDirMixin() {
-  import std.container;
-  import std.stdio;
-  
-  private Array!File _sequencesFiles;
-
-  public @property auto sequencesFiles() { return _sequencesFiles[]; }
-  
-  mixin argumentMixin!(
-    _sequencesFile,
-    "indexedRight( 
-      0,
-      \"sequences directory\", 
-      \"This argument indicates the directory where the sequences files are located.\", 
-      commonParser(
-        ( string[] args ) => args[ 0 ],
-        ( string dir ) {         
-          foreach( file; dirEntries( dir, SpanMode.shallow ).map!( a => File( a, \"r\" ) ) ) {
-            _sequencesFiles.insertBack( file );
-          }
-        } 
-      ),
-      mandatory
-    )"
-  ); 
-  
-}
-
-//Workaround for bug: 11522.
-mixin template resultsFileInitMixin() {
-
-  private void initResultsFile() {
-  
-    _resultsFile = stdout;
-  
-  }
-
-}
-
-mixin template resultsFileMixin() {
-
-  import std.stdio;
-
-  private File _resultsFile;
-  mixin getter!_resultsFile;
-  
-  mixin resultsFileInitMixin;  
-  
-  mixin argumentMixin!(
-    _resultsFile,
-    "file( 
-      \"--rf\",
-      \"Results file. This is where the program prints the results. Default is stdout.\",
-      _resultsFile, 
-      \"w\" 
-    )"  
-  );
-
-
-}
-
-mixin template verbosityMixin() {
-
-  private ubyte _verbosity = 0;  
-  mixin getter!_verbosity;
-  
-  mixin argumentMixin!( 
-    _verbosity,
-    "value( \"-v\", \"Verbosity level. Default is \" ~ _verbosity.to!string() ~ \".\", _verbosity )"
-  );
-  
-}
-
-mixin template outFileMixin() {
-  
-  import std.stdio;
-
-  private File _outFile;
-  mixin getter!_outFile;
-  
-  mixin argumentMixin!( 
-    _outFile, 
-    "file( 
-      \"--of\", 
-      \"Output file. This is where the program emits statements. Default is stdout.\", 
-      _outFile, 
-      \"w\" 
-    )" 
-  );
-  
-}  
-
-mixin template printResultsMixin() {
-
-  private bool _printResults = true;
-  mixin getter!_printResults;
-  
-  mixin argumentMixin!( 
-    _printResults, 
-    "toggle( \"--no-res\", \"Prevents the results from being printed.\", _printResults )" 
-  ); 
-
-}    
-  
-mixin template noResultsMixin() {
-  size_t _noResults = 1000;    
-  mixin getter!_noResults;
-  
-  mixin argumentMixin!(
-    _noResults, 
-    "value(  
-      \"--nr \",  
-      \"Number of results to keep in memory. Default is  \" ~ _noResults.to!string() ~  \". \",
-      _noResults 
-    )"
-  );
-  
-}
-  
-mixin template printTimeMixin() {
-  bool _printTime = true;
-  mixin getter!_printTime;
-
-  mixin argumentMixin!(
-    _printTime,
-    "toggle(
-      \"--no-time \",
-      \"Removes the execution time from the results. \",
-      _printTime 
-    )"  
-  );
-}  
-  
-mixin template minLengthMixin() {
-
-  size_t _minLength = 3;
-  mixin getter!_minLength;
-  
-  mixin argumentMixin!(
-    _minLength,
-    "value(  
-      \"--min \",  
-      \"Minimum period length. Default is  \" ~ _minLength.to!string() ~  \". \", 
-      _minLength 
-    )"
-  );
-
-}
-  
-mixin template maxLengthMixin() {
-
-  size_t _maxLength = size_t.max;
-  mixin getter!_maxLength;
-
-  mixin argumentMixin!(
-    _maxLength,
-    "value( 
-      \"--max\",
-      \"Maximum period length. Default is \" ~ _maxLength.to!string() ~ \". The mid sequence position is used if it is lower than this value.\",
-      _maxLength 
-    )"
-  );
-  
-}
-
-mixin template lengthStepMixin() {
-
-  size_t _lengthStep = 3;
-  mixin getter!_lengthStep;
-
-  mixin argumentMixin!(
-    _lengthStep,
-    "setter( 
-      \"--single-step\",
-      \"Sets the segment pair length step to be 1. The default is \" ~ std.conv.to!string( _lengthStep ) ~ \" instead of 3.\",
-      _lengthStep,
-      1u
-    )"
-  );
-    
-  
-}
-  
-mixin template noThreadsMixin() {
-
-  size_t _noThreads = 1;
-  mixin getter!_noThreads;
-  
-  //No arguments support as of today.
-}  
-
-
-/**
-  Those are the algorithms used to process sequences and determine segment pairs distances.
-*/
-enum Algo {
-  standard = 0,   //Without optimizations.
-  cache,          //Using a window frame cache.
-  patterns,       //Reusing results based on nucleotides patterns.
-  cachePatterns   //Both optimization at the same time.
-}
-
-//The strings used to identify the algorithms on the command line.
-package immutable string[ 4 ] algoStrings = [ "standard", "cache", "patterns", "cache-patterns" ];
-
-//The algorithms mapped with their strings for easy access.
-package immutable Algo[ string ] algosByStrings;
-static this() {
-  algosByStrings = 
-  [ 
-    algoStrings[ Algo.standard ]: Algo.standard,
-    algoStrings[ Algo.cache ]: Algo.cache, 
-    algoStrings[ Algo.patterns ]: Algo.patterns,
-    algoStrings[ Algo.cachePatterns ]: Algo.cachePatterns 
-  ];
-
-}
-  
-mixin template algosMixin() {
-  import std.container;
-
-  Array!Algo _algos;  
-  public @property auto algos() { return _algos[]; }
-  
-  mixin argumentMixin!(
-    _algos,
-    "flagged( 
-      \"--algo\", 
-      \"Sets the segment pair cost calculation algorithm. Possible values are \\\"standard\\\", \\\"cache\\\", \\\"patterns\\\" and \\\"cache-patterns\\\".\", 
-      commonParser( mappedConverter( algosByStrings ), ( Algo algo ) { _algos.insertBack( algo ); } )
-    )"
-  );
-
-} 
- 
-mixin template printConfigMixin() {
-  
-  bool _printConfig = false;  
-  mixin getter!_printConfig;
-  
-  mixin argumentMixin!(
-    _printConfig,
-    "toggle( 
-      \"--print-config\", 
-      \"Prints the used configuration before starting the process if the flag is present.\",
-      _printConfig 
-    )"
-  );
-
-}
-
-mixin template initAllMixin() {
-
-  void initAll() {
-    
-    foreach( member; __traits( allMembers, typeof( this ) ) ) {
-    
-      debug( mixins ) {
-      
-        pragma( msg, "processing member " ~ member );
-      
-      }
-    
-      enum call = "init!( \"" ~ member ~ "\" )()";
-      enum hasInit = __traits( compiles, mixin( call ) );
-      
-      debug( mixins ) {
-      
-        pragma( msg, "has init? " ~ hasInit.to!string() );
-      
-      }
-      
-      static if( hasInit ) {
-      
-        mixin( call ~ ";" );
-      
-      } else {
-      
-        static assert( !isArgumentName!member, member );
-      
-      }
-    
-    }
-  
-  }
-
-}
-
- 
-unittest {
-
-  struct Toto {
-
-    mixin sequencesFilesMixin;
-    mixin printConfigMixin;
-    mixin algosMixin;
-    mixin resultsFileMixin;
-  
-    mixin initAllMixin;  
-  }
-
-  Toto t;
-  
-  /+t.initAll();
-  
-  assert( t._sequencesFilesArg !is null );
-  assert( t._algosArg !is null );
-  assert( t._printConfigArg !is null );
-  assert( t._resultsFile == stdout );
-  assert( t._resultsFileArg !is null );+/
-  
-}  
- 
-/+  
- 
-  //Used when in compare results mode.
-  Array!File _resultsToCompare;
-  double _epsilon;
-  public @property auto epsilon() { return _epsilon; }
-
-
-  string PROGRAM_NAME;
-  
-  protected this( string[] args ) {
-    initFlags();
-    parse( args );
-  }
-  
-  //Default standalone mode arguments.
-  IndexedLeft _script; 
-    
-  Flagged _noResultsArg;
-  
-  Flagged _maxPeriodArg;
-  Flagged _singleStepArg;
-  
-  Flagged _printConfigArg;
-  Flagged _printTimeArg;
-  
-  Flagged _algorithmArg;   
-  Flagged _epsilonArg;
-    
-  IndexedRight _seqDirArg;
-  IndexedRight _resDirArg;
-  IndexedRight _refDirArg;
-  IndexedRight _filesToCompareArg;
-  
-  
-  
-  Flagged _resFileArg;
-  Flagged _timeFileArg;
-     
-  
-  void initFlags() {
-    _noResultsArg = ;
-
-       
-   _seqDirArg = indexedRight( 
-      0,
-      "sequences directory", 
-      "This argument indicates the directory where the sequences files are located.", 
-      commonParser(
-        ( string[] args ) => args[ 0 ],
-        ( string dir ) {         
-          foreach( file; dirEntries( dir, SpanMode.shallow ).map!( a => File( a, "r" ) ) ) {
-            _sequencesFiles.insertBack( file );
-          }
-        } 
-      ),
-      mandatory
-    );       
-      
-    _resDirArg = indexedRight( 
-      1u,
-      "results directory", 
-      "Where the results will be stored.", 
-      commonParser( dirConverter(), _resultsDir ),
-      mandatory
-    );
-    
-    _refDirArg = indexedRight( 
-      1u,
-      "references directory", 
-      "Where the references are stored.", 
-      commonParser( dirConverter(), _resultsDir ),
-      mandatory
-    );
-    
-    
-    
-    _resFileArg = file( "--rf", "Results file. This is where the program prints the results. Default is stdout.", _resultsFile, "w" );
-    _timeFileArg = file( "--tf", "Time file. This is where the time will be printed. Default is stdout.", _timeFile, "w" );
-    
-      
-  }
-
-  Parser runTestsParser() {
-    auto runTestsParser = new Parser();
-    runTestsParser.name = PROGRAM_NAME ~ " run-tests";    
-    runTestsParser.add(
-      _seqDirArg,
-      _refDirArg,
-      _verbosityArg,
-      _outFileArg,
-      _printTimeArg,
-      _printConfigArg,
-    );           
-    
-    return runTestsParser;  
-  }
-
-  auto standardParser() {
-    
-    auto standardParser = parser();
-    standardParser.name = PROGRAM_NAME;
-    
-    standardParser.add(
-      _seqFileArg,
-      _verbosityArg,
-      _outFileArg,
-      _printResultsArg,
-      _resFileArg,
-      _printTimeArg,
-      _timeFileArg,
-      _noResultsArg,
-      _minPeriodArg,
-      _maxPeriodArg,
-      _singleStepArg,
-      _printConfigArg,
-      _algorithmArg
-    );
-    
-    mutuallyExclusive( _printResultsArg, _resFileArg );
-    mutuallyExclusive( _printTimeArg, _timeFileArg );
-    
-    return standardParser;
-    
-  }
-  
-  auto generateReferencesParser() {
-    
-    auto genRefParser = parser;
-    genRefParser.name = PROGRAM_NAME ~ " generate-references";    
-    genRefParser.add(
-      _verbosityArg,
-      _outFileArg,
-      _printTimeArg,
-      _printConfigArg,
-      _seqDirArg,
-      _resDirArg
-    );           
-    
-    return genRefParser;  
-  }
-    
-  auto compareResultsParser() {
-  
-  }
-    
-public: 
- 
-  /**
-    Prints the program configuration to the standard output.
-    Typically, it is to be used on demand by the user.
-  */
-  public void print() {
-    import std.algorithm;
-    
-    with( _outFile ) {
-      writeln( "-------------------------------------------------" );
-      writeln( "Configuration:" );
-      
-      writeln( "Verbosity level: ", _verbosity );
-      writeln( "Output file: ", _outFile );
-      
-      writeln( "Sequences files: ", _sequencesFiles[].map!( a => a.fileName() ) );
-      
-      writeln( "Print results: ", _printResults );
-      writeln( "Number of results: ", _noResults );
-      
-      if( _mode == Mode.standard ) {
-        writeln( "Results file: ", _resultsFile.fileName() );
-      } else {
-        writeln( "Results dir: ", _resultsDir );
-      }
-      
-      writeln( "Print time: ", _printTime );
-      writeln( "Time file: ", _timeFile.fileName() );
-      
-      writeln( "Algorithms: ", _algos[].map!( algo => algoStrings[ algo ] ) );
-      writeln( "Minimum period: ", _minPeriod );
-      writeln( "Maximum period: ", _maxLength );
-      writeln( "Period step: ", _lengthStep );
-      
-      writeln( "Print configuration: ", _printConfig );    
-      
-      writeln( "-------------------------------------------------" );
-    }
-  }
+  //TODO: implement runtime defaults for files and algorithms.
   
   /**
-    This function will get the arguments from the command line and initialize
-    the configuration accordingly. When this function throws, the main program
-    should not consider the configuration in a usable state and therefore
-    abort.
-    
-    This function not only throws on error, but also if the user asked for the
-    help menu (-h).
+    This mixin template generates a file variable name sequencesFile that
+    will hold the file provided by the user on the command line. This
+    argument is mandatory and it is meant to be the first on the right
+    side of the flagged arguments (options).
   */
-  public void parse( string[] tokens ) out {
-  
-    assert( _lengthStep == 1 || _lengthStep == 3 );
-    
-  } body {
-  
-    //Run time defaults.
-    _timeFile = stdout;
-    _outFile = stdout;
-    _resultsFile = stdout;
-    _algos.reserve( algoStrings.length );
-    _algos.insertBack( Algo.standard );
-    PROGRAM_NAME = commandName( tokens );
-    
-    Parser parser;
-    
-    auto script = indexedLeft( 
-      0u, 
-      "script", 
-      "This argument lets the user use a predefined script.", 
-      new class ParserI {
-      
-        override string[] take( string[] args ) out {
+  mixin template sequencesFileMixin() {
         
-          assert( parser !is null );
+    private std.stdio.File _sequencesFile;  
+    mixin getter!_sequencesFile;
         
-        } body {
-        
-          if( args.length ) { 
-            
-            switch( args[ 0 ] ) {
-            
-              case "generate-references":
-                
-                _mode = Mode.generateReferences;              
-                parser = generateReferencesParser();           
-                tokens = tokens[ 1 .. $ ];
-                
-                break;   
-                
-              case "run-tests":
-              
-                assert( false, "not implemented yet" );
-                
-              default:
-              
-                _mode = Mode.standard;
-                parser = standardParser();
-                
+    mixin argumentMixin!(
+      _sequencesFile,
+      "indexedRight( 
+        0u,
+        \"sequencesFile\", 
+        \"This argument is the file holding the sequences to process.\", 
+        commonParser( fileConverter( \"r\" ), _sequencesFile ),
+        mandatory
+      )"    
+    ); 
+    
+  }
+
+  /**
+    This mixin generates an argument for the command line that expects a sequences files DIRECTORY
+    as the first argument on the right of the options. However, for convenience purposes,
+    it generates a getter that returns a range over the sequences files located in the directory.
+    
+    The getter is named "sequencesFiles".
+  */
+  mixin template sequencesDirMixin() {
+    
+    private std.container.Array!( std.stdio.File ) _sequencesFiles;
+
+    //Returns a range over the sequences files.
+    public @property auto sequencesFiles() { return _sequencesFiles[]; }
+    
+    mixin argumentMixin!(
+      _sequencesFile,
+      "indexedRight( 
+        0,
+        \"sequences directory\", 
+        \"This argument indicates the directory where the sequences files are located. All files are used, so make sure only sequences files are there.\", 
+        commonParser(
+          ( string[] args ) => args[ 0 ],
+          ( string dir ) {         
+            foreach( file; dirEntries( dir, SpanMode.shallow ).map!( a => std.stdio.File( a, \"r\" ) ) ) {
+              _sequencesFiles.insertBack( file );
             }
-          
-          }
-            
-          //Whatever happens, don't parse anything else.
-          return [];
-            
+          } 
+        ),
+        mandatory
+      )"
+    ); 
+    
+  }
+
+  //Workaround for bug: 11522.
+  mixin template resultsFileInitMixin() {
+
+    private void initResultsFile() {
+    
+      _resultsFile = std.stdio.stdout;
+    
+    }
+
+  }
+
+  /**
+    A mixin that generate an optional flagged argument on the command line for specifying where to put the results.
+    Note that this argument should only be used when processing a single file.
+  */
+  mixin template resultsFileMixin() {
+
+    private std.stdio.File _resultsFile;
+    mixin getter!_resultsFile;
+    
+    mixin resultsFileInitMixin;  
+    
+    mixin argumentMixin!(
+      _resultsFile,
+      "file( 
+        \"--rf\",
+        \"Results file. This is where the program prints the results. Default is stdout.\",
+        _resultsFile, 
+        \"w\" 
+      )"  
+    );
+
+  }
+
+  /**
+    An optional flagged argument for setting the verbosity of the program.
+  */
+  mixin template verbosityMixin() {
+
+    private ubyte _verbosity = 0;  
+    mixin getter!_verbosity;
+    
+    mixin argumentMixin!( 
+      _verbosity,
+      "value( 
+        \"-v\", 
+        \"Verbosity level. Default is \" ~ std.conv.to!string( _verbosity ) ~ \".\", 
+        _verbosity        
+      )"
+    );
+    
+  }
+
+  /**
+    An optional flagged argument for redirecting the program output (messages to the user, not the same as
+    the results file).
+  */
+  mixin template outFileMixin() {
+    
+    import std.stdio;
+
+    private std.stdio.File _outFile;
+    mixin getter!_outFile;
+    
+    mixin argumentMixin!( 
+      _outFile, 
+      "file( 
+        \"--of\", 
+        \"Output file. This is where the program emits statements. Default is stdout.\", 
+        _outFile, 
+        \"w\" 
+      )" 
+    );
+    
+  }  
+
+  /**
+    An optional flagged argument that sets whether or not the results are to be printed or just silently
+    compiled.
+  */
+  mixin template printResultsMixin() {
+
+    private bool _printResults = true;
+    mixin getter!_printResults;
+    
+    mixin argumentMixin!( 
+      _printResults, 
+      "toggle( \"--no-res\", \"Prevents the results from being printed.\", _printResults )" 
+    ); 
+
+  }    
+    
+  /**
+    An optional flagged argument for setting the maximum number of results to keep.
+  */
+  mixin template noResultsMixin() {
+    
+    size_t _noResults = 1000;    
+    mixin getter!_noResults;
+    
+    mixin argumentMixin!(
+      _noResults, 
+      "value(  
+        \"--nr \",  
+        \"Number of results to keep in memory. Default is  \" ~ std.conv.to!string( _noResults ) ~  \". \",
+        _noResults 
+      )"
+    );
+    
+  }
+  
+  /**
+    An optional flagged argument that determines whether or not the execution time is to be shown.
+  */  
+  mixin template printTimeMixin() {
+    bool _printTime = true;
+    mixin getter!_printTime;
+
+    mixin argumentMixin!(
+      _printTime,
+      "toggle(
+        \"--no-time \",
+        \"Removes the execution time from the results. \",
+        _printTime 
+      )"  
+    );
+  }  
+    
+  /**
+    An optional flagged argument for setting the minimum segments length to be processed.
+  */
+  mixin template minLengthMixin() {
+
+    size_t _minLength = 3;
+    mixin getter!_minLength;
+    
+    mixin argumentMixin!(
+      _minLength,
+      "value(  
+        \"--min \",  
+        \"Minimum period length. Default is  \" ~ std.conv.to!string( _minLength ) ~  \". \", 
+        _minLength 
+      )"
+    );
+
+  }
+    
+  /**
+    An optional flagged argument for setting the maximum segments length to be processed.
+  */
+  mixin template maxLengthMixin() {
+
+    size_t _maxLength = size_t.max;
+    mixin getter!_maxLength;
+
+    mixin argumentMixin!(
+      _maxLength,
+      "value( 
+        \"--max\",
+        \"Maximum period length. Default is the biggest value held by a word. The mid sequence position is used if it is lower than this value.\",
+        _maxLength 
+      )"
+    );
+    
+  }
+
+  /**
+    An optional flagged argument to change the length step between segments length.
+  */
+  mixin template lengthStepMixin() {
+
+    size_t _lengthStep = 3;
+    mixin getter!_lengthStep;
+
+    mixin argumentMixin!(
+      _lengthStep,
+      "setter( 
+        \"--single-step\",
+        \"Sets the segment pair length step to be 1. The default is \" ~ std.conv.to!string( _lengthStep ) ~ \" instead of 3.\",
+        _lengthStep,
+        1u
+      )"
+    );
+      
+    
+  }
+   
+  /**
+    An optional flagged argument to set the number of concurrent thread to run at the same time.
+  */
+  mixin template noThreadsMixin() {
+
+    size_t _noThreads = 1;
+    mixin getter!_noThreads;
+    
+    //No arguments support as of today.
+  }  
+
+
+  /**
+    Those are the algorithms used to process sequences and determine segments pairs distances.
+  */
+  enum Algo {
+    standard = 0,   //Without optimizations.
+    cache,          //Using a window frame cache.
+    patterns,       //Reusing results based on nucleotides patterns.
+    cachePatterns   //Both optimization at the same time.
+  }
+
+  //The strings used to identify the algorithms on the command line.
+  package immutable string[ 4 ] algoStrings = [ "standard", "cache", "patterns", "cache-patterns" ];
+
+  //The algorithms mapped with their strings for easy access.
+  package immutable Algo[ string ] algosByStrings;
+  static this() {
+    algosByStrings = 
+    [ 
+      algoStrings[ Algo.standard ]: Algo.standard,
+      algoStrings[ Algo.cache ]: Algo.cache, 
+      algoStrings[ Algo.patterns ]: Algo.patterns,
+      algoStrings[ Algo.cachePatterns ]: Algo.cachePatterns 
+    ];
+
+  }
+    
+  /**
+    An optional flagged argument for setting the algorithms to use for the processing of one file or multiple sequences files.
+  */
+  mixin template algosMixin() {
+
+    private std.container.Array!Algo _algos;  
+    public @property auto algos() { return _algos[]; }
+    
+    //TODO: add the possibility to support more than one algorithm at once.
+    mixin argumentMixin!(
+      _algos,
+      "flagged( 
+        \"--algo\", 
+        \"Sets the segment pair cost calculation algorithm. Possible values are \\\"standard\\\", \\\"cache\\\", \\\"patterns\\\" and \\\"cache-patterns\\\".\", 
+        commonParser( mappedConverter( algosByStrings ), ( Algo algo ) { _algos.insertBack( algo ); } ),
+        optional
+      )"
+    );
+
+  } 
+   
+  /**
+    An optional flagged argument that prints the configuration on screen for the user.
+  */
+  mixin template printConfigMixin() {
+    
+    bool _printConfig = false;  
+    mixin getter!_printConfig;
+    
+    mixin argumentMixin!(
+      _printConfig,
+      "toggle( 
+        \"--print-config\", 
+        \"Prints the used configuration before starting the process if the flag is present.\",
+        _printConfig 
+      )"
+    );
+
+  }
+
+  /**
+    This mixin is a convenience function, named initAll(), that initializes all runtime
+    defaults and values for the variables generated by using this module's mixins.
+  */
+  mixin template initAllMixin() {
+
+    //Initializes every variable to its runtime value.
+    void initAll() {
+      
+      foreach( member; __traits( allMembers, typeof( this ) ) ) {
+      
+        debug( mixins ) {
+        
+          pragma( msg, "processing member " ~ member );
+        
+        }
+      
+        enum call = "init!( \"" ~ member ~ "\" )()";
+        enum hasInit = __traits( compiles, mixin( call ) );
+        
+        debug( mixins ) {
+        
+          pragma( msg, "has init? " ~ std.conv.to!string( hasInit ) );
+        
         }
         
-        override void store() {}
-        override void assign() {}
+        static if( hasInit ) {
         
-      },      
-      Usage.optional
+          mixin( call ~ ";" );
+        
+        } else {
+        
+          static assert( !isArgumentName!member, member );
+        
+        }
       
-    );  
+      }
     
-    auto probe = comet.cli.all.parser();
-    probe.add( script );
-    //Only parse the first token.
-    probe.parse( tokens[ 0 .. 2 ] );
-    
-    parser.parse( tokens );
-    
-       
-    //The minimum segment pair length must be below the maximum.
-    enforce( _minPeriod <= _maxLength, "The minimum length value: " ~ _minPeriod.to!string() ~ " is above the maximum length: " ~ _maxLength.to!string() );  
-          
-    if( _printConfig ) {
-
-      print();
-
     }
+
+  }
+  
+  unittest {
+
+    struct Toto {
+
+      mixin sequencesFileMixin;
+      mixin printConfigMixin;
+      mixin algosMixin;
+      mixin resultsFileMixin;
+    
+      mixin initAllMixin;  
+    }
+
+    Toto t;
+    
+    t.initAll();
+    
+    assert( t._sequencesFileArg !is null );
+    assert( t._algosArg !is null );
+    assert( t._printConfigArg !is null );
+    assert( t._resultsFile == std.stdio.stdout ); //Fails because no support for field runtime defaults so far.
+    assert( t._resultsFileArg !is null );
+    
+  }  
+
+  
+  /*********************************************************************************************************
+    Utilities.
+  *********************************************************************************************************/
+
+
+  template dummy( string s ) {}
+
+  /**
+    Determines if the given expression is a string literal. Returns true if that is the case,
+    false otherwise. Returns false if it's a type.
+  */
+  template isStringLiteral( alias s ) {
+    enum isStringLiteral = __traits( compiles, dummy!s );
+  }
+  ///Ditto.
+  template isStringLiteral( T ) {
+    enum isStringLiteral = false;
+  }
+
+  /**
+    Returns the string name of the identifier as provided by __traits( identifier, var ).
+  */
+  template identifier( alias var ) {
+    enum identifier = __traits( identifier, var );  
+  }
+
+
+  unittest {
+    static assert( isStringLiteral!"toto" );
+    static assert( !isStringLiteral!int );
+    string toto = "";
+    static assert( !isStringLiteral!toto );
+    static assert( identifier!toto == "toto" );
+  }
+
+  /**
+    Takes a variable name and generates a standardized argument name
+    corresponding to the variable. More specifically, "Arg" is appended 
+    at the end of the name provided.
+    
+    So an argument for the field "myVar", for example, will be named
+    "myVarArg". A field named "anArgArg" will become "anArgArgArg"...
+    to be used intelligently.
+  */
+  template argumentNameOf( string member ) {
+
+    //Append "Arg".
+    enum argumentNameOf = member ~ "Arg";
+        
+  }
+  
+  /**
+    Returns true if the provided name ends with "Arg", false otherwise.  
+    Any name generated with argumentNameOf is guaranteed to return true.
+  */
+  template isArgumentName( string name ) {
+    
+    enum isArgumentName = std.string.endsWith( name, "Arg" );
     
   }
+
+  unittest {
+    
+    static assert( argumentNameOf!"myVar" == "myVarArg" );
+    static assert( argumentNameOf!"anArgArg" == "anArgArgArg" );
+  
+    static assert( isArgumentName!"Arg" );
+    static assert( isArgumentName!"_Arg" );
+    static assert( isArgumentName!"myVarArg" );
+    static assert( isArgumentName!"anArgArgArg" );
+    static assert( isArgumentName!( argumentNameOf!( "any string really" ) ) );
+    
+    static assert( !isArgumentName!"toto" );
+  
+  }
+  
+  
+  /**
+    This mixin generates an argument based on the provided variable. Note the the first
+    value passed as a parameter must be a symbol, the type of the argument is determined
+    by the return type of the factory function. It delegates the work to the other mixin,
+    which should not be called by the user directly. This template is to be preferred because
+    it formats the argument before passing them on.    
+  */
+  mixin template argumentMixin( alias name, string factoryFunction ) {
+   
+    mixin argumentMixinWithType!( argumentNameOf!( identifier!name ), mixin( "typeof( " ~ factoryFunction ~ " )" ), factoryFunction );
+    
+  }
+
+  /**
+    Takes a variable representing an argument, its type and the factory function
+    provided as a string that will be used to instantiate it.
+    The variable is declared private. It also generates a private init function in case
+    the mixin is used in an environment that does not support runtime initialization
+    (a struct). The init function is called init, and it is a template function
+    whose argument is the name of the variable just generated, which the same as the
+    name passed, as such:
+    
+      private void init( string s )() if( s == name ) {
+      
+        mixin( name ~ " = " ~ factoryFunction ~ ";" );
+      
+      }    
+  */
+  mixin template argumentMixinWithType( string name, T, string factoryFunction ) {
+    
+    //The argument variable generated.
+    mixin( "private T " ~ name ~ ";" );
+    
+    debug( mixins ) {
+    
+      pragma( msg, "generating init for " ~ name );
+    
+    }
+    
+    //The initialization template function using the factory function provided. 
+    //Must be instantiated with the variable name.
+    private void init( string s )() if( s == name ) {
+      
+      mixin( name ~ " = " ~ factoryFunction ~ ";" );
+    
+    }
+
+  }
+
+  
+  /**
+    Generates a getter function for the given variable. The variable must hold the symbol and not be a string
+    (a way to ensure the variable exists).
+    
+    It assumes that the given symbol name starts with "_".
+  */
+  mixin template getter( alias var ) {
+    
+    static assert( identifier!var[ 0 ] == '_' );
+    
+    mixin( "public @property auto " ~ ( identifier!( var ) )[ 1 .. $ ] ~ "() { return " ~ identifier!var ~ "; } " );
+    
+  }
+  
 }
 
-+/
-
-/+
-  File _resultsFile;
-  string _resultsDir;
-  
-  public File resultsFileFor( File sequencesFile ) {
-    import std.path;
-    
-    switch( mode ) {
-      case Mode.generateReferences:
-        return File( _resultsDir ~ sequencesFile.name().baseName().stripExtension() ~ ".reference", "w" );
-      default:
-        return _resultsFile;
-    }
-  }
-
-
-+/
+ 
+ 
