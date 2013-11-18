@@ -454,12 +454,16 @@ private string fileName( File file ) {
 }
 
 unittest {
+
   import std.stdio;
   
-  auto name = fileName( stdout );
+  auto name = fileName( stdout );  
   assert( name == "stdout" );
-  name = fileName( stderr );
+  
+  name = fileName( stderr );  
   assert( name == "stderr" );
+  
   name = fileName( stdin );
   assert( name == "stdin" );
+  
 }
