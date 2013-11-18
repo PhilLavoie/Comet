@@ -1,7 +1,14 @@
 module comet.configs.standard;
 
+debug( modules ) {
+
+  pragma( msg, "compiling " ~ __MODULE__ );
+
+}
+
 import comet.configs.mixins;
 import comet.cli.all;
+import comet.configs.algos; //TODO: removing this creates a crash.
 
 class Config {
 
@@ -146,4 +153,10 @@ unittest {
   name = fileName( stdin );
   assert( name == "stdin" );
   
+}
+
+debug( modules ) {
+
+  pragma( msg, "done" );
+
 }

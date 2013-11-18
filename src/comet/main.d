@@ -1,9 +1,18 @@
 module comet.main;
 
-void main( string[] args ) {
+debug( modules ) {
 
-  import comet.programs.standard;
-  
+  pragma( msg, "compiling " ~ __MODULE__ );
+
+}
+
+
+import comet.programs.standard;
+
+
+void main( string[] args ) {
+ 
   run( args );  
   
 }
+

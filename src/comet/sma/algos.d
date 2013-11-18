@@ -4,6 +4,12 @@
 */
 module comet.sma.algos;
 
+debug( modules ) {
+
+  pragma( msg, "compiling " ~ __MODULE__ );
+
+}
+
 import deimos.bio.dna;
 
 import comet.sma.cost;
@@ -11,7 +17,7 @@ import comet.sma.pattern;
 import comet.sma.segments;
 import comet.sma.smtree;
 
-import comet.config: Algo;
+import comet.configs.algos: Algo;
 
 import std.algorithm;
 import range = std.range;

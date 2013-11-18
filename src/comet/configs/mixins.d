@@ -3,6 +3,12 @@
 */
 module comet.configs.mixins;
 
+debug( modules ) {
+
+  pragma( msg, "compiling " ~ __MODULE__ );
+
+}
+
 import comet.cli.all;
 
 package {
@@ -259,43 +265,16 @@ package {
     
     //No arguments support as of today.
   }  
-
-
-  /**
-    Those are the algorithms used to process sequences and determine segments pairs distances.
-  */
-  enum Algo {
-    standard = 0,   //Without optimizations.
-    cache,          //Using a window frame cache.
-    patterns,       //Reusing results based on nucleotides patterns.
-    cachePatterns   //Both optimization at the same time.
-  }
-
-  //The strings used to identify the algorithms on the command line.
-  package immutable string[ 4 ] algoStrings = [ "standard", "cache", "patterns", "cache-patterns" ];
-
-  //The algorithms mapped with their strings for easy access.
-  package immutable Algo[ string ] algosByStrings;
-  static this() {
-    algosByStrings = 
-    [ 
-      algoStrings[ Algo.standard ]: Algo.standard,
-      algoStrings[ Algo.cache ]: Algo.cache, 
-      algoStrings[ Algo.patterns ]: Algo.patterns,
-      algoStrings[ Algo.cachePatterns ]: Algo.cachePatterns 
-    ];
-
-  }
     
   /**
     An optional flagged argument for setting the algorithms to use for the processing of one file or multiple sequences files.
   */
   mixin template algosMixin() {
 
-    private std.container.Array!Algo _algos;  
+    private std.container.Array!( comet.configs.algos.Algo ) _algos;  
     public @property auto algos() { return _algos[]; }
     
-    mixin defaultSetter!( identifier!_algos, identifier!_algos ~ ".insertBack( Algo.standard );" );
+    mixin defaultSetter!( identifier!_algos, identifier!_algos ~ ".insertBack( comet.configs.algos.Algo.standard );" );
     
     //TODO: add the possibility to support more than one algorithm at once.
     mixin argumentMixin!(
@@ -303,7 +282,7 @@ package {
       "flagged( 
         \"--algo\", 
         \"Sets the segment pair cost calculation algorithm. Possible values are \\\"standard\\\", \\\"cache\\\", \\\"patterns\\\" and \\\"cache-patterns\\\".\", 
-        commonParser( mappedConverter( algosByStrings ), ( Algo algo ) { _algos.insertBack( algo ); } ),
+        commonParser( mappedConverter( comet.configs.algos.algosByStrings ), ( comet.configs.algos.Algo algo ) { _algos.insertBack( algo ); } ),
         optional
       )"
     );
@@ -609,6 +588,9 @@ package {
   }
   
 }
+  
+debug( modules ) {
 
- 
- 
+  pragma( msg, "done" );
+
+}
