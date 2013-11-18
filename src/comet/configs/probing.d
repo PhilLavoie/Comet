@@ -2,7 +2,7 @@
   This module is designed as an entry point for the different configurations
   available for this program.
 */
-module comet.configs.prober;
+module comet.configs.probing;
 
 /**
   The program can run in a variety of modes. Its simplest form is the processing

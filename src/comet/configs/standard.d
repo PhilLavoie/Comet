@@ -43,7 +43,7 @@ private:
     
     }
     
-    standardParser.parse( tokens );
+    standardParser.parse!( DropFirst.yes )( tokens );
     
     if( printConfig ) { this.print(); }
   
@@ -91,7 +91,7 @@ private auto config() {
   return new Config;
 }
 
-auto parse( string[] args ) {
+auto parse( string commandName, string[] args ) {
 
   Config cfg = config();
   cfg.initAll();
@@ -103,7 +103,7 @@ auto parse( string[] args ) {
 
 unittest {
 
-  auto cfg = parse( [ "comet", "--print-config" ] );
+  auto cfg = parse( "comet", [ "--print-config" ] );
 
 }
 

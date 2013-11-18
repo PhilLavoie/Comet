@@ -1,12 +1,9 @@
-import comet.programs;
+module comet.main;
 
 void main( string[] args ) {
-  try {
-    programFor( args ).run();  
-  } catch( Exception e ) {
-    if( e.msg.length ) {
-      import std.stdio;
-      writeln( e.msg );
-    }
-  }
+
+  import comet.programs.standard;
+  
+  run( args );  
+  
 }
