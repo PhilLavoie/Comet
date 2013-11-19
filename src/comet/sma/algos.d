@@ -22,33 +22,50 @@ import comet.configs.algos: Algo;
 import std.algorithm;
 import range = std.range;
 
+
+//TODO: make this module molecule independant.
+
 /**
   This function constructs and returns an algorithm object based on the given parameters. 
 */
-AlgoI algorithmFor( MutationCosts )( Algo algo, Sequence[] sequences, Nucleotide[] states, MutationCosts mutationCosts ) {
+AlgoI!Molecule algorithmFor( Molecule, MutationCosts )( Algo algo, Molecule[][] molecules, Molecule[] states, MutationCosts mutationCosts ) {
+
   final switch( algo ) {
+  
     case Algo.standard:
-      return new Standard!MutationCosts( sequences, states, mutationCosts );
+    
+      return standard( molecules, states, mutationCosts );
       break;
+      
     case Algo.cache:
-      return new Cache!MutationCosts( sequences, states, mutationCosts );
+    
+      return cache( molecules, states, mutationCosts );
       break;
+      
     case Algo.patterns:
-      return new Patterns!MutationCosts( sequences, states, mutationCosts );
+    
+      return patterns( molecules, states, mutationCosts );
       break;
+      
     case Algo.cachePatterns:  
-      return new CachePatterns!MutationCosts( sequences, states, mutationCosts );
+    
+      return cachePatterns( molecules, states, mutationCosts );
       break;
+      
   }
+  
   assert( false );  
+  
 }
 
 /**
   Formal definition of the algorithms interface.
+  An algorithm must be able to provide a cost for a given segments pairs.
 */
-interface AlgoI {
-  //void duplicationCost( ref Duplication );
-  Cost costFor( SegmentPairs!( Nucleotide ) pairs );
+interface AlgoI( T ) {
+
+  Cost costFor( SegmentPairs!( T ) pairs );
+  
 }
 
 
@@ -119,21 +136,25 @@ private mixin template cacheCostFor() {
   }
 }
 
-class Standard( U ): AlgoI {
+class Standard( T, U ): AlgoI!T {
+
 protected:
-  Sequence[] _sequences;
-  Nucleotide[] _states;
+
+  T[][] _sequences;
+  T[] _states;
   U _mutationCosts;
-  SMTree!Nucleotide _smTree;
+  SMTree!T _smTree;
 
   this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
+  
     _sequences = seqs;
     _states = states;
     _mutationCosts = mutationCosts;
    
     //Phylogenize the tree according to the sequences, see documentation to see
     //how it is done.  
-    phylogenize( _smTree, _sequences );    
+    phylogenize( _smTree, _sequences );   
+    
   }
   
   mixin standardColumnCost;
@@ -141,12 +162,18 @@ protected:
 public:  
   
   mixin standardCostFor;  
+  
+}
+auto standard( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
+
+  return new Standard!( T, U )( molecules, states, mutationCosts );
+
 }
 
-class Cache( U ): Standard!( U ) {
+class Cache( T, U ): Standard!( T, U ) {
 protected:
   
-  this( T... )( T args ) {
+  this( Args... )( Args args ) {
     super( args );
     _cache = new Cost[ _sequences[ 0 ].length ];
   }
@@ -158,11 +185,16 @@ public:
   mixin cacheCostFor;
     
 }
+auto cache( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
 
-class Patterns( U ): Standard!( U ) {
+  return new Cache!( T, U )( molecules, states, mutationCosts );
+
+}
+
+class Patterns( T, U ): Standard!( T, U ) {
 protected:    
   
-  this( T... )( T args ) {
+  this( Args... )( Args args ) {
     super( args );
   }
   
@@ -170,11 +202,16 @@ protected:
   mixin standardCostFor; 
   
 }
+auto patterns( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
 
-class CachePatterns( U ): Standard!( U ) {
+  return new Patterns!( T, U )( molecules, states, mutationCosts );
+
+}
+
+class CachePatterns( T, U ): Standard!( T, U ) {
 protected:
   
-  this( T... )( T args ) {
+  this( Args... )( Args args ) {
     super( args );
     _cache = new Cost[ _sequences[ 0 ].length ];
   }
@@ -182,6 +219,11 @@ protected:
   mixin patternColumnCost;
   mixin cacheCostFor;
   
+}
+auto cachePatterns( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
+
+  return new CachePatterns!( T, U )( molecules, states, mutationCosts );
+
 }
 
 /**
@@ -209,7 +251,7 @@ protected:
         
   The left subtree (from the root) represents the start of the duplication, whereas the right subtree represent the duplicated areas.
 */
-private void phylogenize( Tree )( ref Tree tree, Sequence[] sequences ) in {
+private void phylogenize( Tree, T )( ref Tree tree, T[][] sequences ) in {
   assert( 2 <= sequences.length );
 } out {
   assert( count( tree.leaves ) == 2 * sequences.length );
@@ -241,6 +283,7 @@ private void phylogenize( Tree )( ref Tree tree, Sequence[] sequences ) in {
   the values (read nucleotides if working with dna) of one homologous sequence, whereas the opposite half is a mirror
   image containing the values of the other sequence.
 */
+//TODO: instead of traversing the leaves always, just hold pointers to them and set them directly.
 private void setLeaves( Tree, Range )( ref Tree smTree, Range leaves ) if( range.isInputRange!Range ) {
   
   foreach( ref smLeaf; smTree.leaves ) {
@@ -298,6 +341,7 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
 //Known special case.
 //cactga
 unittest {
+
   import deimos.bio.dna;
 
   SMTree!Nucleotide tree;
@@ -348,4 +392,5 @@ unittest {
   auto zeCost = preSpeciationCost( tree, mutationCosts );
   auto zeExpected = cast( Cost )10 / 14;
   assert( zeExpected - Cost.epsilon <= zeCost && zeCost <= zeExpected + Cost.epsilon );
+  
 }

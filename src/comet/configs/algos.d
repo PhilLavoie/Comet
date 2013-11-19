@@ -1,3 +1,6 @@
+/**
+	
+*/
 module comet.configs.algos;
 
 debug( modules ) {

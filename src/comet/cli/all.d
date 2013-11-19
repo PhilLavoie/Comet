@@ -1,3 +1,6 @@
+/**
+  Convenience module for importing the cli package.
+*/
 module comet.cli.all;
 
 debug( modules ) {

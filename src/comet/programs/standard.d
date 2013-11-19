@@ -54,7 +54,7 @@ package void run( string command, string[] args ) {
   
     case Mode.standard:
       
-      auto cfg = parse( command, args[ 1 .. $ ] );
+      auto cfg = parse( command, args );
       run( cfg );
     
       break;
@@ -111,6 +111,7 @@ private auto loadSequences( File file ) {
 }
 
 private void processFile( File seqFile, File resFile, Config cfg, Algo algo ) {
+
   if( 1 <= cfg.verbosity ) {
     cfg.outFile.writeln( "Processing file " ~ seqFile.name ~ "..." );
   }
@@ -130,11 +131,19 @@ private void processFile( File seqFile, File resFile, Config cfg, Algo algo ) {
   
   SysTime startTime;
   
+  //Transfer the sequences into a nucleotides matrix.  
+  auto nucleotides = new Nucleotide[][ sequences.length ];
+  for( int i = 0; i < nucleotides.length; ++i ) {
+  
+    nucleotides[ i ] = sequences[ i ].nucleotides;
+    
+  }
+  
   if( cfg.printTime ) { startTime = Clock.currTime(); }  
   
   auto results = Results( cfg.noResults );  
   
-  auto bestResults = sequentialDupCostsCalculation( results, sequences, cfg, algorithmFor( algo, sequences, loadStates(), loadMutationCosts() ) );  
+  auto bestResults = sequentialDupCostsCalculation( results, nucleotides, cfg, algorithmFor( algo, nucleotides, loadStates(), loadMutationCosts() ) );  
   
   if( cfg.printTime ) { cfg.outFile.printTime( Clock.currTime() - startTime ); }
   if( cfg.printResults ) { resFile.printResults( bestResults ); }
@@ -237,14 +246,16 @@ private auto loadAlgos( Range, Sequences, States, MutationCosts )( Range algos, 
   
   Returns a range over the results in descending order (best result comes first).
 */
-private auto sequentialDupCostsCalculation( Seq )( ref Results results, Seq[] sequences, ref Config cfg, AlgoI algorithm ) in {
-  assert( 2 <= sequences.length );
+private auto sequentialDupCostsCalculation( Molecule )( ref Results results, Molecule[][] molecules, ref Config cfg, AlgoI!Molecule algorithm ) in {
+
+  assert( 2 <= molecules.length );
+  
 } body {  
     
   
   //Main loop of the program.
   //For each period length, evaluate de duplication cost of every possible positions.
-  size_t seqLength = sequences[ 0 ].length;
+  size_t seqLength = molecules[ 0 ].length;
   
   auto segmentsLengths = 
     segmentsLengthsFor( 
@@ -255,19 +266,12 @@ private auto sequentialDupCostsCalculation( Seq )( ref Results results, Seq[] se
       lengthStep( cfg.lengthStep ) 
     
     );
-    
-  auto nucleotides = new Nucleotide[][ sequences.length ];
-  for( int i = 0; i < nucleotides.length; ++i ) {
-  
-    nucleotides[ i ] = sequences[ i ].nucleotides;
-    
-  }
-  
+     
   foreach( segmentsLength; segmentsLengths ) {
     
     if( 2 <= cfg.verbosity ) { cfg.outFile.writeln( "Processing segments of length: ", segmentsLength ); }
   
-    auto segmentsPairsRange = nucleotides.segmentPairsForLength( segmentsLength );
+    auto segmentsPairsRange = molecules.segmentPairsForLength( segmentsLength );
     
     foreach( segmentsPairs; segmentsPairsRange ) {
     
