@@ -6,12 +6,7 @@ debug( modules ) {
 
 }
 
-import comet.configs.mixins;
-import comet.cli.all;
-import comet.configs.algos; //BUG: removing this creates a crash.
-import comet.configs.utils; //DITTO
-
-import std.algorithm;
+import comet.configs.metaconfig;
 
 alias StandardConfig = typeof( config() );
   
@@ -33,8 +28,7 @@ private auto config() {
     Field.maxLength,
     Field.lengthStep,
     Field.noThreads,
-    Field.algos,
-    Field.printConfig
+    Field.algos,    
   )();
   
 }
@@ -42,7 +36,7 @@ private auto config() {
 auto parse( string commandName, string[] args ) {
 
   auto cfg = config();
-    
+      
   auto parser = parser();
   parser.name = commandName;
   
@@ -50,9 +44,12 @@ auto parse( string commandName, string[] args ) {
     cfg.argFor!( Field.sequencesFile )()
   );
   
+  bool printConfig = false;
+  parser.add( printConfigArg( printConfig ) );
+  
   parser.parse!( DropFirst.no )( args );
   
-  if( cfg.printConfig ) { cfg.print(); }
+  if( printConfig ) { /*cfg.print();*/ }
   
   return cfg;
 

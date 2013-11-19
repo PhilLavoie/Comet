@@ -1,17 +1,17 @@
 /**
   Module providing mixin code for creating reusable configuration fields and command line arguments.
+  It is responsible to hold and know every static and runtime defaults for every configuration field
+  available to the user.
 */
-module comet.configs.mixins;
-
-debug( modules ) {
-
-  pragma( msg, "compiling " ~ __MODULE__ );
-
-}
+module comet.configs.metaconfig;
 
 public import comet.cli.all;
 public import comet.configs.algos;
-public import std.conv;
+public import comet.configs.utils;
+
+import std.conv;
+import std.file;
+import std.algorithm;
 
 version( unittest ) {
 
@@ -19,9 +19,12 @@ version( unittest ) {
 
 }
 
-//What is exported outside this module.
+//"Public" interface of the module.
 package {
 
+  /**
+    An enumeration of all possible fields available for configuration.
+  */
   enum Field {
     sequencesFile,
     sequencesDir,
@@ -36,9 +39,12 @@ package {
     lengthStep,
     noThreads,
     algos,
-    printConfig
   }
   
+  /**
+    Constructs a configuration type based on the given configuration fields, properly initializes it and then
+    return it to the caller.
+  */
   auto configFor( Fields... )() {
     Config!Fields config;
     config.init();
@@ -46,34 +52,72 @@ package {
     return config; 
   }
   
-  
-  auto argFor( Field field, C )( C cfg ) if( __traits( compiles, cfg.get!field() ) ) {
+  /**
+    Factory function for generating a standard command line argument for the given configuration field.
+  */
+  auto argFor( Field field, C )( ref C cfg ) {
 
-    return argForImpl!field( cfg );
+    return cfg.argForImpl!field;
 
   }
+  
+  /**
+    Because we don't want to bloat the configuration with a field the rest of the program doesn't want,
+    but because we want to be able to provide a standard command line argument for printing the configuration
+    on screen, this factory function has been created. It creates a command line argument that will set
+    the reference boolean value to true if the user request the printing of the configuration.
+  */
+  auto printConfigArg( ref bool printConfig ) in {
+  
+    assert( !printConfig );
+  
+  } body {
+  
+    return toggle( 
+      "--print-config", 
+      "Prints the used configuration before starting the process if the flag is present.",
+      printConfig,      
+    );
+
+  }     
   
 }
 
 unittest {
   
-    alias UnittestConfig = Config!( Field.sequencesFile, Field.resultsFile );
-    UnittestConfig cfg;
-    cfg.init();
-    
-    assert( cfg.resultsFile == std.stdio.stdout );
-    
-    static assert( isConfig!cfg );
-    static assert( hasField!( cfg, Field.sequencesFile ) );
-    
-    auto flag = cfg.argFor!( Field.sequencesFile );
+  alias fields = std.traits.EnumMembers!Field;
   
+  //Construct a configuration with every field available.
+  auto cfg = configFor!( fields )();
+  
+  static assert( isConfig!cfg );
+  static assert( __traits( compiles, cfg.get!( Field.sequencesFile )() ) );
+  static assert( __traits( compiles, cfg.get!( Field.sequencesDir )() ) );
+  
+  //Make sure the fields are in the configuration.
+  foreach( field; fields ) {
+    
+    static assert( hasField!( cfg, field ) );
+    //Make sure the arguments factories compile.
+    static assert( __traits( compiles, cfg.get!( field )() ), fieldString!field );
+    static assert( __traits( compiles, cfg.argFor!( field )() ), fieldString!field );
+    
   }
+  
+  //Check the runtime defaults.
+  assert( cfg.resultsFile == stdout );
+  assert( cfg.outFile == stdout );
+  assert( cfg.algos.count == 1 && cfg.algos.front == Algo.standard );   
+
+}
 
 
 //Fields related stuff.
 private {
 
+  /**
+    Templated structs that will hold all the configuration fields.
+  */
   struct Config( Fields... ) if( 1 <= Fields.length ) {
   
     mixin fields!( Fields );      
@@ -81,6 +125,9 @@ private {
   
   }  
   
+  /**
+    Returns the field string as to!string() would.
+  */
   template fieldString( Field f ) {
   
     enum fieldString = f.to!string();
@@ -90,11 +137,18 @@ private {
   unittest {
   
     static assert( fieldString!( Field.sequencesFile ) == "sequencesFile", fieldString!( Field.sequencesFile ) );  
+    static assert( memberName!( Field.sequencesFile ) == "_sequencesFile" );
+    
     static assert( fieldString!( Field.sequencesDir ) == "sequencesDir" );  
     static assert( memberName!( Field.sequencesDir ) == "_sequencesFiles" );
+    
   
   }
-    
+   
+  /**
+    Returns the member name as generated inside the configuration struct for the
+    given field.
+  */
   template memberName( Field f ) {
   
     static if( f == Field.sequencesDir ) {
@@ -108,24 +162,10 @@ private {
     }
   
   }
-  
-  unittest {
 
-    alias UnittestConfig = Config!(
-      std.traits.EnumMembers!Field      
-    );  
-        
-    UnittestConfig cfg;
-    
-    static assert( isConfig!cfg );
-    
-    cfg.init();
-    
-    //assert( cfg.get!( Field.resultsFile ) == stdout );
-    assert( cfg.resultsFile == stdout );
-
-  }  
-
+  /**
+    Instantiate the given fields.
+  */
   mixin template fields( Fields... ) if( 1 <= Fields.length ) {
   
     mixin field!( Fields[ 0 ] );
@@ -137,15 +177,13 @@ private {
     }
   
   }
-  
+  ///Ditto.  
   mixin template field( Field f ) {
   
     mixin( "mixin " ~ fieldString!f ~ "Field;" );
   
   }
-  
-
-  
+    
 
   /*********************************************************************************************************
     Field declaration mixins.
@@ -249,14 +287,7 @@ private {
     mixin defaultSetter!( identifier!_algos, identifier!_algos ~ ".insertBack( comet.configs.algos.Algo.standard );" );  
   
   }
-  
-  mixin template printConfigField() {
-  
-    bool _printConfig = false;  
-    mixin getter!_printConfig;
-  
-  }
-  
+    
   /*********************************************************************************************************
     Launch initialization.
   *********************************************************************************************************/
@@ -272,20 +303,8 @@ private {
         //Runtime defaults for variables such as files.
         mixin hasDefaultSetter!member;
         
-        debug( fields ) {
-        
-          pragma( msg, member ~ " has default setter? " ~ hasDefaultSetter.to!string() );
-        
-        }
-        
         static if( hasDefaultSetter ) {
-        
-          debug( fields ) {
-          
-            pragma( msg, "calling default setter: " ~ defaultSetterFor!member );
-          
-          }
-        
+                
           mixin( defaultSetterFor!member ~ ";" );
         
         }
@@ -373,31 +392,42 @@ private {
   
   }
   
+  /**
+    Returns true if the given expression/type is an instance of a configuration
+    generated by this module.
+  */
   template isConfig( alias config ) if( !is( config ) ) {
   
     enum isConfig = isConfig!( typeof( config ) );
  
   }
-  
+  ///DITTO.
   template isConfig( alias T ) if( is( T ) ) {
   
     enum isConfig = std.traits.isInstanceOf!( Config, T );
   
   }
   
+  /**
+    Returns true if the given configuration holds the field.
+  */
   template hasField( alias config, Field f ) if( !is( config ) ) {
   
     enum hasField = hasField!( typeof( config ), f );
   
   }
-  
+  ///DITTO.
   template hasField( alias T, Field f ) if( is( T ) ) {
   
     enum hasField = __traits( hasMember, T, memberName!f );
   
   }
   
-  auto ref get( Field field, C )( C cfg ) if( isConfig!C && hasField!( C, field ) ) {
+  /**
+    This function extracts a field by reference from a configuration to be passed to an
+    argument factory.
+  */
+  auto ref get( Field field, C )( ref C cfg ) if( isConfig!C && hasField!( C, field ) ) {
   
     return __traits( getMember, cfg, memberName!( field ) );
   
@@ -409,7 +439,7 @@ private {
 //Arguments related stuff.
 private {
 
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.sequencesFile ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.sequencesFile ) {
 
     return indexedRight( 
       0u,
@@ -421,7 +451,7 @@ private {
 
   }
 
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.sequencesDir ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.sequencesDir ) {
 
     return indexedRight( 
       0u,
@@ -442,7 +472,7 @@ private {
 
   }
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.resultsFile ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.resultsFile ) {
 
     return file( 
       "--rf",
@@ -453,17 +483,17 @@ private {
 
   }
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.verbosity ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.verbosity ) {
 
     return value( 
       "-v", 
-      "Verbosity level. Default is " ~ std.conv.to!string( _verbosity ) ~ ".", 
+      "Verbosity level. Default is " ~ to!string( cfg.get!field() ) ~ ".", 
       cfg.get!field()        
     );
 
   }
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.outFile ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.outFile ) {
 
     return file( 
       "--of", 
@@ -474,23 +504,23 @@ private {
 
   }
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.printResults ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.printResults ) {
 
     return toggle( "--no-res", "Prevents the results from being printed.", cfg.get!field() );
 
   }
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.noResults ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.noResults ) {
 
     return value(  
       "--nr ",  
-      "Number of results to keep in memory. Default is  " ~ std.conv.to!string( _noResults ) ~  ". ",
+      "Number of results to keep in memory. Default is  " ~ to!string( cfg.get!field() ) ~  ". ",
       cfg.get!field()
     );
 
   }
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.printTime ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.printTime ) {
 
     return toggle(
       "--no-time ",
@@ -500,7 +530,7 @@ private {
 
   }
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.minLength ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.minLength ) {
 
     return value(  
       "--min ",  
@@ -510,7 +540,7 @@ private {
 
   }
       
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.maxLength ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.maxLength ) {
 
     return value( 
       "--max",
@@ -520,7 +550,7 @@ private {
 
   }
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.lengthStep ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.lengthStep ) {
 
     return setter( 
       "--single-step",
@@ -531,13 +561,13 @@ private {
 
   }   
 
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.noThreads ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.noThreads ) {
 
     assert( false, "unimplemented" );
 
   }     
   
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.algos ) {
+  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.algos ) {
 
     return flagged( 
       "--algo", 
@@ -546,16 +576,6 @@ private {
       optional
     );
 
-  }     
-      
-  auto argForImpl( Field field, C )( C cfg ) if( field == Field.printConfig ) {
-
-    return toggle( 
-      "--print-config", 
-      "Prints the used configuration before starting the process if the flag is present.",
-      cfg.get!field() 
-    );
-
-  }     
+  }      
   
 }
