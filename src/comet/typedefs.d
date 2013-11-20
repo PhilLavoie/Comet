@@ -1,3 +1,6 @@
+/**
+  Module offering program wide type definitions.
+*/
 module comet.typedefs;
 
 import comet.meta;
@@ -6,6 +9,9 @@ import std.string;
 import std.typecons;
 import std.conv;
 
+/**
+  Represents the NUMBER of sequences. Not to be confounded with the LENGTH of the sequences.
+*/
 mixin SizeT!( "SequencesCount", 2 );
 
 /**
@@ -33,8 +39,13 @@ mixin SizeT!( "MaxLength", 1 );
 */
 mixin SizeT!( "LengthStep", 1 );
 
+/**
+  Number of threads.
+*/
 mixin SizeT!( "NoThreads", 1 );
 
-mixin SizeT!( "NoResults", 1 );
 
-mixin SizeT!( "Verbosity", 0 );
+/**
+  Number of results to be kept.
+*/
+mixin SizeT!( "NoResults", 1 );

@@ -9,6 +9,10 @@ template identifier( alias var ) {
   enum identifier = __traits( identifier, var );  
 }
 
+/**
+  Visbility enumeration. They represent their D language counterpart.
+  The notation "_<visbility>" is used because it is easy to remember.    
+*/
 enum Visibility: string {
   _public = "public",
   _private = "private", 

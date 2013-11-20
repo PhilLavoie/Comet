@@ -1,3 +1,7 @@
+/**
+  Module providing facilities for handling results obtained by processing segments
+  pairs in the context of state mutation analysis on sequences.
+*/
 module comet.results;
 
 import comet.sma.cost;
