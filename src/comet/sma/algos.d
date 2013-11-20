@@ -19,37 +19,36 @@ import comet.sma.smtree;
 
 import comet.configs.algos: Algo;
 
+public import comet.typedefs: SequencesCount;
+
 import std.algorithm;
 import range = std.range;
-
-
-//TODO: make this module molecule independant.
 
 /**
   This function constructs and returns an algorithm object based on the given parameters. 
 */
-AlgoI!Molecule algorithmFor( Molecule, MutationCosts )( Algo algo, Molecule[][] molecules, Molecule[] states, MutationCosts mutationCosts ) {
+AlgoI!Molecule algorithmFor( Molecule, MutationCosts )( Algo algo, SequencesCount seqsCount, Molecule[] states, MutationCosts mutationCosts ) {
 
   final switch( algo ) {
   
     case Algo.standard:
     
-      return standard( molecules, states, mutationCosts );
+      return standard( seqsCount, states, mutationCosts );
       break;
       
     case Algo.cache:
     
-      return cache( molecules, states, mutationCosts );
+      return cache( seqsCount, states, mutationCosts );
       break;
       
     case Algo.patterns:
     
-      return patterns( molecules, states, mutationCosts );
+      return patterns( seqsCount, states, mutationCosts );
       break;
       
     case Algo.cachePatterns:  
     
-      return cachePatterns( molecules, states, mutationCosts );
+      return cachePatterns( seqsCount, states, mutationCosts );
       break;
       
   }
@@ -140,20 +139,20 @@ class Standard( T, U ): AlgoI!T {
 
 protected:
 
-  T[][] _sequences;
+  SequencesCount _seqCount;
   T[] _states;
   U _mutationCosts;
   SMTree!T _smTree;
 
-  this( typeof( _sequences ) seqs, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
+  this( SequencesCount seqCount, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
   
-    _sequences = seqs;
+    _seqCount = seqCount;
     _states = states;
     _mutationCosts = mutationCosts;
    
     //Phylogenize the tree according to the sequences, see documentation to see
     //how it is done.  
-    phylogenize( _smTree, _sequences );   
+    phylogenize( _smTree, _seqCount );   
     
   }
   
@@ -164,9 +163,10 @@ public:
   mixin standardCostFor;  
   
 }
-auto standard( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
 
-  return new Standard!( T, U )( molecules, states, mutationCosts );
+private auto standard( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
+
+  return new Standard!( T, U )( seqCount, states, mutationCosts );
 
 }
 
@@ -175,7 +175,7 @@ protected:
   
   this( Args... )( Args args ) {
     super( args );
-    _cache = new Cost[ _sequences[ 0 ].length ];
+    _cache = new Cost[ _seqCount.value ];
   }
 
   mixin standardColumnCost;
@@ -185,9 +185,9 @@ public:
   mixin cacheCostFor;
     
 }
-auto cache( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
+auto cache( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
 
-  return new Cache!( T, U )( molecules, states, mutationCosts );
+  return new Cache!( T, U )( seqCount, states, mutationCosts );
 
 }
 
@@ -202,9 +202,9 @@ protected:
   mixin standardCostFor; 
   
 }
-auto patterns( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
+auto patterns( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
 
-  return new Patterns!( T, U )( molecules, states, mutationCosts );
+  return new Patterns!( T, U )( seqCount, states, mutationCosts );
 
 }
 
@@ -213,16 +213,16 @@ protected:
   
   this( Args... )( Args args ) {
     super( args );
-    _cache = new Cost[ _sequences[ 0 ].length ];
+    _cache = new Cost[ _seqCount.value ];
   }
 
   mixin patternColumnCost;
   mixin cacheCostFor;
   
 }
-auto cachePatterns( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
+auto cachePatterns( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
 
-  return new CachePatterns!( T, U )( molecules, states, mutationCosts );
+  return new CachePatterns!( T, U )( seqCount, states, mutationCosts );
 
 }
 
@@ -251,10 +251,22 @@ auto cachePatterns( T, U )( T[][] molecules, T[] states, U mutationCosts ) {
         
   The left subtree (from the root) represents the start of the duplication, whereas the right subtree represent the duplicated areas.
 */
-private void phylogenize( Tree, T )( ref Tree tree, T[][] sequences ) in {
-  assert( 2 <= sequences.length );
+private void phylogenize( Tree )( ref Tree tree, SequencesCount seqCount ) in {
+  
+  debug {
+    
+    assert( 2 <= seqCount );
+    
+  }
+  
 } out {
-  assert( count( tree.leaves ) == 2 * sequences.length );
+
+  debug {
+  
+    assert( count( tree.leaves ) == 2 * seqCount );
+    
+  }
+  
 } body {
   
   tree.clear();  
@@ -262,14 +274,13 @@ private void phylogenize( Tree, T )( ref Tree tree, T[][] sequences ) in {
   auto leftCurrent = tree.appendChild( root );
   auto rightCurrent = tree.appendChild( root );
   
-  auto seqsCount = sequences.length;
-  for( size_t seqIndex = 0; seqIndex < seqsCount; ++seqIndex ) {
+  for( size_t seqIndex = 0; seqIndex < seqCount; ++seqIndex ) {
     tree.appendChild( leftCurrent );
     tree.appendChild( rightCurrent );
     
     //If we have more than one sequence left, we have to create
     //at least an additional branch.
-    if( 2 < ( seqsCount - seqIndex ) ) {
+    if( 2 < ( seqCount - seqIndex ) ) {
       leftCurrent = tree.appendChild( leftCurrent );
       rightCurrent = tree.appendChild( rightCurrent );
     }

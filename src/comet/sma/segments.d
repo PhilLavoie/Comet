@@ -4,85 +4,13 @@
 */  
 module comet.sma.segments;
 
+import comet.typedefs;
+
 import std.range;
 import std.algorithm;
 import std.container;
 import std.typecons;
 import std.string;
-
-/**
-  A mixin template for creating different types of length values.
-  Useful for creating new types to avoid confusion while passing parameters.
-*/
-private mixin template Length( string structName ) {  
-  mixin( 
-    "struct " ~ structName ~ " {
-      private size_t _value;
-      public mixin Proxy!_value;  
-      public @property auto value() { return _value; }
-      
-      this( size_t length ) {
-        
-        _value = length;
-        
-      }
-      
-      this( int length ) in {
-        
-        debug {
-          
-          assert( 1 <= length );
-          
-        }
-        
-      } body {
-      
-        _value = length;
-        
-      }
-      
-      debug {
-      
-        invariant() {
-        
-          assert( 1 <= _value );
-          
-        }
-        
-      } 
-    }
-    auto " ~ toLower( structName[ 0 .. 1 ] )  ~ structName[ 1 .. $ ] ~ "( T... )( T args ) {
-    
-      return " ~ structName ~ "( args );
-    
-    }"
-  );
-}
-
-/**
-  This type holds the length of a sequence.
-*/
-mixin Length!"SequenceLength";
-
-/**
-  This type defines the length of segments inside sequences.
-*/
-mixin Length!"SegmentsLength";
-
-/**
-  This type holds the minimum length values for segments.
-*/
-mixin Length!"MinLength";
-
-/**
-  This type holds the maximum segments length.
-*/
-mixin Length!"MaxLength";
-
-/**
-  This type holds the value for the step between length jumps.
-*/
-mixin Length!"LengthStep";
 
 /**
   Generates all the possible segment length for segment pairs with the given parameters.
@@ -190,10 +118,10 @@ unittest {
   
   auto segmentLengths = segmentsLengthsFor( 
     
-      SequenceLength( sequenceLength ), 
-      MinLength( minLength ), 
-      MaxLength( maxLength ), 
-      LengthStep( lengthStep ) 
+      .sequenceLength( sequenceLength ), 
+      .minLength( minLength ), 
+      .maxLength( maxLength ), 
+      .lengthStep( lengthStep ) 
       
     );
     

@@ -3,6 +3,9 @@ module comet.results;
 import comet.sma.cost;
 import comet.sma.segments;
 
+import comet.typedefs;
+public import comet.typedefs: NoResults;
+
 import std.container;
 
 /**
@@ -136,10 +139,10 @@ struct Results {
     The number of results is intended to be bounded.
     The parameter provided is that bound (inclusive).
   */
-  this( size_t maxResults ) {
+  this( NoResults maxResults ) {
   
     _results = new typeof( _results )();
-    _max = maxResults;
+    _max = maxResults.value;
     
   }
   

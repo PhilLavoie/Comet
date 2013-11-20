@@ -15,6 +15,10 @@ import comet.configs.algos;
 
 import comet.sma.all;
 import comet.results;
+import comet.typedefs;
+import comet.logger;
+
+import comet.programs.runs;
 
 import deimos.bio.dna;
 import deimos.containers.tree;
@@ -29,7 +33,9 @@ import std.container;
 import std.datetime;
 import std.range: isForwardRange;
 
-
+/**
+  Main entry point of the default program.  
+*/
 void run( string[] args ) {
       
   run( cli.commandName( args ), args[ 1 .. $ ] );
@@ -37,7 +43,8 @@ void run( string[] args ) {
 }
 
 /**
-  Main entry point of the program.
+  Uses the command name passes as the one presented to the user.
+  Will parse the arguments as they are passed... DOES NOT DROP the first one.
 */
 package void run( string command, string[] args ) {
 
@@ -69,19 +76,25 @@ package void run( string command, string[] args ) {
 
 }
 
-private auto resultsFileFor( Config cfg, File file ) {
+private:
+
+auto resultsFileFor( StandardConfig cfg, File file ) {
 
   return cfg.resultsFile;
 
 }
 
-package void run( Config cfg ) {
+void run( StandardConfig cfg ) {
+  
+  Logger logger = .logger( cfg.outFile, cfg.verbosity );
+  
+  logger.logln( 1, "Processing file: " ~ cfg.sequencesFile.name );
 
   processFile( cfg.sequencesFile, cfg.resultsFileFor( cfg.sequencesFile ), cfg,  cfg.algos.front );
 
 }
 
-private void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isForwardRange!Range ) {
+void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isForwardRange!Range ) {
   
   foreach( sequence; sequences ) {
   
@@ -97,7 +110,7 @@ private void enforceSequencesLength( Range )( Range sequences, size_t length ) i
     - They must be made of dna nucleotides;
     - They must have the same name.  
 */
-private auto loadSequences( File file ) {
+auto loadSequences( File file ) {
 
   auto sequences = fasta.parse!( Molecule.DNA )( file );
   size_t seqsCount = sequences.length;
@@ -110,7 +123,7 @@ private auto loadSequences( File file ) {
   
 }
 
-private void processFile( File seqFile, File resFile, Config cfg, Algo algo ) {
+void processFile( File seqFile, File resFile, StandardConfig cfg, Algo algo ) {
 
   if( 1 <= cfg.verbosity ) {
     cfg.outFile.writeln( "Processing file " ~ seqFile.name ~ "..." );
@@ -129,8 +142,6 @@ private void processFile( File seqFile, File resFile, Config cfg, Algo algo ) {
     " and is therefore invalid."
   );
   
-  SysTime startTime;
-  
   //Transfer the sequences into a nucleotides matrix.  
   auto nucleotides = new Nucleotide[][ sequences.length ];
   for( int i = 0; i < nucleotides.length; ++i ) {
@@ -138,15 +149,27 @@ private void processFile( File seqFile, File resFile, Config cfg, Algo algo ) {
     nucleotides[ i ] = sequences[ i ].nucleotides;
     
   }
-  
+    
+  auto states = loadStates();
+  auto mutationCosts = loadMutationCosts();
+    
+  SysTime startTime;
   if( cfg.printTime ) { startTime = Clock.currTime(); }  
+    
+  auto sr = .sequencesRun(
+    nucleotides,
+    minLength( cfg.minLength ),
+    maxLength( cfg.maxLength ),
+    lengthStep( cfg.lengthStep ),
+    noThreads( cfg.noThreads ),
+    noResults( cfg.noResults ),    
+    algorithmFor( cfg.algos.front, sequencesCount( nucleotides.length ), states, mutationCosts )  
+  );
   
-  auto results = Results( cfg.noResults );  
-  
-  auto bestResults = sequentialDupCostsCalculation( results, nucleotides, cfg, algorithmFor( algo, nucleotides, loadStates(), loadMutationCosts() ) );  
+  comet.programs.runs.run( sr );
   
   if( cfg.printTime ) { cfg.outFile.printTime( Clock.currTime() - startTime ); }
-  if( cfg.printResults ) { resFile.printResults( bestResults ); }
+  if( cfg.printResults ) { resFile.printResults( sr.results[] ); }
   
 }
 
@@ -225,11 +248,6 @@ private auto loadMutationCosts() {
   };
 }
 
-private auto loadAlgos( Range, Sequences, States, MutationCosts )( Range algos, Sequences sequences, States states, MutationCosts mCosts ) if( isForwardRange!Range ) {
-  import std.algorithm;
-  return algos.map!( algo => algorithmFor( algo, sequences, states, mutationCosts ) );
-}
-
 //TODO: add support for multiple threads.
 //In order to maximize the benefits of the cache, work separation should be based
 //on period length, rather than duplication start.
@@ -246,7 +264,7 @@ private auto loadAlgos( Range, Sequences, States, MutationCosts )( Range algos, 
   
   Returns a range over the results in descending order (best result comes first).
 */
-private auto sequentialDupCostsCalculation( Molecule )( ref Results results, Molecule[][] molecules, ref Config cfg, AlgoI!Molecule algorithm ) in {
+private auto sequentialDupCostsCalculation( Molecule )( ref Results results, Molecule[][] molecules, ref StandardConfig cfg, AlgoI!Molecule algorithm ) in {
 
   assert( 2 <= molecules.length );
   

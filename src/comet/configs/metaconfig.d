@@ -9,6 +9,8 @@ public import comet.cli.all;
 public import comet.configs.algos;
 public import comet.configs.utils;
 
+import comet.meta;
+
 import std.conv;
 import std.file;
 import std.algorithm;
@@ -54,11 +56,19 @@ package {
   
   /**
     Factory function for generating a standard command line argument for the given configuration field.
+    If the argument is a configuration, it will extract the associated value automatically, otherwise the
+    user can still pass his own value.
   */
-  auto argFor( Field field, C )( ref C cfg ) {
+  auto argFor( Field field, C )( ref C cfg ) if( isConfig!C ) {
 
-    return cfg.argForImpl!field;
+    return argFor!( field )( cfg.get!field() );
 
+  }
+  ///DITTO.
+  auto argFor( Field field, T )( ref T value ) if( !isConfig!T ) {
+  
+    return argForImpl!( field, T )( value );
+  
   }
   
   /**
@@ -81,36 +91,136 @@ package {
 
   }     
   
-}
-
-unittest {
+  /**
+    Prints the configuration to its out file if it has one otherwise to the file provided.
+  */
+  void print( C )( ref C cfg ) if( isConfig!C && hasField!( C, Field.outFile ) ) {
+   
+    print( cfg, cfg.get!( Field.outFile )() );
   
-  alias fields = std.traits.EnumMembers!Field;
+  }
+  ///DITTO.
+  void print( C )( ref C cfg, File output ) if( isConfig!C ) {
   
-  //Construct a configuration with every field available.
-  auto cfg = configFor!( fields )();
-  
-  static assert( isConfig!cfg );
-  static assert( __traits( compiles, cfg.get!( Field.sequencesFile )() ) );
-  static assert( __traits( compiles, cfg.get!( Field.sequencesDir )() ) );
-  
-  //Make sure the fields are in the configuration.
-  foreach( field; fields ) {
+    with( output ) {
     
-    static assert( hasField!( cfg, field ) );
-    //Make sure the arguments factories compile.
-    static assert( __traits( compiles, cfg.get!( field )() ), fieldString!field );
-    static assert( __traits( compiles, cfg.argFor!( field )() ), fieldString!field );
+      writeln( "-------------------------------------------------" );
+      writeln( "Configuration:" );
+      
+      static if( hasField!( cfg, Field.verbosity ) ) {
+        
+        writeln( "Verbosity level: ", cfg.get!( Field.verbosity )() );
+        
+      }
+      
+      static if( hasField!( cfg, Field.outFile ) ) {
+      
+        writeln( "Output file: ", fileName( cfg.get!( Field.outFile )() ) );
+        
+      }
+      
+      static if( hasField!( cfg, Field.sequencesFile ) ) {
+      
+        writeln( "Sequences file: ", fileName( cfg.get!( Field.sequencesFile ) ) );
+        
+      }
+      
+      static if( hasField!( cfg, Field.sequencesDir ) ) {
+      
+        writeln( "Sequences files: ", cfg.get!( Field.sequencesDir )()[].map!( a => a.fileName() ) );
+        
+      }
+      
+      static if( hasField!( cfg, Field.printResults ) ) {
+      
+        writeln( "Print results: ", cfg.get!( Field.printResults )() );
+        
+      }
+      
+      static if( hasField!( cfg, Field.noResults ) ) {
+      
+        writeln( "Number of results: ", cfg.get!( Field.noResults )() );
+        
+      }
+      
+      static if( hasField!( cfg, Field.resultsFile ) ) {
+      
+        writeln( "Results file: ", fileName( cfg.get!( Field.resultsFile )()  ) );
+      
+      }
+      
+      static if( hasField!( cfg, Field.printTime ) ) {
+      
+        writeln( "Print time: ", cfg.get!( Field.printTime )() );
+      
+      }
+      
+      static if( hasField!( cfg, Field.algos ) ) {
+      
+        writeln( "Algorithms: ", cfg.get!( Field.algos )()[].map!( algo => algoStrings[ algo ] ) );
+      
+      }
+      
+      static if( hasField!( cfg, Field.minLength ) ) {
+      
+        writeln( "Minimum segments length: ", cfg.get!( Field.minLength ) );
+      
+      }
+      
+      static if( hasField!( cfg, Field.maxLength ) ) {
+      
+        writeln( "Maximum segments length: ", cfg.get!( Field.maxLength ) );
+      
+      }
+      
+      static if( hasField!( cfg, Field.lengthStep ) ) {
+      
+        writeln( "Segments length step: ", cfg.get!( Field.lengthStep ) );
+      
+      }
+     
+      writeln( "-------------------------------------------------" );
     
+    }
+  
   }
   
-  //Check the runtime defaults.
-  assert( cfg.resultsFile == stdout );
-  assert( cfg.outFile == stdout );
-  assert( cfg.algos.count == 1 && cfg.algos.front == Algo.standard );   
+  unittest {
+  
+    alias fields = std.traits.EnumMembers!Field;
+    
+    //Construct a configuration with every field available.
+    auto cfg = configFor!( fields )();
+    
+    static assert( isConfig!cfg );
+    static assert( __traits( compiles, cfg.get!( Field.sequencesFile )() ) );
+    static assert( __traits( compiles, cfg.get!( Field.sequencesDir )() ) );
+      
+    //Make sure the fields are in the configuration.
+    foreach( field; fields ) {
+      
+      static assert( hasField!( cfg, field ) );
+      //Make sure the arguments factories compile.
+      static assert( __traits( compiles, cfg.get!( field )() ), fieldString!field );
+      
+      //For now, no support for setting the number of threads via the command line.
+      //TODO: remove eventually.
+      static if( field != Field.noThreads ) {
+      
+        static assert( __traits( compiles, cfg.argFor!( field )() ), fieldString!field );
+      
+      }
+      
+    }
+    
+    //Check the runtime defaults.
+    assert( cfg.resultsFile == stdout );
+    assert( cfg.outFile == stdout );
+    assert( cfg.algos.count == 1 && cfg.algos.front == Algo.standard );   
 
+  }
+  
 }
-
 
 //Fields related stuff.
 private {
@@ -318,28 +428,7 @@ private {
   /*********************************************************************************************************
     Utilities.
   *********************************************************************************************************/
-  
-  /**
-    Returns the string name of the identifier as provided by __traits( identifier, var ).
-  */
-  template identifier( alias var ) {
-    enum identifier = __traits( identifier, var );  
-  }
-  
-  /**
-    Generates a getter function for the given variable. The variable must hold the symbol and not be a string
-    (a way to ensure the variable exists).
     
-    It enforces that the given symbol name starts with "_".
-  */
-  mixin template getter( alias var ) {
-    
-    static assert( identifier!var[ 0 ] == '_' );
-    
-    mixin( "public @property auto " ~ ( identifier!( var ) )[ 1 .. $ ] ~ "() { return " ~ identifier!var ~ "; } " );
-    
-  }
-  
   /**
     Generate a default runtime value setter for the given symbol mixes in the given statement.
     
@@ -402,10 +491,16 @@ private {
  
   }
   ///DITTO.
-  template isConfig( alias T ) if( is( T ) ) {
+  template isConfig( T ) if( is( T ) ) {
   
     enum isConfig = std.traits.isInstanceOf!( Config, T );
   
+  }
+  
+  unittest {
+  
+    static assert( !isConfig!ubyte );
+
   }
   
   /**
@@ -439,142 +534,129 @@ private {
 //Arguments related stuff.
 private {
 
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.sequencesFile ) {
-
-    return indexedRight( 
-      0u,
-      "sequencesFile", 
-      "This argument is the file holding the sequences to process.", 
-      commonParser( fileConverter( "r" ), cfg.get!field()  ),
-      mandatory
-    );
-
-  }
-
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.sequencesDir ) {
-
-    return indexedRight( 
-      0u,
-      "sequences directory", 
-      "This argument indicates the directory where the sequences files are located. All files are used, so make sure only sequences files are there.", 
-      commonParser(
-        //Converter, do nothing.
-        ( string[] args ) => args[ 0 ],
-        //Eagerly read the directory for sequences files.
-        ( string dir ) {         
-          foreach( file; dirEntries( dir, SpanMode.shallow ).map!( a => std.stdio.File( a, "r" ) ) ) {
-            cfg.get!field().insertBack( file );
-          }
-        } 
-      ),
-      mandatory
-    );
-
-  }
+  /**
+    Returns a default constructed argument for the given field.
+  */
+  auto argForImpl( Field field, T )( ref T v )  {
   
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.resultsFile ) {
+    static if( field == Field.sequencesFile ) {
 
-    return file( 
-      "--rf",
-      "Results file. This is where the program prints the results. Default is stdout.",
-      cfg.get!field(), 
-      "w"
-    );  
-
-  }
-  
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.verbosity ) {
-
-    return value( 
-      "-v", 
-      "Verbosity level. Default is " ~ to!string( cfg.get!field() ) ~ ".", 
-      cfg.get!field()        
-    );
-
-  }
-  
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.outFile ) {
-
-    return file( 
-      "--of", 
-      "Output file. This is where the program emits statements. Default is stdout.", 
-      cfg.get!field(), 
-      "w" 
-    );
-
-  }
-  
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.printResults ) {
-
-    return toggle( "--no-res", "Prevents the results from being printed.", cfg.get!field() );
-
-  }
-  
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.noResults ) {
-
-    return value(  
-      "--nr ",  
-      "Number of results to keep in memory. Default is  " ~ to!string( cfg.get!field() ) ~  ". ",
-      cfg.get!field()
-    );
-
-  }
-  
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.printTime ) {
-
-    return toggle(
-      "--no-time ",
-      "Removes the execution time from the results. ",
-      cfg.get!field() 
-    );
-
-  }
-  
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.minLength ) {
-
-    return value(  
-      "--min ",  
-      "Minimum period length. Default is  " ~ std.conv.to!string( cfg.get!field() ) ~  ". ", 
-      cfg.get!field() 
-    );
-
-  }
+      return indexedRight( 
+        0u,
+        "sequencesFile", 
+        "This argument is the file holding the sequences to process.", 
+        commonParser( fileConverter( "r" ), v  ),
+        mandatory
+      );
       
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.maxLength ) {
+    } else static if( field == Field.sequencesDir ) {
 
-    return value( 
-      "--max",
-      "Maximum period length. Default is the biggest value held by a word. The mid sequence position is used if it is lower than this value.",
-      cfg.get!field() 
-    );
+      return indexedRight( 
+        0u,
+        "sequences directory", 
+        "This argument indicates the directory where the sequences files are located. All files are used, so make sure only sequences files are there.", 
+        commonParser(
+          //Converter, do nothing.
+          ( string[] args ) => args[ 0 ],
+          //Eagerly read the directory for sequences files.
+          ( string dir ) {         
+            foreach( file; dirEntries( dir, SpanMode.shallow ).map!( a => std.stdio.File( a, "r" ) ) ) {
+              v.insertBack( file );
+            }
+          } 
+        ),
+        mandatory
+      );
+      
+    } else static if( field == Field.resultsFile ) {
 
-  }
-  
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.lengthStep ) {
+      return file( 
+        "--rf",
+        "Results file. This is where the program prints the results. Default is stdout.",
+        v, 
+        "w"
+      );  
+      
+    } else static if( field == Field.verbosity ) {
 
-    return setter( 
-      "--single-step",
-      "Sets the segment pair length step to be 1. The default is " ~ std.conv.to!string( cfg.get!field() ) ~ " instead of 3.",
-      cfg.get!field(),
-      1u
-    );
+      return value( 
+        "-v", 
+        "Verbosity level. Default is " ~ v.to!string() ~ ".", 
+        v        
+      );
+      
+    } else static if( field == Field.outFile ) {
 
-  }   
+      return file( 
+        "--of", 
+        "Output file. This is where the program emits statements. Default is stdout.", 
+        v, 
+        "w" 
+      );
+      
+    } else static if( field == Field.printResults ) {
 
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.noThreads ) {
+      return toggle( "--no-res", "Prevents the results from being printed.", v );
+      
+    } else static if( field == Field.noResults ) {
 
-    assert( false, "unimplemented" );
+      return value(  
+        "--nr ",  
+        "Number of results to keep in memory. Default is  " ~ v.to!string() ~  ". ",
+        v
+      );
+      
+    } else static if( field == Field.printTime ) {
 
-  }     
-  
-  auto argForImpl( Field field, C )( ref C cfg ) if( field == Field.algos ) {
+      return toggle(
+        "--no-time ",
+        "Removes the execution time from the results. ",
+        v 
+      );
+      
+    } else static if( field == Field.minLength ) {
 
-    return flagged( 
-      "--algo", 
-      "Sets the segment pair cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
-      commonParser( mappedConverter( comet.configs.algos.algosByStrings ), ( comet.configs.algos.Algo algo ) { cfg.get!field().insertBack( algo ); } ),
-      optional
-    );
+      return value(  
+        "--min ",  
+        "Minimum period length. Default is  " ~ v.to!string() ~  ". ", 
+        v
+      );
+      
+    } else static if( field == Field.maxLength ) {
+
+      return value( 
+        "--max",
+        "Maximum period length. Default is the biggest value held by a word. The mid sequence position is used if it is lower than this value.",
+        v 
+      );
+      
+    } else static if( field == Field.lengthStep ) {
+
+      return setter( 
+        "--single-step",
+        "Sets the segment pair length step to be 1. The default is " ~ v.to!string() ~ " instead of 3.",
+        v,
+        1u
+      );
+      
+    } else static if( field == Field.noThreads ) {
+
+      static assert( false, "unimplemented" );
+      
+    } else static if( field == Field.algos ) {
+
+      return flagged( 
+        "--algo", 
+        "Sets the segment pair cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
+        commonParser( mappedConverter( comet.configs.algos.algosByStrings ), ( comet.configs.algos.Algo algo ) { v.insertBack( algo ); } ),
+        optional
+      );
+      
+    } else {
+    
+      static assert( false, "unknown field " ~ fieldString!field );
+    
+    }
 
   }      
   

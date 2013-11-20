@@ -33,6 +33,11 @@ private auto config() {
   
 }
 
+/**
+  Sets the program name to the given one and parses the argument according to the predefined
+  configuration and command line interface. Starts parsing the arguments as they are, does NOT
+  skip the first one.
+*/
 auto parse( string commandName, string[] args ) {
 
   auto cfg = config();
@@ -41,7 +46,18 @@ auto parse( string commandName, string[] args ) {
   parser.name = commandName;
   
   parser.add(
-    cfg.argFor!( Field.sequencesFile )()
+    cfg.argFor!( Field.sequencesFile )(),
+    cfg.argFor!( Field.verbosity )(),
+    cfg.argFor!( Field.outFile )(),
+    cfg.argFor!( Field.noResults )(),
+    cfg.argFor!( Field.printResults )(),
+    cfg.argFor!( Field.resultsFile )(),
+    cfg.argFor!( Field.printTime )(),
+    cfg.argFor!( Field.minLength )(),
+    cfg.argFor!( Field.maxLength )(),
+    cfg.argFor!( Field.lengthStep )(),
+    //cfg.argFor!( Field.noThreads )(),
+    cfg.argFor!( Field.algos )()
   );
   
   bool printConfig = false;
@@ -49,7 +65,7 @@ auto parse( string commandName, string[] args ) {
   
   parser.parse!( DropFirst.no )( args );
   
-  if( printConfig ) { /*cfg.print();*/ }
+  if( printConfig ) { cfg.print(); }
   
   return cfg;
 
