@@ -9,6 +9,7 @@ public import comet.typedefs: SegmentsLength, segmentsLength;
 public import comet.sma.cost: Cost;
 
 import std.container;
+import std.range: isInputRange, ElementType;
 
 /**
   A structure built to represent a result. It holds the left segment
@@ -76,9 +77,17 @@ public:
     to compare two results on the basis of their cost but with an
     epsilon parameter to be more flexible.
   */
-  bool isEquavalentTo( Result rhs, Cost epsilon = Cost.epsilon ) {
+  bool isEquivalentTo( Result rhs, Cost epsilon = Cost.epsilon ) in {
   
-    return ( ( _cost - epsilon <= rhs._cost && rhs._cost + epsilon <= _cost ) );  
+    debug {
+    
+      assert( epsilon > 0 );
+    
+    }
+  
+  } body {
+  
+    return ( ( _cost - epsilon <= rhs._cost && rhs._cost <= _cost + epsilon ) );  
   
   }
   
@@ -122,6 +131,11 @@ unittest {
   //Equality.
   r1 = r2;
   assert( r1 == r2 );
+  assert( r1.isEquivalentTo( r2 ) );
+  
+  r1.cost = 0;
+  r2.cost = 1;
+  assert( r1.isEquivalentTo( r2, 1. ) );  
   
 }
 
@@ -158,13 +172,13 @@ struct Results {
   @property size_t length() { return _results.length; }
   
   /**
-    This function adds the result only if:
+    This function adds the results only if:
       - The maximum number of results has not been reached, or
       - The worst duplication known is worse than the result to be
         inserted. In that case, the worst result is exchanged
         with the provided one.
   */
-  void add( Result result ) {
+  void add( R )( R result ) if( is( R == Result ) ) {
   
     if( !_max ) { return; }
     
@@ -183,6 +197,16 @@ struct Results {
       
     }
     
+  }
+  ///DITTO.
+  void add( R )( R range ) if( isInputRange!R && is( ElementType!R == Result ) ) {
+  
+    foreach( Result res; range ) {
+    
+      add( res );
+    
+    }
+  
   }
 
   /**

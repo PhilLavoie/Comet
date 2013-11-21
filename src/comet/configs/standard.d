@@ -7,13 +7,12 @@ module comet.configs.standard;
 
 import comet.configs.metaconfig;
 
-alias StandardConfig = typeof( config() );
+alias StandardConfig = typeof( makeConfig() );
   
-
 /**
   Factory function for creating a configuration.
 */
-private auto config() {
+private auto makeConfig() {
   
   return configFor!(
     Field.sequencesFile,
@@ -39,7 +38,7 @@ private auto config() {
 */
 auto parse( string commandName, string[] args ) {
 
-  auto cfg = config();
+  auto cfg = makeConfig();
       
   auto parser = parser();
   parser.name = commandName;

@@ -2,13 +2,20 @@ module comet.configs.compare_results;
 
 import comet.configs.metaconfig;
 
-alias CompareResultsConfig = typeof( config() );
+import std.container;
+import std.stdio;
+import std.algorithm: map;
+
+import comet.configs.utils;
+import comet.cli.all;
+
+alias CompareResultsConfig = typeof( makeConfig() );
   
 
 /**
   Factory function for creating the configuration for comparing results.
 */
-private auto config() {
+private auto makeConfig() {
   
   return configFor!(
     Field.epsilon,
@@ -27,23 +34,42 @@ private auto config() {
 */
 auto parse( string commandName, string[] args ) {
 
-  auto cfg = config();
+  auto cfg = makeConfig();  
+  
+  debug {
+  
+    scope( success ) {
+      import std.algorithm: count;
+      import comet.configs.utils: fileName;
+      import std.stdio: File, writeln;
+      import std.conv: to;
       
+      assert( 2 <= cfg.comparedResultsFiles.count, cfg.comparedResultsFiles.count.to!string );
+      
+      foreach( File file; cfg.comparedResultsFiles ) {
+            
+        assert( file.isOpen(), "unopened file " ~ file.fileName() );
+      
+      }
+    }
+    
+  }
+  
   auto parser = parser();
   
   parser.name = commandName;
   
   parser.add(
-    cfg.argFor!( Field.epsilon )(),
-    cfg.argFor!( Field.comparedResultsFiles )(),    
+    argFor!( Field.epsilon )( cfg ),
+    argFor!( Field.comparedResultsFiles )( cfg ),    
   );
     
   bool printConfig = false;
   parser.add( printConfigArg( printConfig ) );
   
-  parser.parse!( DropFirst.no )( args );
+  parser.parse!( DropFirst.no )( args );  
   
-  if( printConfig ) { cfg.print( std.stdio.stdout ); }
+  if( printConfig ) { cfg.print( std.stdio.stdout ); }    
   
   return cfg;
 

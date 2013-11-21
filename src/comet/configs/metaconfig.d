@@ -8,8 +8,9 @@ module comet.configs.metaconfig;
 public import comet.cli.all;
 public import comet.configs.algos;
 public import comet.configs.utils;
+public import std.container: Array;
 
-import comet.meta;
+public import comet.meta;
 
 import std.conv;
 import std.file;
@@ -553,7 +554,7 @@ private {
     This function extracts a field by reference from a configuration to be passed to an
     argument factory.
   */
-  auto ref get( Field field, C )( ref C cfg ) if( isConfig!C && hasField!( C, field ) ) {
+  ref typeof( mixin( "C." ~ memberName!field ) ) get( Field field, C )( ref C cfg ) if( isConfig!C && hasField!( C, field ) ) {
   
     return __traits( getMember, cfg, memberName!( field ) );
   
@@ -589,11 +590,12 @@ private {
         new class ParserI {
         
           private string[] _args;
+          private std.container.Array!( std.stdio.File ) * _files;
         
-          /**
-            Takes the number of arguments it needs and returns the slice without them.
-          */
-          string[] take( string[] args ) {
+          this() { _files = &v; }
+        
+        
+          override string[] take( string[] args ) {
 
             enforceEnoughArgs( args, 2 ); //We expect at least two files.
             _args = args;
@@ -601,29 +603,17 @@ private {
             
           }
           
-          private std.container.Array!( std.stdio.File ) _files;
-          /**
-            Converts the value from the previously saved tokens and store it temporarily, if any.
-          */
-          void store() {
+          override void store() {
           
             foreach( fileName; _args ) {
-            
+              writeln( "opening file: ", fileName );
               _files.insertBack( File( fileName, "r" ) );
             
             }
           
           }
           
-          /**
-            Final step: affects the user program's environment by either assigning the 
-            converted value or executing the action requested by the user.
-          */
-          void assign() {
-
-            v = _files;
-
-          }
+          override void assign() {}
         
         },
         mandatory      
