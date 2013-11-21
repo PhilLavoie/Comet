@@ -33,19 +33,19 @@ unittest {
   assert( probe( [ "toto" ] ) == Mode.standard );
   
   auto mode = Mode.generateReferences;
-  auto tokens = [ modeStrings[ mode ], "noise" ];  
+  auto tokens = [ mode.toString(), "noise" ];  
   assert( probe( tokens ) == mode );
   
   mode = Mode.compareResults;
-  tokens = [ modeStrings[ mode ], "noise" ];  
+  tokens = [ mode.toString(), "noise" ];  
   assert( probe( tokens ) == mode );
   
   mode = Mode.runTests;
-  tokens = [ modeStrings[ mode ], "noise" ];  
+  tokens = [ mode.toString(), "noise" ];  
   assert( probe( tokens ) == mode );
   
   mode = Mode.compileMeasures;
-  tokens = [ modeStrings[ mode ], "noise" ];  
+  tokens = [ mode.toString(), "noise" ];  
   assert( probe( tokens ) == mode );
 
 }

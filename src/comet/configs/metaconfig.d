@@ -26,6 +26,8 @@ package {
 
   /**
     An enumeration of all possible fields available for configuration.
+    When adding a field, add a "Field" mixin, an "argForImpl" mixin if available
+    and add it in the print config function.
   */
   enum Field {
     sequencesFile,
@@ -41,6 +43,8 @@ package {
     lengthStep,
     noThreads,
     algos,
+    epsilon,
+    comparedResultsFiles
   }
   
   /**
@@ -178,6 +182,19 @@ package {
         writeln( "Segments length step: ", cfg.get!( Field.lengthStep ) );
       
       }
+      
+      static if( hasField!( cfg, Field.epsilon ) ) {
+      
+        writeln( "Epsilon: ", cfg.get!( Field.epsilon ) );
+      
+      }
+      
+      static if( hasField!( cfg, Field.comparedResultsFiles ) ) {
+      
+        writeln( "Compared results files: ", cfg.get!( Field.comparedResultsFiles )()[].map!( a => a.fileName() ) );
+      
+      }
+      
      
       writeln( "-------------------------------------------------" );
     
@@ -304,7 +321,7 @@ private {
     private std.stdio.File _sequencesFile;  
     mixin getter!_sequencesFile;
  
-  }
+  }  
 
   mixin template sequencesDirField() {
   
@@ -395,6 +412,20 @@ private {
     public @property auto algos() { return _algos[]; }
     
     mixin defaultSetter!( identifier!_algos, identifier!_algos ~ ".insertBack( comet.configs.algos.Algo.standard );" );  
+  
+  }
+  
+  mixin template epsilonField() {
+  
+    private double _epsilon = double.epsilon;
+    mixin getter!_epsilon;
+  
+  }
+  
+  mixin template comparedResultsFilesField() {
+  
+    private std.container.Array!( std.stdio.File ) _comparedResultsFiles;    
+    public @property auto comparedResultsFiles() { return _comparedResultsFiles[]; }
   
   }
     
@@ -539,7 +570,67 @@ private {
   */
   auto argForImpl( Field field, T )( ref T v )  {
   
-    static if( field == Field.sequencesFile ) {
+    static if( field == Field.epsilon ) {
+    
+      return bounded(
+        "-e",
+        "Sets the comparison epsilon for results costs. Default is " ~ v.to!string() ~ ".",
+        v,
+        0.,
+        10.
+      );    
+    
+    } else static if( field == Field.comparedResultsFiles ) {
+    
+      return indexedRight(
+        0u,
+        "comparedResultsFiles",
+        "The user specifies a list of files holding previously obtained results.",
+        new class ParserI {
+        
+          private string[] _args;
+        
+          /**
+            Takes the number of arguments it needs and returns the slice without them.
+          */
+          string[] take( string[] args ) {
+
+            enforceEnoughArgs( args, 2 ); //We expect at least two files.
+            _args = args;
+            return [];
+            
+          }
+          
+          private std.container.Array!( std.stdio.File ) _files;
+          /**
+            Converts the value from the previously saved tokens and store it temporarily, if any.
+          */
+          void store() {
+          
+            foreach( fileName; _args ) {
+            
+              _files.insertBack( File( fileName, "r" ) );
+            
+            }
+          
+          }
+          
+          /**
+            Final step: affects the user program's environment by either assigning the 
+            converted value or executing the action requested by the user.
+          */
+          void assign() {
+
+            v = _files;
+
+          }
+        
+        },
+        mandatory      
+      );
+    
+    
+    } else static if( field == Field.sequencesFile ) {
 
       return indexedRight( 
         0u,

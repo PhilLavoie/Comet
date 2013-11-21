@@ -13,6 +13,8 @@ import comet.configs.standard;  //TODO: for some reason, importing this in the f
 import comet.configs.probing;   //TODO: ditto.
 import comet.configs.algos;
 
+import compare_results = comet.programs.compare_results;
+
 import comet.sma.all;
 import comet.results;
 import comet.typedefs;
@@ -66,11 +68,15 @@ package void run( string command, string[] args ) {
     
       break;
       
-    case Mode.generateReferences:
-    case Mode.compareResults:
+    case Mode.generateReferences:   
     case Mode.runTests:
     case Mode.compileMeasures:
       assert( false, "unimplemented yet" ); 
+      
+    case Mode.compareResults:
+    
+      compare_results.run( command ~ " " ~ mode.toString(), args[ 1 .. $ ] );
+      break;
   
   }
 
@@ -246,59 +252,4 @@ private auto loadMutationCosts() {
     if( initial != mutated ) { return 1; }
     return 0;
   };
-}
-
-//TODO: add support for multiple threads.
-//In order to maximize the benefits of the cache, work separation should be based
-//on period length, rather than duplication start.
-//Since the processing gets more and more costy as the period length increase,
-//a thread pool should be used. Each thread should have their own results, then
-//merge them. This would prevent the need to synchronize the structure, introducing
-//additional processing only to save space (and god knows this algorithm needs
-//speed more than space!).
-/**
-  Main loop of the program. For each every duplication possible given
-  the program configuration, it passes it to the appropriate algorithm to
-  calculate its cost. Its cost is stored such that only that the duplications
-  with the n best scores are kept (provided by configuration).
-  
-  Returns a range over the results in descending order (best result comes first).
-*/
-private auto sequentialDupCostsCalculation( Molecule )( ref Results results, Molecule[][] molecules, ref StandardConfig cfg, AlgoI!Molecule algorithm ) in {
-
-  assert( 2 <= molecules.length );
-  
-} body {  
-    
-  
-  //Main loop of the program.
-  //For each period length, evaluate de duplication cost of every possible positions.
-  size_t seqLength = molecules[ 0 ].length;
-  
-  auto segmentsLengths = 
-    segmentsLengthsFor( 
-    
-      sequenceLength( seqLength ), 
-      minLength( cfg.minLength ), 
-      maxLength( cfg.maxLength ), 
-      lengthStep( cfg.lengthStep ) 
-    
-    );
-     
-  foreach( segmentsLength; segmentsLengths ) {
-    
-    if( 2 <= cfg.verbosity ) { cfg.outFile.writeln( "Processing segments of length: ", segmentsLength ); }
-  
-    auto segmentsPairsRange = molecules.segmentPairsForLength( segmentsLength );
-    
-    foreach( segmentsPairs; segmentsPairsRange ) {
-    
-      auto cost = algorithm.costFor( segmentsPairs );
-      results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
-      
-    }  
-  
-  }
-  
-  return results[];
 }

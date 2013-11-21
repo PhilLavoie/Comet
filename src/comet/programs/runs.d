@@ -130,6 +130,11 @@ template isSequencesRuns( alias T ) {
 
 }
 
+
+
+
+
+
 struct Channels {
 
 private:
@@ -246,6 +251,9 @@ public:
 
 }
 
+/**
+  Factory function for creating sequences run.
+*/
 auto sequencesRun( T  )( 
     T[][]       sequences,
     MinLength   minLength,
@@ -260,6 +268,9 @@ auto sequencesRun( T  )(
 
 }
 
+/**
+  Returns true if the given parameter is an instantiation of the SequencesRun template.
+*/
 template isSequencesRun( alias T ) {
 
   static if( is( T ) ) {
@@ -275,30 +286,31 @@ template isSequencesRun( alias T ) {
 }
 
 /**
-  Main loop of the program. For each every duplication possible given
-  the program configuration, it passes it to the appropriate algorithm to
-  calculate its cost. Its cost is stored such that only that the duplications
-  with the n best scores are kept (provided by configuration).
-  
-  Returns a range over the results in descending order (best result comes first).
+  Main loop of the program. A sequences run generates every segments pairs associated with the given configuration
+  and calculate their cost using the algorithm provided. The results are stored in the sequences run structure.
 */
 void run( SR )( SR sr ) if( isSequencesRun!SR ) {  
     
+  //Get all segments length possible.
   auto segmentsLengths = 
     segmentsLengthsFor(     
       sequenceLength( sr.sequences.length ), 
       sr.minLength, 
-      maxLength( sr.maxLength ), 
-      lengthStep( sr.lengthStep )     
+      sr.maxLength, 
+      sr.lengthStep
     );
      
+  //For every segments length, generate segments pairs.
   foreach( segmentsLength; segmentsLengths ) {    
       
     auto segmentsPairsRange = sr.sequences.segmentPairsForLength( segmentsLength );
     
+    //The segments pairs start on index 0 and increment by 1 index every time.
     foreach( segmentsPairs; segmentsPairsRange ) {
     
+      //Get the cost of the segments pairs using the appropriate algorithm.
       auto cost = sr.algo.costFor( segmentsPairs );
+      //Store the structured result.
       sr.results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
       
     }  

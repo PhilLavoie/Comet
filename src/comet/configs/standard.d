@@ -1,10 +1,9 @@
+/**
+  Module defining the standard program usage configuration.
+  It is also responsible for initializing said configuration
+  based on the commad line arguments.
+*/
 module comet.configs.standard;
-
-debug( modules ) {
-
-  pragma( msg, "compiling " ~ __MODULE__ );
-
-}
 
 import comet.configs.metaconfig;
 

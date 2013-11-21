@@ -15,7 +15,18 @@ enum Mode {
 
 //The strings used to identify the modes on the command line. The standard algorithm is the absence of a parameter,
 //Therefore there is no strings associated.
-immutable string[ 4 ] modeStrings = [ "generate-references", "compare-results", "run-tests", "compile-measures" ];
+private immutable string[ 4 ] modeStrings = [ "generate-references", "compare-results", "run-tests", "compile-measures" ];
+
+/**
+  Returns the command line string representation of the mode.
+  It makes sure the mode passed is not "standard".
+*/  
+string toString( Mode mode ) {
+
+  assert( mode != Mode.standard );
+  return modeStrings[ mode ];
+  
+}
 
 //The modes mapped by their identifying strings. 
 immutable Mode[ string ] modesByStrings;
