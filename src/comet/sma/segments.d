@@ -305,7 +305,7 @@ public:
   }
    
   auto segmentsLength() {
-    return _segmentsLength;
+    return .segmentsLength( _segmentsLength );
   }
   
   auto leftSegmentStart() {

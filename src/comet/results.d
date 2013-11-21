@@ -4,11 +4,9 @@
 */
 module comet.results;
 
-import comet.sma.cost;
-import comet.sma.segments;
-
-import comet.typedefs;
-public import comet.typedefs: NoResults;
+public import comet.typedefs: NoResults, noResults;
+public import comet.typedefs: SegmentsLength, segmentsLength;
+public import comet.sma.cost: Cost;
 
 import std.container;
 
@@ -20,9 +18,9 @@ struct Result {
 
 private:
 
-  size_t _start;
-  size_t _length;
-  Cost _cost;
+  size_t _start;    //The left segment start index of the segments pairs.
+  size_t _length;   //The length of each segment.
+  Cost _cost;       //The total cost of the segments pairs associated with the previous fields.
   
   this( size_t start, size_t length, Cost cost ) {
   
@@ -42,6 +40,14 @@ public:
   @property auto length() { return _length; }
   @property auto cost() { return _cost; }
   
+  /**
+    A cost based comparison ordering. When the cost is equals, the
+    longest segments length wins. When both fields are equals, then
+    there is an arbitrary ordering on the left index start.
+    
+    Unless every field are the same for both results, this function
+    will return an unequal comparison.
+  */
   int opCmp( Result rhs ) {
   
     //First compare on the cost criteria.
@@ -79,14 +85,10 @@ public:
 }
 
 /**
-  Factory functions to create results.
+  Factory function to create results.
 */
-auto result( size_t start, size_t length, Cost cost ) {
-  return Result( start, length, cost );
-}
-///Ditto.
 auto result( size_t start, SegmentsLength length, Cost cost ) {
-  return result( start, length.value, cost );
+  return Result( start, length.value, cost );
 }
 
 unittest {
