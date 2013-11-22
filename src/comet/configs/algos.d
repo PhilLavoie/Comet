@@ -21,6 +21,7 @@ package immutable string[ 4 ] cliAlgoStrings = [ "standard", "cache", "patterns"
 //The algorithms mapped with their strings for easy access.
 package immutable Algo[ string ] algosByStrings;
 
+//Construct the algorithms map.
 static this() {
 
   import std.traits: EnumMembers;

@@ -66,8 +66,14 @@ interface AlgoI( T ) {
   
 }
 
-
+/**
+  This mixin declares the column cost function for the standard algorithm.
+*/
 private mixin template standardColumnCost() {
+
+  /**
+    
+  */
   private Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
     //Start by extracting the states from the hierarchy: use them to set the
     //the leaves of the smtree.
@@ -78,6 +84,7 @@ private mixin template standardColumnCost() {
     _smTree.update( _states, _mutationCosts );
     return preSpeciationCost( _smTree, _mutationCosts );
   }
+  
 }
 
 private mixin template patternColumnCost() {

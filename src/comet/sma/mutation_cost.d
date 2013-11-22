@@ -6,6 +6,8 @@ module comet.sma.mutation_cost;
 
 public import comet.sma.cost: Cost;
 
+import comet.traits;
+
 import std.traits;
 
 /**
@@ -16,31 +18,10 @@ import std.traits;
   an initial state to a mutated state.
 */
 interface MutationCost( T ) {
+
   Cost opCall( T initialState, T mutatedState );
+  
 }
-
-private mixin template funcInfoMixin( T ) if( isCallable!T ) {
-
-  alias Params = ParameterTypeTuple!T;
-  alias Return = ReturnType!T;
-  enum arity = Params.length;
-
-}
-
-/**
-  Provides the parameters of a callable object.
-*/
-private template FuncInfo( T ) {
-
-  mixin funcInfoMixin!T;
-}
-///Ditto.
-private template FuncInfo( alias T ) if( !is( T ) ) {
-
-  mixin funcInfoMixin!( typeof( T ) );
-
-}
-
 
 /**
   Returns true if the given callable object implements the mutation cost provider interface.
