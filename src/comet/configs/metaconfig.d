@@ -162,7 +162,7 @@ package {
       
       static if( hasField!( cfg, Field.algos ) ) {
       
-        writeln( "Algorithms: ", cfg.get!( Field.algos )()[].map!( algo => algoStrings[ algo ] ) );
+        writeln( "Algorithms: ", cfg.get!( Field.algos )()[].map!( algo => cliAlgoStrings[ algo ] ) );
       
       }
       
@@ -468,12 +468,6 @@ private {
   */
   mixin template defaultSetter( string var, string statement ) {
   
-    debug( fields ) {
-    
-      pragma( msg, "generating default runtime setter for " ~ var );
-    
-    }
-  
     mixin( "private void setDefault" ~ var ~ "() { mixin( \"" ~ statement ~ "\" ); }" );    
   
   }
@@ -606,8 +600,8 @@ private {
           override void store() {
           
             foreach( fileName; _args ) {
-              writeln( "opening file: ", fileName );
-              _files.insertBack( File( fileName, "r" ) );
+
+            _files.insertBack( File( fileName, "r" ) );
             
             }
           

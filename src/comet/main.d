@@ -1,15 +1,10 @@
 module comet.main;
 
-debug( modules ) {
-
-  pragma( msg, "compiling " ~ __MODULE__ );
-
-}
-
-
 import comet.programs.standard;
 
-
+/**
+  The main just delegates to another program handler.
+*/
 void main( string[] args ) {
  
   run( args );  

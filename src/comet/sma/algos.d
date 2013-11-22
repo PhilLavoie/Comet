@@ -1,18 +1,15 @@
 /**
   Module encapsulating logic regarding the calculation of segment pairs cost.
-  It provides an interface to the user in the form of algorithms. 
+  It provides an interface to the user in the form of algorithms that evaluate the
+  cost of pairs of segments.
+
+  Only one function function is offered publicly and provides a unified way to receive an algorithm
+  object based on a set of parameters.
 */
 module comet.sma.algos;
 
-debug( modules ) {
+public import comet.sma.mutation_cost;
 
-  pragma( msg, "compiling " ~ __MODULE__ );
-
-}
-
-import deimos.bio.dna;
-
-import comet.sma.cost;
 import comet.sma.pattern;
 import comet.sma.segments;
 import comet.sma.smtree;
@@ -20,6 +17,8 @@ import comet.sma.smtree;
 import comet.configs.algos: Algo;
 
 public import comet.typedefs: SequencesCount;
+
+import deimos.bio.dna;
 
 import std.algorithm;
 import range = std.range;

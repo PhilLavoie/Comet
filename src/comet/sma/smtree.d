@@ -3,7 +3,7 @@
 */
 module comet.sma.smtree;
 
-import comet.sma.cost;
+public import comet.sma.mutation_cost;
 
 import deimos.containers.tree;
 
@@ -234,14 +234,6 @@ public:
     assert( !_tree.empty );
     gatherInfo( _tree.root, states, mutationCosts );
   }
-}
-
-/**
-  This interface formalize the interface of the callable object responsible
-  for providing the cost of a mutation between two states.
-*/
-interface MutationCosts( T ) {
-  Cost opCall( T initialState, T mutatedState );
 }
 
 unittest {
