@@ -9,16 +9,12 @@
 module comet.sma.algos;
 
 public import comet.sma.mutation_cost;
+public import comet.typedefs: SequencesCount, sequencesCount;
+public import comet.configs.algos: Algo;
 
 import comet.sma.pattern;
 import comet.sma.segments;
 import comet.sma.smtree;
-
-import comet.configs.algos: Algo;
-
-public import comet.typedefs: SequencesCount;
-
-import deimos.bio.dna;
 
 import std.algorithm;
 import range = std.range;
@@ -98,8 +94,8 @@ private mixin template patternColumnCost() {
   }
 }
 
-private mixin template standardCostFor() {
-  public override Cost costFor( SegmentPairs!( Nucleotide ) pairs ) {
+private mixin template standardCostFor( T ) {
+  public override Cost costFor( SegmentPairs!( T ) pairs ) {
     real sum = 0;
     foreach( column; pairs.byColumns ) {
       sum += columnCost( column );
@@ -109,13 +105,13 @@ private mixin template standardCostFor() {
   }
 }
 
-private mixin template cacheCostFor() {
+private mixin template cacheCostFor( T ) {
   protected Cost[] _cache;
   protected real _costSum;
   
   //Relies on the fact that the outer loop is on period length.
   //Relies on the face that the first duplication for a given length starts at position 0.
-  public override Cost costFor( SegmentPairs!( Nucleotide ) pairs ) {
+  public override Cost costFor( SegmentPairs!( T ) pairs ) {
     //If those are the first segment pairs of a given length.
     size_t segmentsStart = pairs.leftSegmentStart;
     if( segmentsStart == 0 ) {
@@ -166,7 +162,7 @@ protected:
     
 public:  
   
-  mixin standardCostFor;  
+  mixin standardCostFor!T;  
   
 }
 
@@ -188,7 +184,7 @@ protected:
   
 public:    
   
-  mixin cacheCostFor;
+  mixin cacheCostFor!T;
     
 }
 auto cache( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
@@ -205,7 +201,7 @@ protected:
   }
   
   mixin patternColumnCost;
-  mixin standardCostFor; 
+  mixin standardCostFor!T; 
   
 }
 auto patterns( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
@@ -223,7 +219,7 @@ protected:
   }
 
   mixin patternColumnCost;
-  mixin cacheCostFor;
+  mixin cacheCostFor!T;
   
 }
 auto cachePatterns( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
@@ -290,7 +286,8 @@ private void phylogenize( Tree )( ref Tree tree, SequencesCount seqCount ) in {
       leftCurrent = tree.appendChild( leftCurrent );
       rightCurrent = tree.appendChild( rightCurrent );
     }
-  }  
+  }
+  
 }
 
 /**
@@ -312,6 +309,7 @@ private void setLeaves( Tree, Range )( ref Tree smTree, Range leaves ) if( range
 
 
 private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
+  
   //The pre speciation cost is associated with the number of mutations
   //from the root to its children, accounting for every possible reconstructions.
   //That value is then averaged by the number of possible reconstructions.
@@ -401,7 +399,7 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
 //cactga
 unittest {
 
-  import deimos.bio.dna;
+  import comet.bio.dna;
 
   SMTree!Nucleotide tree;
   

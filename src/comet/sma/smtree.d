@@ -7,7 +7,7 @@ module comet.sma.smtree;
 
 public import comet.sma.mutation_cost;
 
-import deimos.containers.tree;
+import comet.containers.tree;
 
 import std.algorithm;
 import std.range: isInputRange, ElementType;
@@ -61,7 +61,7 @@ public:
   
   /**
     Indicates that the given state is known to be present, therefore
-    favoring him when considering every possible states.
+    favoring it when considering every possible states.
     Sets the state's cost to 0 and every other costs to the maximum value.
   */
   void fixState( T state ) {
@@ -74,9 +74,7 @@ public:
       }
     }
   }
-  
-  //TODO: refactor this code.
-  
+ 
   /**
     Returns the cost of the given state.
   */
@@ -95,9 +93,13 @@ public:
     Returns the count of the given state.
   */
   ref size_t countOf( T state ) {
+  
     if( state !in _infos ) {
+    
       _infos[ state ] = StateInfo.init;
+      
     }
+    
     return _infos[ state ].count;
   }
   
@@ -120,7 +122,8 @@ public:
   alias StateTuple = std.typecons.Tuple!( T, "state", size_t, "count", Cost, "cost" );
     
   /**
-    Foreach function delegates.
+    Foreach function delegate.
+    See http://dlang.org/statement.html#ForeachStatement 
   */
   int opApply( int delegate( ref StateTuple ) dg ) {
   
@@ -147,7 +150,7 @@ public:
 
 unittest {  
 
-  import deimos.bio.dna;
+  import comet.bio.dna;
   auto sc = StatesInfo!( Nucleotide )();
   
   import std.traits: EnumMembers;
@@ -195,8 +198,11 @@ Cost minMutationCost( T, U )( T initialState, StatesInfo!T si, U mutationCosts )
 
 } 
 
+//TODO: document.
 struct SMTree( T ) {
+
 private:
+
   Tree!( StatesInfo!T ) _tree;
   
   //Expects the leaves to be set.
@@ -261,27 +267,35 @@ private:
   }  
     
 public:
+
   auto opDispatch( string method, T... )( T args ) {
+
     return mixin( "_tree." ~ method )( args );
+  
   }
   
   /**
     Updates the tree given the used states and the mutation costs
-    provider, which has to respond to the MutationCosts interface
-    for the given states type.
+    provider.
     
     This method is only to be used once the leaves have been set
     to a given state.
   */
-  void update( Range, U )( Range states, U mutationCosts ) {
-    assert( !_tree.empty );
+  void update( Range, U )( Range states, U mutationCosts ) if( isInputRange!Range && isMutationCost!U ) in {
+  
+    debug { assert( !_tree.empty ); }
+  
+  } body {
+        
     gatherInfo( _tree.root, states, mutationCosts );
+    
   }
+  
 }
 
 unittest {
 
-  import deimos.bio.dna;
+  import comet.bio.dna;
   
   auto validStates = [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];
   auto initCosts = () { return StatesInfo!( Nucleotide )( validStates ); };
@@ -380,7 +394,7 @@ unittest {
 //Redo with a known special case.
 //cactga
 unittest {
-  import deimos.bio.dna;
+  import comet.bio.dna;
 
   SMTree!Nucleotide tree;
   

@@ -9,13 +9,24 @@ import std.algorithm: map, count, filter;
 import std.container: Array;
 import std.stdio: File, writeln;
 
+/**
+  Program entry point.
+  Expects the first argument to be the command invocation.
+*/
 void run( string[] args ) {
 
   run( commandName( args ), args[ 1 .. $ ] );
 
 }
 
-
+/**
+  Uses the command name passes as the one presented to the user.
+  Does not expect the command invocation to be in the arguments passed
+  (does not drop the first argument).
+  
+  The sole purpose of this function is to extract the program configuration
+  from the command line interface, then delegate to its appropriate overload.
+*/
 package void run( string command, string[] args ) {
 
   CompareResultsConfig cfg;

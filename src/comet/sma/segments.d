@@ -4,7 +4,11 @@
 */  
 module comet.sma.segments;
 
-import comet.typedefs;
+public import comet.typedefs: MinLength, minLength;
+public import comet.typedefs: MaxLength, maxLength;
+public import comet.typedefs: LengthStep, lengthStep;
+public import comet.typedefs: SequenceLength, sequenceLength;
+public import comet.typedefs: SegmentsLength, segmentsLength;
 
 import std.range;
 import std.algorithm;

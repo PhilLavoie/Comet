@@ -1,31 +1,21 @@
 module comet.programs.standard;
 
-debug( modules ) {
-
-  pragma( msg, "compiling " ~ __MODULE__ );
-
-}
-
-//Extract the command name immediately.
-import cli = comet.cli.all;
+import comet.cli.all: commandName;
 
 import comet.configs.standard;  //TODO: for some reason, importing this in the function scope creates linker problems....
 import comet.configs.probing;   //TODO: ditto.
-import comet.configs.algos;
 
 import compare_results = comet.programs.compare_results;
 
-import comet.sma.all;
-import comet.results;
 import comet.results_io;
-import comet.typedefs;
+
 import comet.logger;
 
 import comet.programs.runs;
 
-import deimos.bio.dna;
-import deimos.containers.tree;
-import fasta = deimos.bio.fasta;
+import comet.bio.dna;
+import comet.containers.tree;
+import fasta = comet.bio.fasta;
 alias fasta.Molecule Molecule;
 
 import std.stdio;
@@ -37,17 +27,27 @@ import std.datetime;
 import std.range: isForwardRange;
 
 /**
-  Main entry point of the default program.  
+  Program entry point.
+  Expects the first argument to be the command invocation.
 */
 void run( string[] args ) {
       
-  run( cli.commandName( args ), args[ 1 .. $ ] );
+  run( commandName( args ), args[ 1 .. $ ] );
 
 }
 
 /**
   Uses the command name passes as the one presented to the user.
-  Will parse the arguments as they are passed... DOES NOT DROP the first one.
+  Does not expect the command invocation to be in the arguments passed
+  (does not drop the first argument).
+  
+  The sole purpose of this function is to extract the program configuration
+  from the command line interface, then delegate to its appropriate overload.
+  
+  In addition, the standard program also supports the delegation to a specific
+  script. Therefore, this function first probes the command line to extract
+  the mode/script of operation requested by the user. Then, if one was requested,
+  it delegates to the associated program's run function.
 */
 package void run( string command, string[] args ) {
 
@@ -56,7 +56,7 @@ package void run( string command, string[] args ) {
   
   /*
     The processing is done in three steps:
-      - Identify the mode;
+      - Identify the mode/script;
       - Use the appropriate command line parser and extract the configuration;
       - Load the appropriate program logic and launch the processing with the given config.
   */

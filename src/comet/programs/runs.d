@@ -3,17 +3,21 @@
 */
 module comet.programs.runs;
 
-import comet.meta;
-import comet.typedefs;
-import comet.results;
+public import comet.typedefs: NoThreads, noThreads;
+public import comet.typedefs: SequencesCount, sequencesCount;
+public import comet.typedefs: NoResults, noResults;
+public import comet.results: Result;
+public import comet.sma.segments;
+public import comet.sma.algos;
 
-import comet.sma.algos;
-import comet.sma.segments;
+import comet.results;
+import comet.meta;
 
 import std.stdio;
 import std.container;
 import std.traits;
 import std.typecons: Flag;
+
 
 /**
   This struct holds the fields necessary to generate multiple runs on the same sequences file.
