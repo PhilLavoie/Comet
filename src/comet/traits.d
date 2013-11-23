@@ -3,6 +3,8 @@
 */
 module comet.traits;
 
+import std.traits;
+
 /**
   Generates the fields presented by the associated templates.
 */

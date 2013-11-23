@@ -11,6 +11,19 @@ import comet.traits;
 import std.traits;
 
 /**
+  Proxy function that returns the mutation cost of the inital state to
+  the mutated state given the mutation cost provider.
+  
+  It is to be used to encapsulate how the mutation cost provider is really
+  handled.
+*/
+Cost costFor( M, State )( M mCosts, State initial, State mutated ) if( isMutationCost!M ) {
+
+  return mCosts( initial, mutated );
+
+}
+
+/**
   This interface formalize the interface of the callable object responsible
   for providing the cost of a mutation between two states.
   
@@ -31,7 +44,7 @@ template isMutationCost( T ) if( isCallable!T ) {
   alias Params = FuncInfo!T.Params;
   alias Return = FuncInfo!T.Return;  
 
-  static if( is( Return == Cost ) && Params.length == 2 && is( Params[ 0 ] == Params[ 1 ] ) ) {
+  static if( isImplicitlyConvertible!( Return, Cost ) && Params.length == 2 && is( Params[ 0 ] == Params[ 1 ] ) ) {
 
     enum isMutationCost = true;
     

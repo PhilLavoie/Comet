@@ -321,38 +321,80 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
   //Extract the candidates that have the minimum cost.
   auto root = smTree.root;
   auto minCost = root.element.minCost;
-  foreach( rootState, ref StateInfo rootInfo; root.element ) {
+  
+  foreach( rootStateTuple; root.element ) {
+  
+    auto rootState = rootStateTuple.state;
+    auto rootCost  = rootStateTuple.cost;
+    auto rootCount = rootStateTuple.count;
+  
     //It is a candidate if its cost is the minimum.
     //For each candidates, we accumulate their number of occurrences and calculate
     //the total cost of pre speciation mutations.
-    if( minCost == rootInfo.cost ) {
-      noRecons += rootInfo.count;
+    if( minCost == rootCost ) {
+      
+      noRecons += rootCount;
       
       foreach( child; root.children ) {
+        
         //We need to extract the number of equivalent sub choices from each children.      
         size_t equivalentsCount = 0;
+        
         auto minMutCost = minMutationCost( rootState, child.element, mutationCosts );
-        foreach( childState, ref StateInfo childInfo; child.element ) {
-          if( mutationCost( childInfo.cost, rootState, childState, mutationCosts ) == minMutCost ) {
-            equivalentsCount += childInfo.count;
+        
+        foreach( childStateTuple; child.element ) {
+          
+          auto childState = childStateTuple.state;
+          auto childCost = childStateTuple.cost;
+          auto childCount = childStateTuple.count;
+          
+          if( childCost + mutationCosts.costFor( rootState, childState ) == minMutCost ) {
+          
+            equivalentsCount += childCount;
+          
           }
-        }       
-        assert( 0 < equivalentsCount );
-        assert( rootInfo.count % equivalentsCount == 0 );
-        size_t multiplier = rootInfo.count / equivalentsCount;      
-        assert( 0 < multiplier );
+          
+        } 
+ 
+        size_t multiplier = rootCount / equivalentsCount;      
       
-        foreach( childState, ref StateInfo childInfo; child.element ) {
-          if( mutationCost( childInfo.cost, rootState, childState, mutationCosts ) == minMutCost ) {
-            costSum += mutationCosts( rootState, childState ) * childInfo.count * multiplier;
+        debug {
+        
+          assert( 0 < equivalentsCount );
+          assert( rootCount % equivalentsCount == 0 );
+          assert( 0 < multiplier );
+        
+        }
+ 
+        
+        foreach( childStateTuple; child.element ) {
+        
+          auto childState = childStateTuple.state;
+          auto childCost = childStateTuple.cost;
+          auto childCount = childStateTuple.count;
+        
+          if( childCost + mutationCosts.costFor( rootState, childState  ) == minMutCost ) {
+          
+            costSum += mutationCosts( rootState, childState ) * childCount * multiplier;
+            
           }
-        }       
+          
+        } 
+        
       }    
+      
     }
+    
   }
   
-  assert( 0 < noRecons );
+  debug {
+  
+    assert( 0 < noRecons );
+    
+  }
+  
   return costSum / noRecons;
+  
 }
 
 //Known special case.
