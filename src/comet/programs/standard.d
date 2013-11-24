@@ -16,7 +16,6 @@ import comet.programs.runs;
 import comet.bio.dna;
 import comet.containers.tree;
 import fasta = comet.bio.fasta;
-alias fasta.Molecule Molecule;
 
 import std.stdio;
 import std.algorithm;
@@ -105,7 +104,7 @@ void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isFor
   
   foreach( sequence; sequences ) {
   
-    enforce( sequence.length == length, "Expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.length.to!string ~ " to be of length: " ~ length.to!string );
+    enforce( sequence.molecules.length == length, "Expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.molecules.length.to!string ~ " to be of length: " ~ length.to!string );
   
   }
   
@@ -119,11 +118,11 @@ void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isFor
 */
 auto loadSequences( File file ) {
 
-  auto sequences = fasta.parse!( Molecule.DNA )( file );
+  auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
   size_t seqsCount = sequences.length;
   enforce( 2 <= seqsCount, "Expected at least two sequences but read " ~ seqsCount.to!string() );
   
-  size_t seqLength = sequences[ 0 ].length;
+  size_t seqLength = sequences[ 0 ].molecules.length;
   enforceSequencesLength( sequences[], seqLength );
   
   return sequences;
@@ -139,7 +138,7 @@ void processFile( File seqFile, File resFile, StandardConfig cfg, Algo algo ) {
   
   //Extract sequences from file.
   auto sequences = loadSequences( seqFile );
-  size_t seqLength = sequences[ 0 ].length;
+  size_t seqLength = sequences[ 0 ].molecules.length;
   size_t midPosition = seqLength / 2;
   
   //Make sure the minimum period is within bounds.
@@ -153,7 +152,7 @@ void processFile( File seqFile, File resFile, StandardConfig cfg, Algo algo ) {
   auto nucleotides = new Nucleotide[][ sequences.length ];
   for( int i = 0; i < nucleotides.length; ++i ) {
   
-    nucleotides[ i ] = sequences[ i ].nucleotides;
+    nucleotides[ i ] = sequences[ i ].molecules;
     
   }
     

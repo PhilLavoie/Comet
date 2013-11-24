@@ -13,6 +13,20 @@ private mixin template funcInfoMixin( T ) if( isCallable!T ) {
   alias Params = ParameterTypeTuple!T;
   alias Return = ReturnType!T;
   enum arity = Params.length;
+  
+  template hasReturn() {
+    
+    static if( !is( Return == void ) ) {
+    
+      enum hasReturn = true;
+      
+    } else {
+    
+      enum hasReturn = false;
+    
+    }
+  
+  }
 
 }
 
