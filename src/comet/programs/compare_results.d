@@ -9,15 +9,10 @@ import std.algorithm: map, count, filter;
 import std.container: Array;
 import std.stdio: File, writeln;
 
-/**
-  Program entry point.
-  Expects the first argument to be the command invocation.
-*/
-void run( string[] args ) {
+import comet.programs.metaprogram;
 
-  run( commandName( args ), args[ 1 .. $ ] );
-
-}
+mixin mainRunMixin;
+mixin loadConfigMixin;
 
 /**
   Uses the command name passes as the one presented to the user.
@@ -31,15 +26,7 @@ package void run( string command, string[] args ) {
 
   CompareResultsConfig cfg;
 
-  try {
-  
-    cfg = parse( command, args );
-  
-  } catch( Exception e ) {
-    
-    //The exception has been handled by the parser.
-    return;
-  }
+  if( !loadConfig( cfg, command, args ) ) { return; }
   
   run( cfg );
 

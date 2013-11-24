@@ -6,6 +6,7 @@ import comet.configs.standard;  //TODO: for some reason, importing this in the f
 import comet.configs.probing;   //TODO: ditto.
 
 import compare_results = comet.programs.compare_results;
+import run_tests = comet.programs.run_tests;
 
 import comet.results_io;
 
@@ -25,15 +26,10 @@ import std.container;
 import std.datetime;
 import std.range: isForwardRange;
 
-/**
-  Program entry point.
-  Expects the first argument to be the command invocation.
-*/
-void run( string[] args ) {
-      
-  run( commandName( args ), args[ 1 .. $ ] );
+import comet.programs.metaprogram;
 
-}
+mixin mainRunMixin;
+mixin loadConfigMixin;
 
 /**
   Uses the command name passes as the one presented to the user.
@@ -63,16 +59,23 @@ package void run( string command, string[] args ) {
   
     case Mode.standard:
       
-      auto cfg = parse( command, args );
+      StandardConfig cfg;
+      
+      if( !loadConfig( cfg, command, args ) ) { return; }
+      
       run( cfg );
     
       break;
       
     case Mode.generateReferences:   
-    case Mode.runTests:
     case Mode.compileMeasures:
       assert( false, "unimplemented yet" ); 
-      
+    
+    case Mode.runTests:
+    
+      run_tests.run( command ~ " " ~ mode.toString(), args[ 1 .. $ ] );
+      break;
+    
     case Mode.compareResults:
     
       compare_results.run( command ~ " " ~ mode.toString(), args[ 1 .. $ ] );

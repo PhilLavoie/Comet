@@ -22,7 +22,7 @@ version( unittest ) {
 
 }
 
-//"Public" interface of the module.
+//Interface of the module available to the package.
 package {
 
   /**
@@ -33,6 +33,8 @@ package {
   enum Field {
     sequencesFile,
     sequencesDir,
+    referencesDir,
+    testsResultsDir,
     resultsFile,
     verbosity,
     outFile,
@@ -429,6 +431,20 @@ private {
     public @property auto comparedResultsFiles() { return _comparedResultsFiles[]; }
   
   }
+  
+  mixin template referencesDirField() {
+  
+    private string _referencesDir = ".";
+    mixin getter!_referencesDir;  
+  
+  }
+  
+  mixin template testsResultsDirField() {
+  
+    private string _testsResultsDir;
+    mixin getter!_testsResultsDir;
+  
+  }
     
   /*********************************************************************************************************
     Launch initialization.
@@ -565,7 +581,25 @@ private {
   */
   auto argForImpl( Field field, T )( ref T v )  {
   
-    static if( field == Field.epsilon ) {
+    static if( field == Field.referencesDir ) {
+    
+      return indexedRight(
+        1,
+        "referencesDirectory",
+        "This is the directory where the references files are located.",
+        commonParser( dirConverter(), v )
+      );
+    
+    } else static if( field == Field.testsResultsDir ) {
+    
+      return indexedRight(
+        2,
+        "testsResultsDirectory",
+        "This is the directory where the tests results will be generated.",
+        commonParser( dirConverter(), v )    
+      );    
+    
+    } else static if( field == Field.epsilon ) {
     
       return bounded(
         "-e",

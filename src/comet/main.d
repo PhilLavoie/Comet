@@ -7,7 +7,7 @@ import comet.programs.standard;
 */
 void main( string[] args ) {
  
-  run( args );  
+  mainRun( args );  
   
 }
 

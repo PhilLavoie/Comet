@@ -7,13 +7,15 @@ import std.conv;
 import std.exception;
 import std.ascii;
 
-enum Nucleotide : uint {
+enum Nucleotide {
+
   ADENINE = 0,
   CYTOSINE = 1,
   GUANINE = 2,
   THYMINE = 3,
   GAP = 4,
   ANY = 5
+  
 }
 
 private immutable Nucleotide[ 6 ]               nucleotides = [ std.traits.EnumMembers!Nucleotide ];
@@ -52,23 +54,25 @@ Nucleotide fromAbbreviation( char abbr ) {
   Returns the lower case name of the nucleotide: "adenine", "cytosine", ...
 */
 string name( Nucleotide n ) {
+
   return names[ n ];
+  
 }
 
 /**
   Returns the lower ase abbreviation of the nucleotide: 'a', 'c', 'g', 't'.
 */
 char abbreviation( Nucleotide n ) {
+
   return abbreviations[ n ];
+  
 }
 
 unittest {
 
   auto length = 0;
   
-  foreach( n; __traits( allMembers, Nucleotide ) ) {
-  
-    auto nucleotide = mixin( "Nucleotide." ~ n );
+  foreach( nucleotide; std.traits.EnumMembers!Nucleotide ) {
     
     assert( nucleotide.name() == names[ nucleotide ] );
     

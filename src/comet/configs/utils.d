@@ -5,7 +5,7 @@ import std.stdio;
 /**
   Small helper function to help print configuration files in a user friendly fashion.
 */
-package string fileName( File file ) {
+string fileName( File file ) {
 
   if( file == stdout ) {
   

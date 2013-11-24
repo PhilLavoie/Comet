@@ -1,10 +1,10 @@
-module comet.configs.compare_results;
+//TODO: define configuration.
+module comet.configs.run_tests;
 
 import comet.configs.metaconfig;
 
-alias CompareResultsConfig = typeof( makeConfig() );
+alias RunTestsConfig = typeof( makeConfig() );
   
-
 /**
   Factory function for creating the configuration for comparing results.
 */
@@ -12,7 +12,10 @@ private auto makeConfig() {
   
   return configFor!(
     Field.epsilon,
-    Field.comparedResultsFiles,    
+    Field.verbosity,
+    Field.sequencesDir,    
+    Field.referencesDir,
+    Field.testsResultsDir
   )();
   
 }
@@ -20,41 +23,22 @@ private auto makeConfig() {
 /**
   Sets the program name to the given one and parses the argument according to the predefined
   configuration and command line interface. Starts parsing the arguments as they are, does NOT
-  skip the first one. 
-  
-  The compare results configuration is a light one: it holds an optionally
-  defined epsilon value and a range of compared files.
+  skip the first one.   
 */
 auto parse( string commandName, string[] args ) {
 
   auto cfg = makeConfig();  
-  
-  debug {
-  
-    scope( success ) {
-      import std.algorithm: count;
-      import comet.configs.utils: fileName;
-      import std.stdio: File, writeln;
-      import std.conv: to;
-      
-      assert( 2 <= cfg.comparedResultsFiles.count, cfg.comparedResultsFiles.count.to!string );
-      
-      foreach( File file; cfg.comparedResultsFiles ) {
-            
-        assert( file.isOpen(), "unopened file " ~ file.fileName() );
-      
-      }
-    }
     
-  }
-  
   auto parser = parser();
   
   parser.name = commandName;
   
   parser.add(
     argFor!( Field.epsilon )( cfg ),
-    argFor!( Field.comparedResultsFiles )( cfg ),    
+    argFor!( Field.verbosity )( cfg ),
+    argFor!( Field.sequencesDir )( cfg ),    
+    argFor!( Field.referencesDir )( cfg ),    
+    argFor!( Field.testsResultsDir )( cfg )
   );
     
   bool printConfig = false;
