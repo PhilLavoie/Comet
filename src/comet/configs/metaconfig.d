@@ -24,7 +24,7 @@ version( unittest ) {
 }
 
 //Interface of the module available to the package.
-package {
+public {
 
   /**
     An enumeration of all possible fields available for configuration.
