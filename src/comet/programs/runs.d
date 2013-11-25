@@ -7,6 +7,7 @@ public import comet.typedefs: NoThreads, noThreads;
 public import comet.typedefs: SequencesCount, sequencesCount;
 public import comet.typedefs: NoResults, noResults;
 public import comet.typedefs: SequenceLength, sequenceLength;
+public import comet.typedefs: LengthParameters, lengthParameters;
 
 public import comet.results: Result;
 public import comet.sma.segments;
@@ -37,6 +38,9 @@ interface IOEnvironment {
 
 }
 
+/**
+  Returns whether or not the given type implement the io environment interface.
+*/
 private template isIOEnvironment( T ) {
 
   static if( 
@@ -64,6 +68,13 @@ private template isIOEnvironment( T ) {
   }
 
 }
+
+
+/**
+  Program wide constants. Those constants don't change for the whole duration of the program.
+*/
+
+
 
 /**
   Returns whether or not the given type is a valid sequences files range.
@@ -106,10 +117,7 @@ private:
 
   alias T = ElementType!( ElementType!SequencesGroupsRange );
   
-  MinLength             _minLength;
-  MaxLength             _maxLength;
-  LengthStep            _lengthStep;
-  SequenceLength        _sequencesLength;
+  LengthParameters      _lengthParams;
   NoResults             _noResults;  
   
   SequencesGroupsRange  _sequencesGroupsRange;  
@@ -118,26 +126,15 @@ private:
 
   this( FieldTypeTuple!( typeof( this ) ) args ) {
   
-    _minLength            = args[ 0 ];
-    _maxLength            = args[ 1 ];
-    _lengthStep           = args[ 2 ];
-    _sequencesLength      = args[ 3 ];
-    _noResults            = args[ 4 ];
-    _sequencesGroupsRange = args[ 5 ];
-    _algosRange           = args[ 6 ];
-    _noThreadsRange       = args[ 7 ];
+    _lengthParams         = args[ 0 ];
+    _noResults            = args[ 1 ];
+    _sequencesGroupsRange = args[ 2 ];
+    _algosRange           = args[ 3 ];
+    _noThreadsRange       = args[ 4 ];
   
   }  
   
 public:
-
-  mixin getter!_sequencesGroupsRange;
-  mixin getter!_minLength;
-  mixin getter!_maxLength;
-  mixin getter!_lengthStep;
-  mixin getter!_noResults;
-  mixin getter!_algosRange;
-  mixin getter!_noThreadsRange;
 
   @disable this();
   
@@ -158,10 +155,10 @@ public:
           //Get all segments length possible.
           auto segmentsLengths = 
             segmentsLengthsFor(     
-              _sequencesLength, 
-              _minLength, 
-              _maxLength, 
-              _lengthStep
+              sequenceLength( sequencesGroup[ 0 ].length ), 
+              _lengthParams.min, 
+              _lengthParams.max, 
+              _lengthParams.step
             );
              
           //For every segments length, generate segments pairs.
@@ -200,10 +197,7 @@ public:
   Factory function.
 */  
 auto makeBatchRun( SequencesGroupsRange, AlgosRange, NoThreadsRange ) (
-  MinLength minLength,
-  MaxLength maxLength,
-  LengthStep lengthStep,
-  SequenceLength sequencesLength,
+  LengthParameters lengthParams,
   NoResults noResults,  
   SequencesGroupsRange sequencesGroupsRange,
   AlgosRange algosRange,
@@ -216,10 +210,7 @@ auto makeBatchRun( SequencesGroupsRange, AlgosRange, NoThreadsRange ) (
   
 
   return BatchRun!( SequencesGroupsRange, AlgosRange, NoThreadsRange )(
-    minLength,
-    maxLength,
-    lengthStep,
-    sequencesLength,
+    lengthParams,
     noResults,
     sequencesGroupsRange,
     algosRange,

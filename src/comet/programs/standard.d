@@ -12,71 +12,74 @@ Configuration.
 *************************************************************************************/
 
 
+private {
 
-import comet.configs.metaconfig;
-import comet.configs.probing;   
+  import comet.configs.metaconfig;
+  import comet.configs.probing;   
 
-import comet.cli.all: Parser, parser, DropFirst;
+  import comet.cli.all: Parser, parser, DropFirst;
 
 
-private alias StandardConfig = typeof( makeConfig() );
+  alias StandardConfig = typeof( makeConfig() );
   
-/**
-  Factory function for creating a configuration.
-*/
-private auto makeConfig() {
-  
-  return configFor!(
-    Field.sequencesFile,
-    Field.verbosity,
-    Field.outFile,
-    Field.noResults,
-    Field.printResults,
-    Field.resultsFile,
-    Field.printExecutionTime,
-    Field.minLength,
-    Field.maxLength,
-    Field.lengthStep,
-    Field.noThreads,
-    Field.algo,    
-  )();
-  
-}
+  /**
+    Factory function for creating a configuration.
+  */
+  auto makeConfig() {
+    
+    return configFor!(
+      Field.sequencesFile,
+      Field.verbosity,
+      Field.outFile,
+      Field.noResults,
+      Field.printResults,
+      Field.resultsFile,
+      Field.printExecutionTime,
+      Field.minLength,
+      Field.maxLength,
+      Field.lengthStep,
+      Field.noThreads,
+      Field.algo,    
+    )();
+    
+  }
 
-/**
-  Sets the program name to the given one and parses the argument according to the predefined
-  configuration and command line interface. Starts parsing the arguments as they are, does NOT
-  skip the first one.
-*/
-private auto parse( string commandName, string[] args ) {
+  /**
+    Sets the program name to the given one and parses the argument according to the predefined
+    configuration and command line interface. Starts parsing the arguments as they are, does NOT
+    skip the first one.
+  */
+  auto parse( string commandName, string[] args ) {
 
-  auto cfg = makeConfig();
-      
-  auto parser = parser();
-  parser.name = commandName;
-  
-  parser.add(
-    cfg.argFor!( Field.sequencesFile )(),
-    cfg.argFor!( Field.verbosity )(),
-    cfg.argFor!( Field.noResults )(),
-    cfg.argFor!( Field.printResults )(),
-    cfg.argFor!( Field.resultsFile )(),
-    cfg.argFor!( Field.printExecutionTime )(),
-    cfg.argFor!( Field.minLength )(),
-    cfg.argFor!( Field.maxLength )(),
-    cfg.argFor!( Field.lengthStep )(),
-    cfg.argFor!( Field.algo )()
-  );
-  
-  bool printConfig = false;
-  parser.add( printConfigArg( printConfig ) );
-  
-  parser.parse!( DropFirst.no )( args );
-  
-  if( printConfig ) { cfg.print(); }
-  
-  return cfg;
+    auto cfg = makeConfig();
+        
+    auto parser = parser();
+    parser.name = commandName;
+    
+    parser.add(
+      cfg.argFor!( Field.sequencesFile )(),
+      cfg.argFor!( Field.verbosity )(),
+      cfg.argFor!( Field.noResults )(),
+      cfg.argFor!( Field.printResults )(),
+      cfg.argFor!( Field.resultsFile )(),
+      cfg.argFor!( Field.printExecutionTime )(),
+      cfg.argFor!( Field.minLength )(),
+      cfg.argFor!( Field.maxLength )(),
+      cfg.argFor!( Field.lengthStep )(),
+      cfg.argFor!( Field.algo )()
+    );
+    
+    bool printConfig = false;
+    parser.add( printConfigArg( printConfig ) );
+    
+    parser.parse!( DropFirst.no )( args );
+    
+    if( printConfig ) { cfg.print(); }
+    
+    return cfg;
 
+  }
+  
 }
 
 
@@ -219,10 +222,11 @@ private {
     };
           
     auto br = makeBatchRun(
-      minLength( cfg.minLength ),
-      maxLength( cfg.maxLength ),
-      lengthStep( cfg.lengthStep ),
-      sequenceLength( seqLength ),
+      lengthParameters(
+        minLength( cfg.minLength ),
+        maxLength( cfg.maxLength ),
+        lengthStep( cfg.lengthStep )
+      ),
       noResults( cfg.noResults ),    
       [ nucleotides ],      
       algos,
