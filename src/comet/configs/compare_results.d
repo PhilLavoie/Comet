@@ -1,6 +1,7 @@
 module comet.configs.compare_results;
 
 import comet.configs.metaconfig;
+import comet.cli.all;
 
 alias CompareResultsConfig = typeof( makeConfig() );
   
@@ -28,25 +29,6 @@ private auto makeConfig() {
 auto parse( string commandName, string[] args ) {
 
   auto cfg = makeConfig();  
-  
-  debug {
-  
-    scope( success ) {
-      import std.algorithm: count;
-      import comet.configs.utils: fileName;
-      import std.stdio: File, writeln;
-      import std.conv: to;
-      
-      assert( 2 <= cfg.comparedResultsFiles.count, cfg.comparedResultsFiles.count.to!string );
-      
-      foreach( File file; cfg.comparedResultsFiles ) {
-            
-        assert( file.isOpen(), "unopened file " ~ file.fileName() );
-      
-      }
-    }
-    
-  }
   
   auto parser = parser();
   

@@ -6,9 +6,15 @@ module comet.programs.runs;
 public import comet.typedefs: NoThreads, noThreads;
 public import comet.typedefs: SequencesCount, sequencesCount;
 public import comet.typedefs: NoResults, noResults;
+public import comet.typedefs: SequenceLength, sequenceLength;
+
 public import comet.results: Result;
 public import comet.sma.segments;
 public import comet.sma.algos;
+public import comet.logger;
+public import std.datetime: Duration;
+
+import std.datetime;
 
 import comet.results;
 import comet.meta;
@@ -16,309 +22,208 @@ import comet.meta;
 import std.stdio;
 import std.container;
 import std.traits;
-import std.typecons: Flag;
+
+import std.range: isInputRange, ElementType;
 
 
 /**
-  This struct holds the fields necessary to generate multiple runs on the same sequences file.
+  Formal io environment definition.  
 */
-struct SequencesRuns( T, U, R ) {
+interface IOEnvironment {
 
-private:
-
-  T[][] _sequences;
-  mixin getter!_sequences;
-  
-  MinLength _minLength;
-  mixin getter!_minLength;
-  
-  MaxLength _maxLength;
-  mixin getter!_maxLength;
-  
-  LengthStep _lengthStep;
-  mixin getter!_lengthStep;
-  
-  NoThreads _noThreads;
-  mixin getter!_noThreads;
-  
-  NoResults _noResults;
-  mixin getter!_noResults;
-    
-  T[] _states;
-  public @property auto states() { return _states[]; }
-  
-  U _mutationCosts;
-  mixin getter!_mutationCosts;
-  
-  R _algos;
-  public @property auto algos() { return _algos; }
-
-  this(
-    typeof( _sequences )      sequences,
-    typeof( _minLength )      minLength,
-    typeof( _maxLength )      maxLength,
-    typeof( _lengthStep )     lengthStep,
-    typeof( _noThreads )      noThreads,
-    typeof( _noResults )      noResults,
-    typeof( _states )         states,
-    typeof( _mutationCosts )  mutationCosts,
-    typeof( _algos )          algos,
-  ) {
-  
-    foreach( parameter; ParameterIdentifierTuple!( typeof( this ).__ctor ) ) {
-    
-      mixin( "_" ~ parameter ~ " = " ~ parameter ~ ";" );
-    
-    } 
-  
-  }  
-      
-public:
-
-  @disable this();
+  Logger logger();
+  void printResults( R )( R results ) if( isInputRange!R && is( ElementType!R == Result ) );
+  void printExecutionTime( Duration );
 
 }
 
-auto sequencesRuns( T, U, R  )( 
-    T[][]       sequences,
-    MinLength   minLength,
-    MaxLength   maxLength,
-    LengthStep  lengthStep,
-    NoThreads   noThreads,
-    NoResults   noResults,    
-    T[]         states,
-    U           mutationCosts,
-    R           algos
-  ) {
+private template isIOEnvironment( T ) {
 
-  return SequencesRuns!( T, U, R )( sequences, minLength, maxLength, lengthStep, noThreads, noResults, states, mutationCosts, algos );
-
-}
-
-unittest {
+  static if( 
+    is( 
+      typeof( 
+        () {
+          T t;
+          Logger log = t.logger();
+          t.printExecutionTime( Duration.zero() );
+          
+          t.printResults( [ result( 0, segmentsLength( 0 ), 0 ) ][] );          
+          
+        
+        }
+      ) 
+    ) 
+  ) {  
   
-  auto sequences = [ [ 1, 2 ], [ 2, 3 ], [ 3, 4 ] ];
-  auto states = [ 1, 2, 3 ];
-  auto mCosts = ( int a, int b ) { return a + b; };
-  auto algos = "coucou";
+    enum isIOEnvironment = true;
   
-  auto sr = sequencesRuns( sequences, minLength( 1 ), maxLength( 2 ), lengthStep( 3 ), noThreads( 4 ), noResults( 5 ), states, mCosts, algos );
-  
-  static assert( isSequencesRuns!( typeof( sr ) ) );
-  static assert( isSequencesRuns!sr );
-  
-  assert( sr.sequences == sequences );
-  assert( sr.minLength == 1 );
-  assert( sr.maxLength == 2 );
-  assert( sr.lengthStep == 3 );
-  assert( sr.noThreads == 4 );
-  assert( sr.noResults == 5 );
-  assert( sr.states == states );
-  assert( sr.mutationCosts == mCosts );
-  assert( sr.algos == algos );   
-  
-}
-
-
-template isSequencesRuns( alias T ) {
-
-  static if( is( T ) ) {
-  
-    enum isSequencesRuns = std.traits.isInstanceOf!( SequencesRuns, T );
-    
   } else {
   
-    enum isSequencesRuns = isSequencesRuns!( typeof( T ) );
+    enum isIOEnvironment = false;
   
   }
 
 }
 
+/**
+  Returns whether or not the given type is a valid sequences files range.
+*/
+private template isSequencesGroupsRange( T ) {
 
-
-
-
-
-struct Channels {
-
-private:
-  
-  bool _printTime;
-  mixin getter!_printTime;
-  
-  File _timeFile;
-  mixin getter!( _timeFile, Visibility._private );
-  
-  bool _printResults;
-  mixin getter!_printResults;
-  
-  File _resultsFile; 
-  mixin getter!( _resultsFile, Visibility._private );
-  
-}
-
-alias PrintTime = Flag!"printTime";
-alias PrintResults = Flag!"printResults";
-
-auto channels( PrintTime printTime, File timeFile, PrintResults printResults, File resultsFile ) {
-  Channels c;
-  c._printTime = printTime;
-  c._printResults = printResults;
-  
-  c._timeFile = timeFile;
-  c._resultsFile = resultsFile;
-
-  return c;
-  
-}
-
-unittest {
-  
-  auto c = channels( PrintTime.yes, stdout, PrintResults.yes, stdout );
-    
-}
-
-
-void run( SRs )( SRs srs, Channels channels ) if( isSequencesRuns!SRs ) {
-
-  foreach( sr; srs ) {
-  
-    if( channels.printTime ) { startTime = Clock.currTime(); }  
-  
-    sr.run;
-    
-    if( channels.printTime ) { channels.timeFile.printTime( Clock.currTime() - startTime ); }
-    if( channels.printResults ) { channels.resultsFile.printResults( sr.results[] ); } 
-  
-  }
-
+  //TODO: add the check to make sure it is a dynamic array.
+  enum isSequencesGroupsRange = isInputRange!T ;
 
 }
 
+/**
+  Returns whether or not the given type is a valid algorithms range.
+*/
+private template isAlgosRange( T ) {
 
+  //TODO: add algoI instance checking.
+  enum isAlgosRange = isInputRange!T;
 
+}
 
-struct SequencesRun( T ) {
+/**
+  Returns whether or not the given type is a valid range over threads counts.
+*/
+private template isNoThreadsRange( T ) {
+
+  enum isNoThreadsRange = isInputRange!T && is( ElementType!( T ) == NoThreads );
+
+}
+
+struct BatchRun( SequencesGroupsRange, AlgosRange, NoThreadsRange ) if(
+  
+  isSequencesGroupsRange!SequencesGroupsRange &&
+  isAlgosRange!AlgosRange &&
+  isNoThreadsRange!NoThreadsRange
+
+) {
 
 private:
 
-  T[][] _sequences;
-  mixin getter!_sequences;
+  alias T = ElementType!( ElementType!SequencesGroupsRange );
   
-  MinLength _minLength;
+  MinLength             _minLength;
+  MaxLength             _maxLength;
+  LengthStep            _lengthStep;
+  SequenceLength        _sequencesLength;
+  NoResults             _noResults;  
+  
+  SequencesGroupsRange  _sequencesGroupsRange;  
+  AlgosRange            _algosRange;
+  NoThreadsRange        _noThreadsRange;
+
+  this( FieldTypeTuple!( typeof( this ) ) args ) {
+  
+    _minLength            = args[ 0 ];
+    _maxLength            = args[ 1 ];
+    _lengthStep           = args[ 2 ];
+    _sequencesLength      = args[ 3 ];
+    _noResults            = args[ 4 ];
+    _sequencesGroupsRange = args[ 5 ];
+    _algosRange           = args[ 6 ];
+    _noThreadsRange       = args[ 7 ];
+  
+  }  
+  
+public:
+
+  mixin getter!_sequencesGroupsRange;
   mixin getter!_minLength;
-  
-  MaxLength _maxLength;
   mixin getter!_maxLength;
-  
-  LengthStep _lengthStep;
   mixin getter!_lengthStep;
-  
-  NoThreads _noThreads;
-  mixin getter!_noThreads;
-  
-  Results _results;
-  mixin getter!_results;
-    
-  AlgoI!T _algo;
-  mixin getter!_algo;
+  mixin getter!_noResults;
+  mixin getter!_algosRange;
+  mixin getter!_noThreadsRange;
 
-  this(
-    typeof( _sequences )      sequences,
-    typeof( _minLength )      minLength,
-    typeof( _maxLength )      maxLength,
-    typeof( _lengthStep )     lengthStep,
-    typeof( _noThreads )      noThreads,
-    NoResults                 noResults,
-    typeof( _algo )           algo,
-  ) {
+  @disable this();
   
-    foreach( parameter; ParameterIdentifierTuple!( typeof( this ).__ctor ) ) {
+  void run( IO )( IO io ) {
+  
+    static assert( isIOEnvironment!IO );
+  
+    foreach( sequencesGroup; _sequencesGroupsRange ) {
     
-      static if( parameter == "noResults" ) {
+      foreach( algo; _algosRange ) {
       
-        _results = Results( mixin( parameter ) );
-      
-      } else {
-      
-        mixin( "_" ~ parameter ~ " = " ~ parameter ~ ";" );
+        foreach( noThreads; _noThreadsRange ) {
         
+          SysTime startTime = Clock.currTime();
+          
+          Results results = Results( _noResults );
+          
+          //Get all segments length possible.
+          auto segmentsLengths = 
+            segmentsLengthsFor(     
+              _sequencesLength, 
+              _minLength, 
+              _maxLength, 
+              _lengthStep
+            );
+             
+          //For every segments length, generate segments pairs.
+          foreach( segmentsLength; segmentsLengths ) {    
+              
+            auto segmentsPairsRange = sequencesGroup.segmentPairsForLength( segmentsLength );
+            
+            //The segments pairs start on index 0 and increment by 1 index every time.
+            foreach( segmentsPairs; segmentsPairsRange ) {
+            
+              //Get the cost of the segments pairs using the appropriate algorithm.
+              auto cost = algo.costFor( segmentsPairs );
+              //Store the structured result.
+              results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
+              
+            }  
+          
+          }
+          
+          io.printExecutionTime( Clock.currTime() - startTime );
+          io.printResults( results[] );           
+        
+        }
+      
       }
     
-    } 
-  
-  }  
-      
-public:
-
-  @disable this();
-
-}
-
-/**
-  Factory function for creating sequences run.
-*/
-auto sequencesRun( T  )( 
-    T[][]       sequences,
-    MinLength   minLength,
-    MaxLength   maxLength,
-    LengthStep  lengthStep,
-    NoThreads   noThreads,
-    NoResults   noResults,    
-    AlgoI!T     algo
-  ) {
-
-  return SequencesRun!( T )( sequences, minLength, maxLength, lengthStep, noThreads, noResults, algo );
-
-}
-
-/**
-  Returns true if the given parameter is an instantiation of the SequencesRun template.
-*/
-template isSequencesRun( alias T ) {
-
-  static if( is( T ) ) {
-  
-    enum isSequencesRun = isInstanceOf!( SequencesRun, T );
-  
-  } else {
-  
-    enum isSequencesRun = isSequencesRun!( typeof( T ) );
+    }
   
   }
-
+  
+  
+  
 }
 
 /**
-  Main loop of the program. A sequences run generates every segments pairs associated with the given configuration
-  and calculate their cost using the algorithm provided. The results are stored in the sequences run structure.
-*/
-void run( SR )( SR sr ) if( isSequencesRun!SR ) {  
-    
-  //Get all segments length possible.
-  auto segmentsLengths = 
-    segmentsLengthsFor(     
-      sequenceLength( sr.sequences.length ), 
-      sr.minLength, 
-      sr.maxLength, 
-      sr.lengthStep
-    );
-     
-  //For every segments length, generate segments pairs.
-  foreach( segmentsLength; segmentsLengths ) {    
-      
-    auto segmentsPairsRange = sr.sequences.segmentPairsForLength( segmentsLength );
-    
-    //The segments pairs start on index 0 and increment by 1 index every time.
-    foreach( segmentsPairs; segmentsPairsRange ) {
-    
-      //Get the cost of the segments pairs using the appropriate algorithm.
-      auto cost = sr.algo.costFor( segmentsPairs );
-      //Store the structured result.
-      sr.results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
-      
-    }  
+  Factory function.
+*/  
+auto makeBatchRun( SequencesGroupsRange, AlgosRange, NoThreadsRange ) (
+  MinLength minLength,
+  MaxLength maxLength,
+  LengthStep lengthStep,
+  SequenceLength sequencesLength,
+  NoResults noResults,  
+  SequencesGroupsRange sequencesGroupsRange,
+  AlgosRange algosRange,
+  NoThreadsRange noThreadsRange
+) {
+
+  static assert( isSequencesGroupsRange!SequencesGroupsRange );
+  static assert( isAlgosRange!AlgosRange );
+  static assert( isNoThreadsRange!NoThreadsRange );
   
-  }
+
+  return BatchRun!( SequencesGroupsRange, AlgosRange, NoThreadsRange )(
+    minLength,
+    maxLength,
+    lengthStep,
+    sequencesLength,
+    noResults,
+    sequencesGroupsRange,
+    algosRange,
+    noThreadsRange
+  );
   
 }

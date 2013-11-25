@@ -5,12 +5,13 @@
 */
 module comet.configs.metaconfig;
 
-public import comet.cli.all;
-public import comet.configs.algos;
-public import comet.configs.utils;
-public import std.container: Array;
 
+public import comet.configs.algos;
+public import std.container: Array;
 public import comet.meta;
+
+import comet.cli.all;
+import comet.programs.utils: fileName;
 
 import std.conv;
 import std.file;
@@ -40,12 +41,12 @@ package {
     outFile,
     printResults,
     noResults,
-    printTime,
+    printExecutionTime,
     minLength,
     maxLength,
     lengthStep,
     noThreads,
-    algos,
+    algo,
     epsilon,
     comparedResultsFiles
   }
@@ -107,7 +108,7 @@ package {
   
   }
   ///DITTO.
-  void print( C )( ref C cfg, File output ) if( isConfig!C ) {
+  void print( C )( ref C cfg, File output ) if( isConfig!C ) {   
   
     with( output ) {
     
@@ -156,15 +157,15 @@ package {
       
       }
       
-      static if( hasField!( cfg, Field.printTime ) ) {
+      static if( hasField!( cfg, Field.printExecutionTime ) ) {
       
-        writeln( "Print time: ", cfg.get!( Field.printTime )() );
+        writeln( "Print time: ", cfg.get!( Field.printExecutionTime )() );
       
       }
       
-      static if( hasField!( cfg, Field.algos ) ) {
+      static if( hasField!( cfg, Field.algo ) ) {
       
-        writeln( "Algorithms: ", cfg.get!( Field.algos )()[].map!( algo => cliAlgoStrings[ algo ] ) );
+        writeln( "Algorithm: ", cliAlgoStrings[ cfg.get!( Field.algo ) ] );
       
       }
       
@@ -236,8 +237,7 @@ package {
     //Check the runtime defaults.
     assert( cfg.resultsFile == stdout );
     assert( cfg.outFile == stdout );
-    assert( cfg.algos.count == 1 && cfg.algos.front == Algo.standard );   
-
+    
   }
   
 }
@@ -374,10 +374,10 @@ private {
   
   }
   
-  mixin template printTimeField() {
+  mixin template printExecutionTimeField() {
   
-    bool _printTime = true;
-    mixin getter!_printTime;  
+    bool _printExecutionTime = true;
+    mixin getter!_printExecutionTime;  
   
   }
   
@@ -409,12 +409,10 @@ private {
   
   }
   
-  mixin template algosField() {
+  mixin template algoField() {
   
-    private std.container.Array!( comet.configs.algos.Algo ) _algos;  
-    public @property auto algos() { return _algos[]; }
-    
-    mixin defaultSetter!( identifier!_algos, identifier!_algos ~ ".insertBack( comet.configs.algos.Algo.standard );" );  
+    private comet.configs.algos.Algo _algo = Algo.standard;  
+    mixin getter!_algo;    
   
   }
   
@@ -715,7 +713,7 @@ private {
         v
       );
       
-    } else static if( field == Field.printTime ) {
+    } else static if( field == Field.printExecutionTime ) {
 
       return toggle(
         "--no-time ",
@@ -752,13 +750,13 @@ private {
 
       static assert( false, "unimplemented" );
       
-    } else static if( field == Field.algos ) {
+    } else static if( field == Field.algo ) {
 
-      return flagged( 
+      return mapped( 
         "--algo", 
-        "Sets the segment pair cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
-        commonParser( mappedConverter( comet.configs.algos.algosByStrings ), ( comet.configs.algos.Algo algo ) { v.insertBack( algo ); } ),
-        Usage.optional
+        "Sets the segment pair cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\". The default is standard.", 
+        v,
+        comet.configs.algos.algosByStrings        
       );
       
     } else {

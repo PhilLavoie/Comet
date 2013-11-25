@@ -6,6 +6,7 @@
 module comet.configs.standard;
 
 import comet.configs.metaconfig;
+import comet.cli.all;
 
 alias StandardConfig = typeof( makeConfig() );
   
@@ -21,12 +22,12 @@ private auto makeConfig() {
     Field.noResults,
     Field.printResults,
     Field.resultsFile,
-    Field.printTime,
+    Field.printExecutionTime,
     Field.minLength,
     Field.maxLength,
     Field.lengthStep,
     Field.noThreads,
-    Field.algos,    
+    Field.algo,    
   )();
   
 }
@@ -50,12 +51,11 @@ auto parse( string commandName, string[] args ) {
     cfg.argFor!( Field.noResults )(),
     cfg.argFor!( Field.printResults )(),
     cfg.argFor!( Field.resultsFile )(),
-    cfg.argFor!( Field.printTime )(),
+    cfg.argFor!( Field.printExecutionTime )(),
     cfg.argFor!( Field.minLength )(),
     cfg.argFor!( Field.maxLength )(),
     cfg.argFor!( Field.lengthStep )(),
-    //cfg.argFor!( Field.noThreads )(),
-    cfg.argFor!( Field.algos )()
+    cfg.argFor!( Field.algo )()
   );
   
   bool printConfig = false;

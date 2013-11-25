@@ -1,7 +1,7 @@
-//TODO: define configuration.
 module comet.configs.run_tests;
 
 import comet.configs.metaconfig;
+import comet.cli.all;
 
 alias RunTestsConfig = typeof( makeConfig() );
   

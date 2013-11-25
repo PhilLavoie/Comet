@@ -85,119 +85,147 @@ package void run( string command, string[] args ) {
 
 }
 
-private:
+private {
 
-auto resultsFileFor( StandardConfig cfg, File file ) {
-
-  return cfg.resultsFile;
-
-}
-
-void run( StandardConfig cfg ) {
+  void run( StandardConfig cfg ) {
+    
+    Logger logger = .logger( cfg.outFile, cfg.verbosity );
+    
+    logger.logln( 1, "Processing file: " ~ cfg.sequencesFile.name );
+    
+    //Extract sequences from file.
+    auto sequences = loadSequences( cfg.sequencesFile );
+    size_t seqLength = sequences[ 0 ].molecules.length;
+    size_t midPosition = seqLength / 2;
+    
+    //Make sure the minimum period is within bounds.
+    enforce( 
+      cfg.minLength <= midPosition,
+      "The minimum period: " ~ cfg.minLength.to!string() ~ " is set beyond the mid sequence position: " ~ to!string( midPosition ) ~
+      " and is therefore invalid."
+    );
+    
+    //Transfer the sequences into a nucleotides matrix.  
+    auto nucleotides = new Nucleotide[][ sequences.length ];
+    for( int i = 0; i < nucleotides.length; ++i ) {
+    
+      nucleotides[ i ] = sequences[ i ].molecules;
+      
+    }
+       
+    auto algos = new class( [ cfg.algo ], sequencesCount( nucleotides.length ) ) {
+      
+      private typeof( StandardConfig.algo )[] _algos;
+      private SequencesCount _sequencesCount;
+      private typeof( loadStates() ) _states;
+      private typeof( loadMutationCosts() ) _mutationCosts;
+      
+      private this( typeof( _algos ) algos, typeof( _sequencesCount ) sequencesCount ) {
+      
+        _algos = algos;
+        _sequencesCount = sequencesCount;
+        _states = loadStates();
+        _mutationCosts = loadMutationCosts();
+      
+      }
+      
+      auto front() { return algorithmFor( _algos[ 0 ], _sequencesCount, _states, _mutationCosts ); }
+      void popFront() { _algos = _algos[ 1 .. $ ]; }
+      bool empty() { return !_algos.length; }   
+    
+    };
+          
+    auto br = makeBatchRun(
+      minLength( cfg.minLength ),
+      maxLength( cfg.maxLength ),
+      lengthStep( cfg.lengthStep ),
+      sequenceLength( seqLength ),
+      noResults( cfg.noResults ),    
+      [ nucleotides ],      
+      algos,
+      [ noThreads( cfg.noThreads ) ]
+    );
+    
+    auto io = new class( cfg, logger )  {
   
-  Logger logger = .logger( cfg.outFile, cfg.verbosity );
-  
-  logger.logln( 1, "Processing file: " ~ cfg.sequencesFile.name );
+      private StandardConfig _cfg;
+      private Logger _logger;
+    
+      private this( typeof( _cfg ) config, typeof( _logger ) logger ) {
+        _cfg = config;
+      }
+    
+      public @property logger() { return _logger; }
+      
+      public void printExecutionTime( Duration time ) { 
+      
+        if( !_cfg.printExecutionTime ) { return; }
+        
+        .printExecutionTime( stdout, time );
+      
+      }
+      
+      public void printResults( R )( R results ) if( isInputRange!R && is( ElementType!R == Result ) ) {
+      
+        if( !_cfg.printResults ) { return; }
+        
+        .printResults( _cfg.resultsFile, results );
+      
+      }
+    
+    };
+    
+    br.run( io ); 
 
-  processFile( cfg.sequencesFile, cfg.resultsFileFor( cfg.sequencesFile ), cfg,  cfg.algos.front );
+  }
 
-}
+  void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isForwardRange!Range ) {
+    
+    foreach( sequence; sequences ) {
+    
+      enforce( sequence.molecules.length == length, "Expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.molecules.length.to!string ~ " to be of length: " ~ length.to!string );
+    
+    }
+    
+  }
 
-void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isForwardRange!Range ) {
-  
-  foreach( sequence; sequences ) {
-  
-    enforce( sequence.molecules.length == length, "Expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.molecules.length.to!string ~ " to be of length: " ~ length.to!string );
-  
+  /**
+    Extract the sequences from the provided file and makes sure they follow the rules of processing:
+      - They must be of fasta format;
+      - They must be made of dna nucleotides;
+      - They must have the same name.  
+  */
+  auto loadSequences( File file ) {
+
+    auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
+    size_t seqsCount = sequences.length;
+    enforce( 2 <= seqsCount, "Expected at least two sequences but read " ~ seqsCount.to!string() );
+    
+    size_t seqLength = sequences[ 0 ].molecules.length;
+    enforceSequencesLength( sequences[], seqLength );
+    
+    return sequences;
+    
+  }
+
+  private auto loadStates() {
+    //Up to now, only nucleotides are supported.
+    return [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];  
+  }
+
+  private auto loadMutationCosts() {
+    //Basic 0, 1 cost table. Include gaps?
+    return ( Nucleotide initial, Nucleotide mutated ) { 
+      if( initial != mutated ) { return 1; }
+      return 0;
+    };
+  }
+
+  /**
+    Prints the execution time value to the given output.
+  */
+  private void printExecutionTime( File output, Duration time ) {
+    output.writeln( "execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
   }
   
-}
-
-/**
-  Extract the sequences from the provided file and makes sure they follow the rules of processing:
-    - They must be of fasta format;
-    - They must be made of dna nucleotides;
-    - They must have the same name.  
-*/
-auto loadSequences( File file ) {
-
-  auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
-  size_t seqsCount = sequences.length;
-  enforce( 2 <= seqsCount, "Expected at least two sequences but read " ~ seqsCount.to!string() );
-  
-  size_t seqLength = sequences[ 0 ].molecules.length;
-  enforceSequencesLength( sequences[], seqLength );
-  
-  return sequences;
-  
-}
-
-void processFile( File seqFile, File resFile, StandardConfig cfg, Algo algo ) {
-
-  if( 1 <= cfg.verbosity ) {
-    cfg.outFile.writeln( "Processing file " ~ seqFile.name ~ "..." );
-  }
-  
-  
-  //Extract sequences from file.
-  auto sequences = loadSequences( seqFile );
-  size_t seqLength = sequences[ 0 ].molecules.length;
-  size_t midPosition = seqLength / 2;
-  
-  //Make sure the minimum period is within bounds.
-  enforce( 
-    cfg.minLength <= midPosition,
-    "The minimum period: " ~ cfg.minLength.to!string() ~ " is set beyond the mid sequence position: " ~ to!string( midPosition ) ~
-    " and is therefore invalid."
-  );
-  
-  //Transfer the sequences into a nucleotides matrix.  
-  auto nucleotides = new Nucleotide[][ sequences.length ];
-  for( int i = 0; i < nucleotides.length; ++i ) {
-  
-    nucleotides[ i ] = sequences[ i ].molecules;
-    
-  }
-    
-  auto states = loadStates();
-  auto mutationCosts = loadMutationCosts();
-    
-  SysTime startTime;
-  if( cfg.printTime ) { startTime = Clock.currTime(); }  
-    
-  auto sr = .sequencesRun(
-    nucleotides,
-    minLength( cfg.minLength ),
-    maxLength( cfg.maxLength ),
-    lengthStep( cfg.lengthStep ),
-    noThreads( cfg.noThreads ),
-    noResults( cfg.noResults ),    
-    algorithmFor( cfg.algos.front, sequencesCount( nucleotides.length ), states, mutationCosts )  
-  );
-  
-  comet.programs.runs.run( sr );
-  
-  if( cfg.printTime ) { cfg.outFile.printTime( Clock.currTime() - startTime ); }
-  if( cfg.printResults ) { resFile.printResults( sr.results[] ); }
-  
-}
-
-/**
-  Prints the execution time value to the standard output.
-*/
-private void printTime( Time )( File output, Time time ) {
-  output.writeln( "Execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
-}
-
-private auto loadStates() {
-  //Up to now, only nucleotides are supported.
-  return [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];  
-}
-
-private auto loadMutationCosts() {
-  //Basic 0, 1 cost table. Include gaps?
-  return ( Nucleotide initial, Nucleotide mutated ) { 
-    if( initial != mutated ) { return 1; }
-    return 0;
-  };
 }

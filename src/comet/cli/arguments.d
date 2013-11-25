@@ -717,10 +717,16 @@ public:
       
     } catch( Exception e ) {
     
+      _out.writeln();
       _out.writeln( e.msg );
+      
       _out.writeln();
       printUsage();
+      _out.writeln();
+      
       _out.writeln( "use " ~ _helpFlag ~ " for help" );      
+      _out.writeln();
+      
       //TODO: throw another exception that means program abortion.
       e.msg = "";
       throw e;

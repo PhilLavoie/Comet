@@ -7,8 +7,49 @@ import std.stdio: File, stdout, stdin, stderr;
 import std.conv: to;
 
 /**
-  Make sure that the input file provided to get some kind of output file from
-  is not the standard input, but a real fasta sequences file.
+  Small helper function to help print configuration files in a user friendly fashion.
+*/
+string fileName( File file ) {
+
+  if( file == stdout ) {
+  
+    return "stdout";
+    
+  }
+  
+  if( file == stdin ) {
+  
+    return "stdin";
+    
+  }
+  
+  if( file == stderr ) {
+  
+    return "stderr";
+    
+  }
+  
+  return file.name;
+  
+}
+
+unittest {
+
+  import std.stdio;
+  
+  auto name = fileName( stdout );
+  assert( name == "stdout" );
+  
+  name = fileName( stderr );
+  assert( name == "stderr" );
+  
+  name = fileName( stdin );
+  assert( name == "stdin" );
+  
+}
+
+/**
+  TODO: re assess the purpose for this to exist.
 */
 private void assertRealFile( File file ) {
  

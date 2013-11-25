@@ -7,6 +7,9 @@ mixin loadConfigMixin;
 
 import comet.configs.run_tests;
 
+import std.range: isInputRange, ElementType;
+import std.stdio: File;
+
 package void run( string command, string[] args ) {
 
   RunTestsConfig cfg;
@@ -33,6 +36,34 @@ private void run( RunTestsConfig cfg ) {
   //Compare every result.
 
 
+
+
+}
+
+//Take the states and the mutation costs provider?
+private void runFiles( R )( R sequencesFiles ) if( isInputRange!R && is( ElementType!R == File ) ) {
+
+  foreach( file; sequencesFiles ) {
+  
+    //Load the sequences.
+    
+    //Launch a sequences runs.
+  
+  }
+
+}
+
+private void runSequences( R )( R sequences ) if( isInputRange!R ) {
+
+  foreach( sequence; sequences ) {
+  
+    //Get the time.
+  
+    //Run the sequence.
+    
+    //Print results && time.
+  
+  }
 
 
 }
