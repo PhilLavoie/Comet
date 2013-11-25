@@ -375,13 +375,6 @@ protected:
   
   string[] takeIndexed( string s )( string[] tokens ) if( s == "left" || s == "right" ) {
       
-    debug( cli ) {
-    
-      writeln( "takeIndexed!" ~ s ~ "( " ~ tokens.to!string() ~ " )" );
-    
-    }
-
-    
     static if( s == "left" ) {
     
       auto container = _indexedLeft;     
@@ -391,13 +384,7 @@ protected:
       auto container = _indexedRight;
       
     }
-    
-    debug( cli ) {
-      
-      writeln( "indexed: ", container[].to!string() );
-    
-    } 
-    
+        
     foreach( indexed; container ) {
       auto previousTokens = tokens;
       tokens = argProxy!"take"( indexed, tokens );
@@ -409,14 +396,6 @@ protected:
   }
   
   string[] takeFlagged( string[] tokens ) {
-  
-    debug( cli ) {
-    
-      writeln( "takeFlagged( " ~ tokens.to!string() ~ " )" );
-      writeln( "flagged: ", _flags );
-    
-    }
-  
   
     while( tokens.length && tokens[ 0 ] in _flags ) {
       auto f = flagOf( tokens[ 0 ] );

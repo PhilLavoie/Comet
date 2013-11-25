@@ -55,11 +55,7 @@ mixin template SizeT( string structName, size_t min = size_t.min, size_t max = s
       
       private this( int value ) in {
         
-        debug {
-          
-          assert( 0 < value );
-          
-        }
+        assert( 0 < value );
         
       } body {
       
@@ -73,16 +69,19 @@ mixin template SizeT( string structName, size_t min = size_t.min, size_t max = s
       
       }
       
-      debug {
+      public string toString() {
       
-        invariant() {
+        return std.conv.to!string( _value );
+      
+      }
+      
+      invariant() {
         
-          assert( min <= _value, \"min: \" ~ min.to!string() ~ \" !<= value: \" ~ _value.to!string() );
-          assert( _value <= max, \"max: \" ~ max.to!string() ~ \" !>= value: \" ~ _value.to!string() );
-          
-        }
+        assert( min <= _value, \"min: \" ~ min.to!string() ~ \" !<= value: \" ~ _value.to!string() );
+        assert( _value <= max, \"max: \" ~ max.to!string() ~ \" !>= value: \" ~ _value.to!string() );
         
-      } 
+      }
+        
     }
     auto " ~ toLower( structName[ 0 .. 1 ] )  ~ structName[ 1 .. $ ] ~ "( T... )( T args ) {
     

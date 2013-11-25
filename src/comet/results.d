@@ -79,12 +79,8 @@ public:
   */
   bool isEquivalentTo( Result rhs, Cost epsilon = Cost.epsilon ) in {
   
-    debug {
+    assert( epsilon > 0 );
     
-      assert( epsilon > 0 );
-    
-    }
-  
   } body {
   
     return ( ( _cost - epsilon <= rhs._cost && rhs._cost <= _cost + epsilon ) );  

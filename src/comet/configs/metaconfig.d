@@ -225,8 +225,9 @@ package {
       static assert( __traits( compiles, cfg.get!( field )() ), fieldString!field );
       
       //For now, no support for setting the number of threads via the command line.
+      //The outfile arguments has been removed since this can easily be done in the shell.
       //TODO: remove eventually.
-      static if( field != Field.noThreads ) {
+      static if( field != Field.noThreads && field != Field.outFile ) {
       
         static assert( __traits( compiles, cfg.argFor!( field )() ), fieldString!field );
       
@@ -692,14 +693,14 @@ private {
         v        
       );
       
-    } else static if( field == Field.outFile ) {
+    /+ } else static if( field == Field.outFile ) {
 
       return file( 
         "--of", 
         "Output file. This is where the program emits statements. Default is stdout.", 
         v, 
         "w" 
-      );
+      ); +/
       
     } else static if( field == Field.printResults ) {
 

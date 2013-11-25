@@ -42,13 +42,9 @@ private:
     
   ) in {
   
-    debug {
-    
-      assert( 2 <= sequenceLength );    
-      assert( minLength <= maxLength );
-      assert( minLength % lengthStep == 0 ); //Relax this constraint??
-      
-    }
+    assert( 2 <= sequenceLength );    
+    assert( minLength <= maxLength );
+    assert( minLength % lengthStep == 0 ); //Relax this constraint??
     
   } body {
     
@@ -95,25 +91,6 @@ auto segmentsLengthsFor( SequenceLength sequenceLength, MinLength minLength, Max
 }  
 
 unittest {
-  
-  debug( 2 ) {
-  
-    import std.stdio;
-    writeln( "running tests for segments length range..." );
-    
-    scope( success ) {
-    
-      writeln( "done" );
-      
-    }
-    
-    scope( failure ) {
-    
-      writeln( "failed" );
-      
-    }
-    
-  }
   
   auto minLength = 3u;
   auto maxLength = size_t.max;
@@ -210,23 +187,10 @@ private:
     
   this( Sequences sequences, size_t pairsStart, size_t segmentsLength ) in {
   
-    debug {
-      
-      import std.conv;
-      import std.stdio;
-      
-      scope( failure ) {
-      
-        writeln( typeof( this ).stringof ~ "( " ~ sequences.to!string() ~ ", " ~ pairsStart.to!string() ~ ", " ~ segmentsLength.to!string() ~ " )" );        
-        
-      }
-      
-      assert( sequences.length );
-      assert( sequences.front.length );
-      assert( sequences.front.length >= ( pairsStart + ( 2  * segmentsLength ) ) );
-      assert( 1 <= segmentsLength );
-      
-    }
+    assert( sequences.length );
+    assert( sequences.front.length );
+    assert( sequences.front.length >= ( pairsStart + ( 2  * segmentsLength ) ) );
+    assert( 1 <= segmentsLength );
     
   } body {
   
@@ -337,26 +301,8 @@ private auto segmentPairsAt( E )( E[][] sequences, size_t start, size_t length )
 } 
 
 unittest {
-  import std.conv;
   
-  debug( 2 ) {
-  
-    import std.stdio;
-    writeln( "running tests for segment pairs range..." );
-    
-    scope( success ) {
-    
-      writeln( "done" );
-      
-    }
-    
-    scope( failure ) {
-    
-      writeln( "failed" );
-      
-    }
-    
-  }
+  import std.conv;  
    
   static void assertExpected( R1, R2 )( R1 column, R2 expected, SegmentsLength segLength, size_t segStart ) {
     assert( 

@@ -61,15 +61,3 @@ auto logger( T... )( T args ) {
   return Logger( args );
 
 }
-
-unittest {
-  
-  auto log = logger( stdout, 1 );
-  
-  debug( logger ) {  
-    log.logln( int.min, "you will always see this" );
-    log.logln( 1, "you see this now" );
-    log.logln( 2, "but you don't see this" );
-  }
-
-}

@@ -47,7 +47,6 @@ auto parse( string commandName, string[] args ) {
   parser.add(
     cfg.argFor!( Field.sequencesFile )(),
     cfg.argFor!( Field.verbosity )(),
-    cfg.argFor!( Field.outFile )(),
     cfg.argFor!( Field.noResults )(),
     cfg.argFor!( Field.printResults )(),
     cfg.argFor!( Field.resultsFile )(),

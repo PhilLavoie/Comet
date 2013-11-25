@@ -255,19 +255,11 @@ auto cachePatterns( T, U )( SequencesCount seqCount, T[] states, U mutationCosts
 */
 private void phylogenize( Tree )( ref Tree tree, SequencesCount seqCount ) in {
   
-  debug {
-    
-    assert( 2 <= seqCount );
-    
-  }
+  assert( 2 <= seqCount );
   
 } out {
 
-  debug {
-  
-    assert( count( tree.leaves ) == 2 * seqCount );
-    
-  }
+  assert( count( tree.leaves ) == 2 * seqCount );
   
 } body {
   
@@ -356,15 +348,10 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
  
         size_t multiplier = rootCount / equivalentsCount;      
       
-        debug {
-        
-          assert( 0 < equivalentsCount );
-          assert( rootCount % equivalentsCount == 0 );
-          assert( 0 < multiplier );
-        
-        }
- 
-        
+        assert( 0 < equivalentsCount );
+        assert( rootCount % equivalentsCount == 0 );
+        assert( 0 < multiplier );
+      
         foreach( childStateTuple; child.element ) {
         
           auto childState = childStateTuple.state;
@@ -385,11 +372,7 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
     
   }
   
-  debug {
-  
-    assert( 0 < noRecons );
-    
-  }
+  assert( 0 < noRecons );
   
   return costSum / noRecons;
   

@@ -228,11 +228,7 @@ private:
       
         auto minCost = minMutationCost( state, children.element, mutationCosts );
         
-        debug {
-        
-          assert( minCost < Cost.max );
-          
-        }
+        assert( minCost < Cost.max );
         
         costSum += minCost;
         
@@ -249,11 +245,7 @@ private:
           
         }
         
-        debug {
-        
-          assert( 0 < minCostMutations );
-          
-        }
+        assert( 0 < minCostMutations );
         
         rCount *= minCostMutations;
         
@@ -283,7 +275,7 @@ public:
   */
   void update( Range, U )( Range states, U mutationCosts ) if( isInputRange!Range && isMutationCost!U ) in {
   
-    debug { assert( !_tree.empty ); }
+    assert( !_tree.empty );
   
   } body {
         
