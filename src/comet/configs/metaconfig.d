@@ -644,7 +644,7 @@ private {
           override void assign() {}
         
         },
-        mandatory      
+        Usage.mandatory      
       );
     
     
@@ -655,7 +655,7 @@ private {
         "sequencesFile", 
         "This argument is the file holding the sequences to process.", 
         commonParser( fileConverter( "r" ), v  ),
-        mandatory
+        Usage.mandatory
       );
       
     } else static if( field == Field.sequencesDir ) {
@@ -674,7 +674,7 @@ private {
             }
           } 
         ),
-        mandatory
+        Usage.mandatory
       );
       
     } else static if( field == Field.resultsFile ) {
@@ -758,7 +758,7 @@ private {
         "--algo", 
         "Sets the segment pair cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\".", 
         commonParser( mappedConverter( comet.configs.algos.algosByStrings ), ( comet.configs.algos.Algo algo ) { v.insertBack( algo ); } ),
-        optional
+        Usage.optional
       );
       
     } else {

@@ -9,7 +9,6 @@ import comet.configs.run_tests;
 
 package void run( string command, string[] args ) {
 
-/*
   RunTestsConfig cfg;
 
   try {
@@ -24,16 +23,16 @@ package void run( string command, string[] args ) {
   
   run( cfg );
   
-  */
-
 }
 
-/*
 private void run( RunTestsConfig cfg ) {
 
+  //Generate all results first.
+  //processFile( File input, makeFile( resultsFileNameFor() ), config );
+  
+  //Compare every result.
 
 
 
 
-
-}*/
+}

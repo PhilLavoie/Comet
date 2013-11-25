@@ -25,8 +25,6 @@ enum Usage: bool {
   optional = true,
   mandatory = false
 }
-alias mandatory = Usage.mandatory;
-alias optional = Usage.optional;
 
 /**
   A class representing a command line argument.
@@ -129,7 +127,7 @@ class IndexedLeft: Indexed {
 /**
   Factory function that create an indexed argument whose index starts right after the command invocation.
 */
-auto indexedLeft( size_t index, string name, string description, ParserI parser, Usage usage = mandatory ) {
+auto indexedLeft( size_t index, string name, string description, ParserI parser, Usage usage = Usage.mandatory ) {
   return new IndexedLeft( index, name, description, parser, usage );
 }
 
@@ -148,7 +146,7 @@ class IndexedRight: Indexed {
 /**
   Factory function that create an indexed argument whose index starts right after the flagged arguments region.
 */
-auto indexedRight( size_t index, string name, string description, ParserI parser, Usage usage = mandatory ) {
+auto indexedRight( size_t index, string name, string description, ParserI parser, Usage usage = Usage.mandatory ) {
   return new IndexedRight( index, name, description, parser, usage );
 }
 
@@ -247,8 +245,8 @@ private void enforceMandatoryUse( A )( A arg ) if( is( A : Argument ) ) {
   If no predefined arguments satisfy the user's needs, this one is the most
   general factory method. It lets the user specify the tokens parser.
 */
-Flagged flagged( string flag, string description, ParserI parser, Usage usage = optional ) {
-  return new Flagged( flag, description, parser, optional );    
+Flagged flagged( string flag, string description, ParserI parser, Usage usage = Usage.optional ) {
+  return new Flagged( flag, description, parser, usage );    
 } 
 
 
@@ -601,6 +599,7 @@ public:
     Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
   */
   this( string theName = "", string desc = "", string usage = "", File output = stdout, File error = stderr ) {
+  
     name = theName;
     description = desc;
     _usage = usage;
@@ -608,6 +607,7 @@ public:
     _err = stderr;    
     _help = toggle( _helpFlag, "Prints the help menu.", _helpNeeded );
     add( _help );
+    
   }    
   
   
@@ -618,33 +618,55 @@ public:
     This method can use an input ranges, and argument tuples as entries.
   */
   void add( Args... )( Args args ) if( 1 < args.length ) {
+  
     add( args[ 0 ] );
     static if( 2 <= args.length ) {
+    
       add( args[ 1 .. $ ] );
+      
     }
+    
   } 
   ///Ditto.
   void add( Range )( Range args ) if( isForwardRange!Range ) {
+  
     foreach( arg; args ) {
+    
       add( arg );
+      
     }
+    
   }    
   ///Ditto.
   void add( F )( F f ) if( is( F == Flagged ) ) in {
+  
     assert( !isMember( f ), "flags must be unique and " ~ f.flag ~ " is already known" );
+    
   } body {
+  
     _flags[ f.flag ] = f;
     if( f.isMandatory ) { addMandatory( f ); }
-  }  
+    
+  } 
+  ///Ditto.
   void add( I )( I i ) if( is( I : Indexed ) ) in {
+  
     checkIndex( i );
+    
   } body {
+  
     static if( is( I == IndexedLeft ) ) {
+    
       _indexedLeft.insertBack( i );
+      
     } else {
+    
       _indexedRight.insertBack( i );
+      
     }
+    
     if( i.isMandatory() ) { addMandatory( i ); }
+    
   }   
   
   
@@ -662,11 +684,7 @@ public:
     
     static if( drop ) {
       
-      debug {
-      
-        assert( tokens.length );
-        
-      }
+      assert( tokens.length );
       
     }
     
@@ -700,6 +718,8 @@ public:
     } catch( Exception e ) {
     
       _out.writeln( e.msg );
+      _out.writeln();
+      printUsage();
       _out.writeln( "use " ~ _helpFlag ~ " for help" );      
       //TODO: throw another exception that means program abortion.
       e.msg = "";
@@ -708,6 +728,16 @@ public:
     }
     
     return tokens;
+  }
+  
+  public void printUsage() {
+  
+    with( _out ) {
+    
+      writeln( "Usage: ", usage );    
+    
+    }
+  
   }
   
   /**
@@ -720,7 +750,7 @@ public:
       _out.writeln( "\nDescription: ", _description, "\n" );
     }
         
-    _out.writeln( "Usage: ", usage, "\n" );
+    printUsage();
     
     _out.writeln( "Flagged arguments:" );    
     //Get the longest flag to determine the first column size.
