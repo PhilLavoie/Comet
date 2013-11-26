@@ -9,6 +9,7 @@ public import comet.typedefs: MaxLength, maxLength;
 public import comet.typedefs: LengthStep, lengthStep;
 public import comet.typedefs: SequenceLength, sequenceLength;
 public import comet.typedefs: SegmentsLength, segmentsLength;
+public import comet.typedefs: LengthParameters, lengthParameters;
 
 import std.range;
 import std.algorithm;
@@ -84,9 +85,9 @@ public:
 /**
   Factory function for constructing a segment length range.
 */
-auto segmentsLengthsFor( SequenceLength sequenceLength, MinLength minLength, MaxLength maxLength, LengthStep lengthStep ) {
+auto segmentsLengthsFor( SequenceLength sequenceLength, LengthParameters params ) {
 
-  return SegmentsLengthsRange( sequenceLength, minLength, maxLength, lengthStep );
+  return SegmentsLengthsRange( sequenceLength, params.min, params.max, params.step );
   
 }  
 
@@ -97,13 +98,13 @@ unittest {
   auto lengthStep = 3u;
   auto sequenceLength = 100u;
   
-  auto segmentLengths = segmentsLengthsFor( 
-    
+  auto segmentLengths = segmentsLengthsFor(     
       .sequenceLength( sequenceLength ), 
-      .minLength( minLength ), 
-      .maxLength( maxLength ), 
-      .lengthStep( lengthStep ) 
-      
+      lengthParameters(
+        .minLength( minLength ), 
+        .maxLength( maxLength ), 
+        .lengthStep( lengthStep ) 
+      )      
     );
     
   assert( segmentLengths.inclusiveMaxLength == 50 );
@@ -320,7 +321,7 @@ unittest {
       [ 2, 4,  6,  8,   10, 12, 14, 16 ],
       [ 4, 7, 10, 13,   13, 10,  7,  4 ] ];
       
-  foreach( segLength; segmentsLengthsFor( sequenceLength( sequences[].front.length ), minLength( 1 ), maxLength( 100u ), lengthStep( 1 ) ) ) {
+  foreach( segLength; segmentsLengthsFor( sequenceLength( sequences[].front.length ), lengthParameters( minLength( 1 ), maxLength( 100u ), lengthStep( 1 ) ) ) ) {
     
     int[] expected;
     
@@ -623,7 +624,7 @@ unittest {
       [ 6, 10, 14, 18,   22, 26, 30, 34,   38 ] ];
   auto sequencesLength = sequences[ 0 ].length;
   
-  auto segLengths = segmentsLengthsFor( sequenceLength( sequences[].front.length ), minLength( 1 ), maxLength( size_t.max ), lengthStep( 1 ) );
+  auto segLengths = segmentsLengthsFor( sequenceLength( sequences[].front.length ), lengthParameters( minLength( 1 ), maxLength( size_t.max ), lengthStep( 1 ) ) );
   assert( ( sequencesLength / 2 ) == count( segLengths ) );
   
   foreach( segLength; segLengths ) {

@@ -233,18 +233,17 @@ private {
       [ noThreads( cfg.noThreads ) ]
     );
     
-    auto io = new class( cfg, logger )  {
+    auto storage = new class( cfg )  {
   
       private StandardConfig _cfg;
-      private Logger _logger;
     
-      private this( typeof( _cfg ) config, typeof( _logger ) logger ) {
-        _cfg = config;
-      }
-    
-      public @property logger() { return _logger; }
+      private this( typeof( _cfg ) config ) {
       
-      public void printExecutionTime( Duration time ) { 
+        _cfg = config;
+        
+      }
+                
+      private void printExecutionTime( Duration time ) { 
       
         if( !_cfg.printExecutionTime ) { return; }
         
@@ -252,17 +251,24 @@ private {
       
       }
       
-      public void printResults( R )( R results ) if( isInputRange!R && is( ElementType!R == Result ) ) {
+      private void printResults( R )( R results ) if( isInputRange!R && is( ElementType!R == Result ) ) {
       
         if( !_cfg.printResults ) { return; }
         
         .printResults( _cfg.resultsFile, results );
       
       }
+      
+      public void store( R )( R summary ) if( isRunSummary!R ) {
+      
+        printResults( summary.results[] );
+        printExecutionTime( summary.executionTime );
+      
+      }
     
     };
     
-    br.run( io ); 
+    br.run( storage ); 
 
   }
 

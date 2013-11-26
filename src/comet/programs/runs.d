@@ -6,11 +6,10 @@ module comet.programs.runs;
 public import comet.typedefs: NoThreads, noThreads;
 public import comet.typedefs: SequencesCount, sequencesCount;
 public import comet.typedefs: NoResults, noResults;
-public import comet.typedefs: SequenceLength, sequenceLength;
-public import comet.typedefs: LengthParameters, lengthParameters;
 
 public import comet.results: Result;
 public import comet.sma.segments;
+//TODO: why?
 public import comet.sma.algos;
 public import comet.logger;
 public import std.datetime: Duration;
@@ -26,55 +25,58 @@ import std.traits;
 
 import std.range: isInputRange, ElementType;
 
+struct RunSummary( T ) {
 
-/**
-  Formal io environment definition.  
-*/
-interface IOEnvironment {
+  T[][] sequences;
+  AlgoI!T algo;
+  NoThreads noThreads;
+  Results results;
+  Duration executionTime;  
 
-  Logger logger();
-  void printResults( R )( R results ) if( isInputRange!R && is( ElementType!R == Result ) );
-  void printExecutionTime( Duration );
+}
+
+auto runSummary( T, Args... )( T[][] sequences, Args args ) {
+  
+  return RunSummary!T( sequences, args );
+
+}
+
+template isRunSummary( T ) {
+
+  enum isRunSummary = isInstanceOf!( RunSummary, T );
 
 }
 
 /**
-  Returns whether or not the given type implement the io environment interface.
+  Formal storage definition.  
 */
-private template isIOEnvironment( T ) {
+interface Storage {
 
-  static if( 
-    is( 
-      typeof( 
+  void store( R )( R runSummary ) if( isRunSummary!R );
+
+}
+
+private template isStorageFor( S, T ) {
+
+  static if( is(
+      typeof(
         () {
-          T t;
-          Logger log = t.logger();
-          t.printExecutionTime( Duration.zero() );
-          
-          t.printResults( [ result( 0, segmentsLength( 0 ), 0 ) ][] );          
-          
-        
+          S s;
+          s.store( T.init );        
         }
-      ) 
-    ) 
-  ) {  
-  
-    enum isIOEnvironment = true;
-  
+      )  
+    )
+  ) {
+
+    enum isStorageFor = true;
+    
   } else {
   
-    enum isIOEnvironment = false;
-  
+    enum isStorageFor = false;
+    
   }
 
 }
-
-
-/**
-  Program wide constants. Those constants don't change for the whole duration of the program.
-*/
-
-
 
 /**
   Returns whether or not the given type is a valid sequences files range.
@@ -138,9 +140,9 @@ public:
 
   @disable this();
   
-  void run( IO )( IO io ) {
+  void run( S )( S storage ) {
   
-    static assert( isIOEnvironment!IO );
+    static assert( isStorageFor!( S, RunSummary!T ) );
   
     foreach( sequencesGroup; _sequencesGroupsRange ) {
     
@@ -156,9 +158,7 @@ public:
           auto segmentsLengths = 
             segmentsLengthsFor(     
               sequenceLength( sequencesGroup[ 0 ].length ), 
-              _lengthParams.min, 
-              _lengthParams.max, 
-              _lengthParams.step
+              _lengthParams
             );
              
           //For every segments length, generate segments pairs.
@@ -178,9 +178,8 @@ public:
           
           }
           
-          io.printExecutionTime( Clock.currTime() - startTime );
-          io.printResults( results[] );           
-        
+          storage.store( runSummary( sequencesGroup, algo, noThreads, results, Clock.currTime() - startTime ) );
+       
         }
       
       }
