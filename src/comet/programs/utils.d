@@ -3,8 +3,67 @@ module comet.programs.utils;
 public import comet.typedefs: NoThreads, noThreads;
 public import comet.configs.algos: Algo;
 
+import fasta = comet.bio.fasta;
+
 import std.stdio: File, stdout, stdin, stderr;
 import std.conv: to;
+import core.time;
+import comet.bio.dna;
+import std.exception;
+import std.range: isForwardRange;
+
+
+
+private void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isForwardRange!Range ) {
+    
+  foreach( sequence; sequences ) {
+  
+    enforce( sequence.molecules.length == length, "expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.molecules.length.to!string ~ " to be of length: " ~ length.to!string );
+  
+  }
+  
+}
+
+/**
+  Extract the sequences from the provided file and makes sure they follow the rules of processing:
+    - They must be of fasta format;
+    - They must be made of dna nucleotides;
+    - They must have the same name.  
+*/
+auto loadSequences( File file ) {
+
+  auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
+  size_t seqsCount = sequences.length;
+  enforce( 2 <= seqsCount, "Expected at least two sequences but read " ~ seqsCount.to!string() );
+  
+  size_t seqLength = sequences[ 0 ].molecules.length;
+  enforceSequencesLength( sequences[], seqLength );
+  
+  return sequences;
+  
+}
+
+auto loadStates() {
+  //Up to now, only nucleotides are supported.
+  return [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];  
+}
+
+auto loadMutationCosts() {
+  //Basic 0, 1 cost table. Include gaps?
+  return ( Nucleotide initial, Nucleotide mutated ) { 
+    if( initial != mutated ) { return 1; }
+    return 0;
+  };
+}
+
+/**
+  Prints the execution time value to the given output.
+*/
+void printExecutionTime( File output, Duration time ) {
+  output.writeln( "execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
+}
+
+
 
 /**
   Small helper function to help print configuration files in a user friendly fashion.
