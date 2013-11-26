@@ -1,4 +1,4 @@
-module comet.run_tests.program;
+module comet.scripts.run_tests.program;
 
 
 
@@ -84,7 +84,7 @@ import std.range: isInputRange, ElementType;
 import std.algorithm: count;
 import std.stdio: File;
 
-import comet.compare_results.program: allEquivalents;
+import comet.scripts.compare_results.program: allEquivalents;
 import comet.results_io;
 import std.exception: enforce;
 

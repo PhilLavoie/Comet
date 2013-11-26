@@ -1,4 +1,4 @@
-module comet.compare_results.program;
+module comet.scripts.compare_results.program;
 
 
 

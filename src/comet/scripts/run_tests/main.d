@@ -1,9 +1,9 @@
 /**
   Entry point for the script running tests.
 */
-module comet.run_tests.main;
+module comet.scripts.run_tests.main;
 
-import comet.run_tests.program;
+import comet.scripts.run_tests.program;
 import comet.programcons;
 
 mixin mainMixin;

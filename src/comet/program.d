@@ -90,8 +90,8 @@ Program.
 
 
 
-import compare_results = comet.compare_results.program;
-import run_tests = comet.run_tests.program;
+import compare_results = comet.scripts.compare_results.program;
+import run_tests = comet.scripts.run_tests.program;
 
 import comet.results_io;
 

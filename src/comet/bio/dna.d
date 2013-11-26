@@ -7,6 +7,9 @@ import std.conv;
 import std.exception;
 import std.ascii;
 
+/**
+  DNA nucleotide representation.
+*/
 enum Nucleotide {
 
   ADENINE = 0,

@@ -31,22 +31,7 @@ public:
   
   @property string id() { return _id; }
   @property auto molecules() { return _molecules; }
-       
   
-  string toString() {
-  
-    string dataString = _molecules.length ? ", data: " : "";
-  
-    foreach( m; _molecules ) {
-    
-      dataString ~= m.to!string;
-      
-    }
-    
-    return "sequence{ id: " ~ _id ~ ", length: " ~ _molecules.length.to!string ~ dataString ~ " }";
-    
-  }
-
 }
 /**
   Factory function.
