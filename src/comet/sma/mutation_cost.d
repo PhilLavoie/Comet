@@ -66,7 +66,7 @@ template isMutationCost( alias symbol ) if( !is( symbol ) ) {
   Returns true if the mutation cost callable passed provides mutation costs for the
   given type.
 */
-template isMutationCostFor( alias T, State ) if( isMutationCost!T ) {
+template isMutationCostFor( T, State ) if( isMutationCost!T ) {
  
   alias Params = FuncInfo!T.Params;
   
@@ -79,6 +79,12 @@ template isMutationCostFor( alias T, State ) if( isMutationCost!T ) {
     enum isMutationCostFor = false;
   
   }
+
+}
+///Ditto.
+template isMutationCostFor( alias T, State ) if( !is( T ) ) {
+ 
+  enum isMutationCostFor = isMutationCostFor!( typeof( T ), State );
 
 }
 

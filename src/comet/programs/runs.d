@@ -9,8 +9,7 @@ public import comet.typedefs: NoResults, noResults;
 
 public import comet.results: Result;
 public import comet.sma.segments;
-//TODO: why?
-public import comet.sma.algos;
+
 public import comet.logger;
 public import std.datetime: Duration;
 
@@ -18,6 +17,9 @@ import std.datetime;
 
 import comet.results;
 import comet.meta;
+import comet.sma.algos: algorithmFor;
+import comet.sma.mutation_cost: isMutationCostFor;
+import comet.configs.algos: Algo;
 
 import std.stdio;
 import std.container;
@@ -25,25 +27,41 @@ import std.traits;
 
 import std.range: isInputRange, ElementType;
 
-struct RunSummary( T ) {
+/**
+  Run specific parameters.
+*/
+struct RunParameters( T, M ) if( isMutationCostFor!( M, T ) ) {
 
-  T[][] sequences;
-  AlgoI!T algo;
+  T[][]     sequencesGroup;
+  Algo      algorithm;
+  T[]       states;
+  M         mutationCosts;
   NoThreads noThreads;
+
+}
+auto runParameters( T, M )( T[][] sequencesGroup, Algo algo, T[] states, M mutationCosts, NoThreads noThreads ) {
+  
+  static assert( isMutationCostFor!( M, T ) );
+  
+  return RunParameters!( T, M )( sequencesGroup, algo, states, mutationCosts, noThreads );
+  
+}
+
+/**
+  Result of the run.
+*/
+struct RunSummary {
+
   Results results;
   Duration executionTime;  
 
 }
-
-auto runSummary( T, Args... )( T[][] sequences, Args args ) {
+/**
+  Factory function.
+*/
+auto runSummary( Args... )( Args args ) {
   
-  return RunSummary!T( sequences, args );
-
-}
-
-template isRunSummary( T ) {
-
-  enum isRunSummary = isInstanceOf!( RunSummary, T );
+  return RunSummary( args );
 
 }
 
@@ -52,10 +70,13 @@ template isRunSummary( T ) {
 */
 interface Storage {
 
-  void store( R )( R runSummary ) if( isRunSummary!R );
+  void store( RunSummary summary );
 
 }
 
+/**
+  Returns whether or not the given type is storage for the other type.
+*/
 private template isStorageFor( S, T ) {
 
   static if( is(
@@ -78,62 +99,38 @@ private template isStorageFor( S, T ) {
 
 }
 
-/**
-  Returns whether or not the given type is a valid sequences files range.
-*/
-private template isSequencesGroupsRange( T ) {
+private template isRunParametersRange( T ) {
 
-  //TODO: add the check to make sure it is a dynamic array.
-  enum isSequencesGroupsRange = isInputRange!T ;
+  static if( isInputRange!T && isInstanceOf!( RunParameters, ElementType!T ) ) {
 
-}
-
-/**
-  Returns whether or not the given type is a valid algorithms range.
-*/
-private template isAlgosRange( T ) {
-
-  //TODO: add algoI instance checking.
-  enum isAlgosRange = isInputRange!T;
-
-}
-
-/**
-  Returns whether or not the given type is a valid range over threads counts.
-*/
-private template isNoThreadsRange( T ) {
-
-  enum isNoThreadsRange = isInputRange!T && is( ElementType!( T ) == NoThreads );
-
-}
-
-struct BatchRun( SequencesGroupsRange, AlgosRange, NoThreadsRange ) if(
+    enum isRunParametersRange = true;
+    
+  } else {
   
-  isSequencesGroupsRange!SequencesGroupsRange &&
-  isAlgosRange!AlgosRange &&
-  isNoThreadsRange!NoThreadsRange
+    enum isRunParametersRange = false;
+  
+  }
+
+}
+
+struct BatchRun( RunParametersRange ) if(
+  
+  isRunParametersRange!RunParametersRange 
 
 ) {
 
 private:
 
-  alias T = ElementType!( ElementType!SequencesGroupsRange );
-  
+  RunParametersRange    _runParametersRange;
   LengthParameters      _lengthParams;
   NoResults             _noResults;  
-  
-  SequencesGroupsRange  _sequencesGroupsRange;  
-  AlgosRange            _algosRange;
-  NoThreadsRange        _noThreadsRange;
-
+    
   this( FieldTypeTuple!( typeof( this ) ) args ) {
   
-    _lengthParams         = args[ 0 ];
-    _noResults            = args[ 1 ];
-    _sequencesGroupsRange = args[ 2 ];
-    _algosRange           = args[ 3 ];
-    _noThreadsRange       = args[ 4 ];
-  
+    _runParametersRange   = args[ 0 ];
+    _lengthParams         = args[ 1 ];
+    _noResults            = args[ 2 ];
+    
   }  
   
 public:
@@ -142,78 +139,66 @@ public:
   
   void run( S )( S storage ) {
   
-    static assert( isStorageFor!( S, RunSummary!T ) );
+    //TODO: change this for just isStorage.
+    static assert( isStorageFor!( S, RunSummary ) );
   
-    foreach( sequencesGroup; _sequencesGroupsRange ) {
-    
-      foreach( algo; _algosRange ) {
+    foreach( runParams; _runParametersRange ) {
       
-        foreach( noThreads; _noThreadsRange ) {
+      auto sequencesGroup = runParams.sequencesGroup;
+      auto noThreads = runParams.noThreads;
+      auto algo = algorithmFor( runParams.algorithm, sequencesCount( sequencesGroup.length ), runParams.states, runParams.mutationCosts );
         
-          SysTime startTime = Clock.currTime();
-          
-          Results results = Results( _noResults );
-          
-          //Get all segments length possible.
-          auto segmentsLengths = 
-            segmentsLengthsFor(     
-              sequenceLength( sequencesGroup[ 0 ].length ), 
-              _lengthParams
-            );
-             
-          //For every segments length, generate segments pairs.
-          foreach( segmentsLength; segmentsLengths ) {    
-              
-            auto segmentsPairsRange = sequencesGroup.segmentPairsForLength( segmentsLength );
+      SysTime startTime = Clock.currTime();
+      
+      Results results = Results( _noResults );
             
-            //The segments pairs start on index 0 and increment by 1 index every time.
-            foreach( segmentsPairs; segmentsPairsRange ) {
-            
-              //Get the cost of the segments pairs using the appropriate algorithm.
-              auto cost = algo.costFor( segmentsPairs );
-              //Store the structured result.
-              results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
+      //Get all segments length possible.
+      auto segmentsLengths = 
+        segmentsLengthsFor(     
+          sequenceLength( sequencesGroup[ 0 ].length ), 
+          _lengthParams
+        );
               
-            }  
+      //For every segments length, generate segments pairs.
+      foreach( segmentsLength; segmentsLengths ) {    
           
-          }
+        auto segmentsPairsRange = sequencesGroup.segmentPairsForLength( segmentsLength );
+        
+        //The segments pairs start on index 0 and increment by 1 index every time.
+        foreach( segmentsPairs; segmentsPairsRange ) {
+        
+          //Get the cost of the segments pairs using the appropriate algorithm.
+          auto cost = algo.costFor( segmentsPairs );
+          //Store the structured result.
+          results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
           
-          storage.store( runSummary( sequencesGroup, algo, noThreads, results, Clock.currTime() - startTime ) );
-       
-        }
+        }  
       
       }
+      
+      storage.store( runSummary( results, Clock.currTime() - startTime ) );     
     
     }
-  
-  }
-  
-  
+    
+  } 
   
 }
 
 /**
   Factory function.
 */  
-auto makeBatchRun( SequencesGroupsRange, AlgosRange, NoThreadsRange ) (
-  LengthParameters lengthParams,
-  NoResults noResults,  
-  SequencesGroupsRange sequencesGroupsRange,
-  AlgosRange algosRange,
-  NoThreadsRange noThreadsRange
+auto makeBatchRun( RunParametersRange ) (
+  RunParametersRange  runParametersRange,
+  LengthParameters    lengthParams,
+  NoResults           noResults
 ) {
 
-  static assert( isSequencesGroupsRange!SequencesGroupsRange );
-  static assert( isAlgosRange!AlgosRange );
-  static assert( isNoThreadsRange!NoThreadsRange );
+  static assert( isRunParametersRange!RunParametersRange );
   
-
-  return BatchRun!( SequencesGroupsRange, AlgosRange, NoThreadsRange )(
+  return BatchRun!( RunParametersRange )(
+    runParametersRange,
     lengthParams,
-    noResults,
-    sequencesGroupsRange,
-    algosRange,
-    noThreadsRange
+    noResults
   );
   
 }

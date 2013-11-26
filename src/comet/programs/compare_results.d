@@ -74,6 +74,10 @@ import std.container: Array;
 import std.stdio: File, writeln;
 
 import comet.programs.metaprogram;
+import comet.results;
+import std.range: frontTransversal, zip;
+import std.algorithm: find;
+
 
 mixin mainRunMixin;
 mixin loadConfigMixin;
@@ -98,34 +102,80 @@ package void run( string command, string[] args ) {
 
 package void run( CompareResultsConfig cfg ) {
 
-  Array!ResultsReader resultsReaders;
-  resultsReaders.reserve( cfg.comparedResultsFiles.count );
+  if( allEquivalents( cfg.comparedResultsFiles, cfg.epsilon ) ) {
   
-  foreach( File file; cfg.comparedResultsFiles ) {
+    writeln( "all results are equivalents using epsilon: ", cfg.epsilon );
   
-    resultsReaders.insertBack( resultsReader( file ) );
+  } else {
+  
+    writeln( "results are not equivalents using epsilon: ", cfg.epsilon );
   
   }
-  
-  while( 0 == resultsReaders[].filter!( a => a.empty ).count ) {
 
-    Result reference = resultsReaders.front.front;
+}
+
+template isResultsRange( R ) {
+
+  enum isResultsRange = isInputRange!R && is( ElementType!R == Result );
+
+}
+
+bool allEquivalents( R )( R results, Cost epsilon ) if( isResultsRange!R ) {
+
+  Result reference = results.front;
+
+  return results.find!( a => !a.isEquivalentTo( reference, epsilon ) ).empty;
+
+}
+
+
+template isResultsRangeOfRanges( RoR ) {
+
+  enum isResultsRangeOfRanges = isForwardRange!RoR && isResultsRange!( ElementType!RoR );
+
+}
+
+bool allEquivalents( RoR )( RoR ror, Cost epsilon  ) if ( isResultsRangeOfRanges!RoR ) {
+
+  //While no results range is empty.
+  while( 0 == ror.filter!( a => a.empty ).count ) {
+
+    //Check if all results are equivalent.
+    if( !allEquivalents( ror.frontTransversal, epsilon ) ) { 
     
-    foreach( ref resultsReader; resultsReaders ) {
+      return false;       
+      
+    }        
     
-      if( !reference.isEquivalentTo( resultsReader.front, cfg.epsilon ) ) {
-      
-        writeln( "Results are not equivalent using epsilon value: ", cfg.epsilon );
-        return;
-        
-      } 
-      
-      resultsReader.popFront();
+    //Pick up every range by reference to be able to move them.
+    foreach( ref resultsRange; ror ) {
+    
+      resultsRange.popFront();
     
     }
 
   }
   
-  writeln( "Results are equivalent using epsilon value: ", cfg.epsilon );
+  return true;
+
+}
+
+template isFileRange( R ) {
+
+  enum isFileRange = isInputRange!R && is( ElementType!R == File );
+
+}
+
+bool allEquivalents( FR )( FR fileRange, Cost epsilon ) if( isFileRange!FR ) {
+
+  Array!ResultsReader resultsReaders;
+    
+  foreach( File file; fileRange ) {
+  
+    resultsReaders.insertBack( resultsReader( file ) );
+  
+  }
+  
+  return allEquivalents( resultsReaders[], epsilon );
 
 }

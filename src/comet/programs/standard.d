@@ -107,8 +107,8 @@ import std.stdio;
 import std.algorithm;
 import std.conv;
 import std.exception;
-import std.container;
-import std.datetime;
+
+import std.datetime: Duration;
 import std.range: isForwardRange;
 
 import comet.programs.metaprogram;
@@ -182,14 +182,8 @@ private {
     //Extract sequences from file.
     auto sequences = loadSequences( cfg.sequencesFile );
     size_t seqLength = sequences[ 0 ].molecules.length;
-    size_t midPosition = seqLength / 2;
-    
-    //Make sure the minimum period is within bounds.
-    enforce( 
-      cfg.minLength <= midPosition,
-      "The minimum period: " ~ cfg.minLength.to!string() ~ " is set beyond the mid sequence position: " ~ to!string( midPosition ) ~
-      " and is therefore invalid."
-    );
+        
+    enforceValidMinLength( cfg.minLength, seqLength / 2 );
     
     //Transfer the sequences into a nucleotides matrix.  
     auto nucleotides = new Nucleotide[][ sequences.length ];
@@ -198,39 +192,54 @@ private {
       nucleotides[ i ] = sequences[ i ].molecules;
       
     }
-       
-    auto algos = new class( [ cfg.algo ], sequencesCount( nucleotides.length ) ) {
-      
-      private typeof( StandardConfig.algo )[] _algos;
-      private SequencesCount _sequencesCount;
+    
+    auto runParamsRange = new class( nucleotides, cfg.algo, loadStates(), loadMutationCosts() ) {
+    
+      private typeof( nucleotides ) _nucleotides;
+      private Algo _algo;
       private typeof( loadStates() ) _states;
       private typeof( loadMutationCosts() ) _mutationCosts;
+      private bool _empty;
       
-      private this( typeof( _algos ) algos, typeof( _sequencesCount ) sequencesCount ) {
+      this( 
+        typeof( _nucleotides ) nucleotides, 
+        typeof( _algo ) algo, 
+        typeof( _states ) states, 
+        typeof( _mutationCosts ) mutationCosts 
+      ) {
       
-        _algos = algos;
-        _sequencesCount = sequencesCount;
-        _states = loadStates();
-        _mutationCosts = loadMutationCosts();
+        _nucleotides = nucleotides;
+        _algo = algo;
+        _states = states;
+        _mutationCosts = mutationCosts;
+        _empty = false;
       
       }
       
-      auto front() { return algorithmFor( _algos[ 0 ], _sequencesCount, _states, _mutationCosts ); }
-      void popFront() { _algos = _algos[ 1 .. $ ]; }
-      bool empty() { return !_algos.length; }   
+      bool empty() { return _empty; }
+      void popFront() { _empty = true; }
+      auto front() {
+      
+        return runParameters( 
+          _nucleotides,
+          _algo,
+          _states,
+          _mutationCosts,
+          noThreads( 1 )
+        );      
+        
+      }
     
     };
-          
+       
     auto br = makeBatchRun(
+      runParamsRange,
       lengthParameters(
         minLength( cfg.minLength ),
         maxLength( cfg.maxLength ),
         lengthStep( cfg.lengthStep )
       ),
-      noResults( cfg.noResults ),    
-      [ nucleotides ],      
-      algos,
-      [ noThreads( cfg.noThreads ) ]
+      noResults( cfg.noResults ),          
     );
     
     auto storage = new class( cfg )  {
@@ -259,7 +268,7 @@ private {
       
       }
       
-      public void store( R )( R summary ) if( isRunSummary!R ) {
+      public void store( RunSummary summary ) {
       
         printResults( summary.results[] );
         printExecutionTime( summary.executionTime );

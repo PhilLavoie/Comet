@@ -2,6 +2,7 @@ module comet.programs.utils;
 
 public import comet.typedefs: NoThreads, noThreads;
 public import comet.configs.algos: Algo;
+public import comet.bio.dna: Nucleotide;
 
 import fasta = comet.bio.fasta;
 
@@ -11,7 +12,19 @@ import core.time;
 import comet.bio.dna;
 import std.exception;
 import std.range: isForwardRange;
+import std.path: stripExtension, baseName, dirSeparator;
+import std.algorithm: endsWith;
 
+void enforceValidMinLength( size_t min, size_t mid ) {
+  
+  //Make sure the minimum period is within bounds.
+  enforce( 
+    min <= mid,
+    "the minimum segments length: " ~ min.to!string() ~ " is set beyond the mid sequence position: " ~ mid.to!string() ~
+    " and is therefore invalid"
+  );
+
+}
 
 
 private void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isForwardRange!Range ) {
@@ -60,9 +73,16 @@ auto loadMutationCosts() {
   Prints the execution time value to the given output.
 */
 void printExecutionTime( File output, Duration time ) {
-  output.writeln( "execution time in seconds: ", time.total!"seconds", ".", time.fracSec.msecs );
+
+  output.writeln( executionTimeString( time ) );
+  
 }
 
+string executionTimeString( Duration time ) {
+
+  return "execution time in seconds: " ~ time.total!"seconds".to!string() ~ "." ~ time.fracSec.msecs.to!string();
+
+}
 
 
 /**
@@ -157,7 +177,7 @@ private string fileNameOf( T )( T fileOrName ) {
   static if( is( T == File ) ) {
     
     assertRealFile( fileOrName );
-    return fileOrName.name;
+    return fileOrName.name.baseName.stripExtension;
   
   } else static if( is( T == string ) ) {
   
@@ -171,9 +191,9 @@ private string fileNameOf( T )( T fileOrName ) {
   
 }
 
-string referenceFileNameFor( T )( T fileOrName ) {
+string referenceFileNameFor( T )( string referencesDir, T fileOrName ) {
 
-  return fileNameOf( fileOrName ) ~ ".reference";
+  return referencesDir ~ ( referencesDir.endsWith( dirSeparator ) ? "" : dirSeparator ) ~ fileNameOf( fileOrName ) ~ ".reference";
   
 }
 
@@ -190,6 +210,7 @@ File fetch( string fileName ) { return File( fileName, "r" ); }
 unittest {
 
   void assertFileName( string got, string expected ) {
+
   
     assert( got == expected, got );
   
@@ -199,11 +220,11 @@ unittest {
   auto expected = "toto_standard_noThreads1.results";  
   assertFileName( fileName, expected );
   
-  fileName = referenceFileNameFor( "toto" );
-  expected = "toto.reference";
+  fileName = referenceFileNameFor( "references", "toto" );
+  expected = "references" ~ dirSeparator ~ "toto.reference";
   assertFileName( fileName, expected );
   
-  static assert( __traits( compiles, referenceFileNameFor( stdout ) ) );
+  static assert( __traits( compiles, referenceFileNameFor( "toto", stdout ) ) );
   static assert( __traits( compiles, resultsFileNameFor( stdout, Algo.standard, noThreads( 1 ) ) ) );
   
 
