@@ -1,13 +1,8 @@
-module comet.meta;
+module comet.typecons;
 
+import comet.traits: identifier;
 import std.typecons;
 
-/**
-  Returns the string name of the identifier as provided by __traits( identifier, var ).
-*/
-template identifier( alias var ) {
-  enum identifier = __traits( identifier, var );  
-}
 
 /**
   Visbility enumeration. They represent their D language counterpart.

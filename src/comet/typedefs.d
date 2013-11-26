@@ -3,7 +3,7 @@
 */
 module comet.typedefs;
 
-import comet.meta;
+import comet.typecons;
 
 import std.string;
 import std.typecons;

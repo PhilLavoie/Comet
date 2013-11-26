@@ -1,4 +1,4 @@
-module comet.programs.run_tests;
+module comet.run_tests.program;
 
 
 
@@ -72,19 +72,24 @@ Program.
 
 
 
-import comet.programs.metaprogram;
+import comet.programcons;
 
 mixin mainRunMixin;
 mixin loadConfigMixin;
 
-import comet.programs.utils;
-import comet.programs.runs;
+import comet.utils;
+import comet.core;
 
 import std.range: isInputRange, ElementType;
 import std.algorithm: count;
 import std.stdio: File;
 
-package void run( string command, string[] args ) {
+import comet.compare_results.program: allEquivalents;
+import comet.results_io;
+import std.exception: enforce;
+
+
+void run( string command, string[] args ) {
 
   RunTestsConfig cfg;
 
@@ -206,9 +211,6 @@ class RunParamsRange {
   
 }
 
-import comet.programs.compare_results: allEquivalents;
-import comet.results_io;
-import std.exception: enforce;
 
 private void run( RunTestsConfig cfg ) {
 
@@ -263,7 +265,7 @@ private void run( RunTestsConfig cfg ) {
       );
       
       logger.logln( 2, "Results are equivalent to reference with epsilon: ", _cfg.epsilon );
-      logger.logln( 3, "Execution time: " ~ executionTimeString( summary.executionTime ) );
+      logger.logln( 3, executionTimeString( summary.executionTime ) );
       
     }
   

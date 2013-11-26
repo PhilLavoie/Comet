@@ -8,10 +8,10 @@ module comet.configs.metaconfig;
 
 public import comet.configs.algos;
 public import std.container: Array;
-public import comet.meta;
+public import comet.typecons;
 
 import comet.cli.all;
-import comet.programs.utils: fileName;
+import comet.utils: fileName;
 
 import std.conv;
 import std.file;

@@ -1,4 +1,4 @@
-module comet.programs.compare_results;
+module comet.compare_results.program;
 
 
 
@@ -73,7 +73,7 @@ import std.algorithm: map, count, filter;
 import std.container: Array;
 import std.stdio: File, writeln;
 
-import comet.programs.metaprogram;
+import comet.programcons;
 import comet.results;
 import std.range: frontTransversal, zip;
 import std.algorithm: find;
@@ -90,7 +90,7 @@ mixin loadConfigMixin;
   The sole purpose of this function is to extract the program configuration
   from the command line interface, then delegate to its appropriate overload.
 */
-package void run( string command, string[] args ) {
+void run( string command, string[] args ) {
 
   CompareResultsConfig cfg;
 

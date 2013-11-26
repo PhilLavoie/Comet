@@ -1,13 +1,9 @@
+/**
+  Entry point for the higher level program.
+*/
 module comet.main;
 
-import comet.programs.standard;
+import comet.program;
+import comet.programcons;
 
-/**
-  The main just delegates to another program handler.
-*/
-void main( string[] args ) {
- 
-  mainRun( args );  
-  
-}
-
+mixin mainMixin;

@@ -1,4 +1,4 @@
-module comet.programs.utils;
+module comet.utils;
 
 public import comet.typedefs: NoThreads, noThreads;
 public import comet.configs.algos: Algo;

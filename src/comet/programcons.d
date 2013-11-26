@@ -1,6 +1,24 @@
-module comet.programs.metaprogram;
+/**
+  This module provides facilities for building standardized program artefacts.  
+*/
+module comet.programcons;
 
 public import comet.cli.utils: commandName;
+
+/**
+  This mixin is only to be used by the program's entry point. It generates a main
+  that calls mainRun with the arguments received, therefore, such a function
+  must be visible in the global scope.
+*/
+mixin template mainMixin() {
+
+  void main( string[] args ) {
+  
+    mainRun( args );
+  
+  }
+
+}
 
 /**
   This mixin generates the standard entry point for programs.

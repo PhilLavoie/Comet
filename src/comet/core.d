@@ -1,7 +1,7 @@
 /**
   Module providing ranges for generalizing the processing of files and sequences.
 */
-module comet.programs.runs;
+module comet.core;
 
 public import comet.typedefs: NoThreads, noThreads;
 public import comet.typedefs: SequencesCount, sequencesCount;
@@ -16,7 +16,7 @@ public import std.datetime: Duration;
 import std.datetime;
 
 import comet.results;
-import comet.meta;
+import comet.typecons;
 import comet.sma.algos: algorithmFor;
 import comet.sma.mutation_cost: isMutationCostFor;
 import comet.configs.algos: Algo;

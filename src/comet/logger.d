@@ -3,7 +3,7 @@
 */
 module comet.logger;
 
-import comet.meta;
+import comet.typecons;
 
 import std.stdio;
 import std.algorithm;

@@ -6,6 +6,14 @@ module comet.traits;
 import std.traits;
 
 /**
+  Returns the string name of the identifier as provided by __traits( identifier, var ).
+*/
+template identifier( alias var ) {
+  enum identifier = __traits( identifier, var );  
+}
+
+
+/**
   Generates the fields presented by the associated templates.
 */
 private mixin template funcInfoMixin( T ) if( isCallable!T ) {

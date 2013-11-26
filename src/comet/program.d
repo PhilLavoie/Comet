@@ -3,7 +3,7 @@
   It is also responsible for initializing said configuration
   based on the commad line arguments.
 */
-module comet.programs.standard;
+module comet.program;
 
 
 
@@ -90,15 +90,15 @@ Program.
 
 
 
-import compare_results = comet.programs.compare_results;
-import run_tests = comet.programs.run_tests;
+import compare_results = comet.compare_results.program;
+import run_tests = comet.run_tests.program;
 
 import comet.results_io;
 
 import comet.logger;
 
-import comet.programs.runs;
-import comet.programs.utils;
+import comet.core;
+import comet.utils;
 
 import comet.bio.dna;
 import comet.containers.tree;
@@ -111,7 +111,7 @@ import std.exception;
 import std.datetime: Duration;
 import std.range: isForwardRange;
 
-import comet.programs.metaprogram;
+import comet.programcons;
 
 mixin mainRunMixin;
 mixin loadConfigMixin;
