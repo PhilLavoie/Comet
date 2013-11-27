@@ -6,7 +6,7 @@ module comet.results;
 
 public import comet.typedefs: NoResults, noResults;
 public import comet.typedefs: SegmentsLength, segmentsLength;
-public import comet.sma.cost: Cost;
+public import comet.typedefs: Cost;
 
 import std.container;
 import std.range: isInputRange, ElementType;

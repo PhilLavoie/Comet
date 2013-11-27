@@ -1,0 +1,5 @@
+                                    file|         algorithm| number of threads| number of results|        min length|        max length|       length step| execution time(s)
+           random_count2_length300.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|             8.109
+           random_count2_length300.fasta|             cache|                 1|              1000|                 3|        4294967295|                 3|             1.538
+           random_count2_length300.fasta|          patterns|                 1|              1000|                 3|        4294967295|                 3|             2.274
+           random_count2_length300.fasta|     cachePatterns|                 1|              1000|                 3|        4294967295|                 3|             1.360

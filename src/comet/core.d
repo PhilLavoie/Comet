@@ -146,7 +146,7 @@ public:
       
       auto sequencesGroup = runParams.sequencesGroup;
       auto noThreads = runParams.noThreads;
-      auto algo = algorithmFor( runParams.algorithm, sequencesCount( sequencesGroup.length ), runParams.states, runParams.mutationCosts );
+      auto algo = algorithmFor( runParams.algorithm, sequencesCount( sequencesGroup.length ), sequenceLength( sequencesGroup[ 0 ].length ), runParams.states, runParams.mutationCosts );
         
       SysTime startTime = Clock.currTime();
       

@@ -12,7 +12,6 @@ import std.conv: to;
   
 private string RESULTS_HEADER_FORMAT = "%12s%12s%12s\n";
 private string RESULT_WRITE_FORMAT = "%12d%12d%12.8f\n";
-private string RESULT_READ_FORMAT = "%d%d%f";
 
 /**
   Prints the results to the given output in the given order.

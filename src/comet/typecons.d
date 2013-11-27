@@ -24,6 +24,8 @@ enum Visibility: string {
 */
 mixin template getter( alias var, Visibility vis = Visibility._public ) {
   
+  import comet.traits: identifier;
+  
   static assert( identifier!var[ 0 ] == '_' );
   
   mixin( vis ~ " @property auto " ~ ( identifier!( var ) )[ 1 .. $ ] ~ "() { return " ~ identifier!var ~ "; } " );
@@ -64,7 +66,7 @@ mixin template SizeT( string structName, size_t min = size_t.min, size_t max = s
       
       }
       
-      public string toString() {
+      public string toString() const {
       
         return std.conv.to!string( _value );
       

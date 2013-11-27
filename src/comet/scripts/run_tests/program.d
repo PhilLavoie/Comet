@@ -29,6 +29,7 @@ private auto makeConfig() {
     Field.noResults,
     Field.sequencesDir,    
     Field.referencesDir,
+    Field.compileTime
   )();
   
 }
@@ -50,7 +51,8 @@ auto parse( string commandName, string[] args ) {
     argFor!( Field.epsilon )( cfg ),
     argFor!( Field.verbosity )( cfg ),
     argFor!( Field.sequencesDir )( cfg ),    
-    argFor!( Field.referencesDir )( cfg )
+    argFor!( Field.referencesDir )( cfg ),
+    argFor!( Field.compileTime )( cfg )
   );
     
   bool printConfig = false;
@@ -77,17 +79,9 @@ import comet.programcons;
 mixin mainRunMixin;
 mixin loadConfigMixin;
 
-import comet.utils;
+import comet.scripts.run_tests.callbacks;
+
 import comet.core;
-
-import std.range: isInputRange, ElementType;
-import std.algorithm: count;
-import std.stdio: File;
-
-import comet.scripts.compare_results.program: allEquivalents;
-import comet.results_io;
-import std.exception: enforce;
-
 
 void run( string command, string[] args ) {
 
@@ -99,124 +93,17 @@ void run( string command, string[] args ) {
   
 }
 
-class RunParamsRange {
-
-  import std.container: Array;
-  
-  private Logger                          _logger;
-  
-  private Array!File                      _sequencesFiles;
-  private int                             _currentFileIndex;
-  private Nucleotide[][][]                _sequencesGroups;  
-  
-  private typeof( loadStates() )          _states;
-  private typeof( loadMutationCosts() )   _mutationCosts;
-  
-  private Array!Algo                      _originalAlgos;
-  private typeof( _originalAlgos[] )      _currentAlgos;
-  
-  private Array!NoThreads                 _originalNoThreads;
-  private typeof( _originalNoThreads[] )  _currentNoThreads;
-  
-  this( FR, AR, NTR )( Logger logger, FR fileRange, AR algoRange, NTR noThreadsRange, size_t minLength ) {
-  
-    static assert( isInputRange!FR  && is( ElementType!FR == File ) );
-    static assert( isInputRange!AR  && is( ElementType!AR == Algo ) );
-    static assert( isInputRange!NTR && is( ElementType!NTR == NoThreads ) );
-  
-    _logger = logger;  
-  
-    foreach( file; fileRange ) {
-    
-      _sequencesFiles.insertBack( file );        
-    
-    }
-    
-    _sequencesGroups = new Nucleotide[][][ count( _sequencesFiles[] ) ];
-    int fileIndex = 0;
-    foreach( file; _sequencesFiles ) {
-    
-      //Extract sequences from file.
-      auto sequencesGroup = loadSequences( file );
-      size_t seqLength = sequencesGroup[ 0 ].molecules.length;
-          
-      enforceValidMinLength( minLength, seqLength / 2 );
-      
-      //Transfer the sequences into a nucleotides matrix.  
-      auto nucleotides = new Nucleotide[][ sequencesGroup.length ];
-      for( int i = 0; i < nucleotides.length; ++i ) {
-      
-        nucleotides[ i ] = sequencesGroup[ i ].molecules;
-        
-      }
-      _sequencesGroups[ fileIndex ] = nucleotides;
-      ++fileIndex;
-    
-    }
-    
-    _states = loadStates();
-    _mutationCosts = loadMutationCosts();
-    
-    foreach( algo; algoRange ) {
-    
-      _originalAlgos.insertBack( algo );
-    
-    }
-    _currentAlgos = _originalAlgos[];
-    
-    foreach( noThread; noThreadsRange ) {
-    
-      _originalNoThreads.insertBack( noThread );
-    
-    }
-    
-    _currentNoThreads = _originalNoThreads[];
-  
-  }
-  
-  bool empty() { return _currentFileIndex >= _sequencesFiles.length; }
-  void popFront() { 
-  
-    _currentNoThreads.popFront();
-  
-    if( _currentNoThreads.empty ) {
-    
-      _currentNoThreads = _originalNoThreads[];
-    
-      _currentAlgos.popFront();
-      
-      if( _currentAlgos.empty ) {
-      
-        _currentAlgos = _originalAlgos[];
-        
-        ++_currentFileIndex;       
-      
-      }
-    
-    }
-  
-  }
-  auto front() {
-    
-    _logger.logln( 1, "Processing file: ", currentFile().fileName() );
-  
-    return runParameters( currentSequencesGroup(), currentAlgo(), _states, _mutationCosts, currentNoThreads() );
-  
-  }
-  
-  @property File currentFile() { return _sequencesFiles[ _currentFileIndex ]; }
-  @property auto currentSequencesGroup() { return _sequencesGroups[ _currentFileIndex ]; }
-  @property auto currentAlgo() { return _currentAlgos.front; }
-  @property auto currentNoThreads() { return _currentNoThreads.front; }
-  
-}
-
-
 private void run( RunTestsConfig cfg ) {
 
   auto logger = comet.logger.logger( cfg.outFile, cfg.verbosity );
 
-  auto runParamsRange = new RunParamsRange( logger, cfg.sequencesFiles, [ Algo.standard ], [ noThreads( 1 ) ], cfg.minLength );
+  auto runParamsRange = .runParamsRange( logger, cfg.sequencesFiles, [ Algo.standard, Algo.cache, Algo.patterns, Algo.cachePatterns ], [ noThreads( 1 ) ], lengthParameters(
+      minLength( cfg.minLength ),
+      maxLength( cfg.maxLength ),
+      lengthStep( cfg.lengthStep )
+      ),
+      noResults( cfg.noResults )      
+  );
   
   auto br = makeBatchRun(
     runParamsRange,
@@ -228,52 +115,17 @@ private void run( RunTestsConfig cfg ) {
     noResults( cfg.noResults ),        
   );
   
-  auto storage = new class( logger, cfg, runParamsRange )  {
-
-    private Logger _logger;
-    private RunTestsConfig _cfg;
-    private RunParamsRange _runParamsRange;
-      
-    private this( typeof( _logger ) logger, typeof( _cfg ) config, typeof( _runParamsRange ) runParamsRange ) {
-    
-      _logger = logger;
-      _cfg = config;
-      _runParamsRange = runParamsRange;
-      
-    }   
-    
-    public void store( RunSummary summary ) {
-      
-      import std.range: roundRobin, chunks;
-      
-      auto referenceFile = fetch( referenceFileNameFor( _cfg.referencesDir, runParamsRange.currentFile() ) );
-      logger.logln( 2, "Comparing results with reference file: ", referenceFile.fileName );
-      
-      Array!Result empirical;
-      foreach( result; summary.results[] ) {
-        empirical.insertBack( result );
-      }
-      Array!Result expected;
-      foreach( result; resultsReader( referenceFile ) ) {
-        expected.insertBack( result );
-      }     
-      
-      enforce( 
-        allEquivalents( [ empirical[], expected[] ], _cfg.epsilon ), 
-        "Test ERROR: results for sequences file " ~ runParamsRange.currentFile.fileName() ~ " are not equivalent to reference results file " ~ referenceFile.fileName() ~
-        " using epsilon: " ~ _cfg.epsilon.to!string() 
-      );
-      
-      logger.logln( 2, "Results are equivalent to reference with epsilon: ", _cfg.epsilon );
-      logger.logln( 3, executionTimeString( summary.executionTime ) );
-      
-    }
-  
-  };
+  auto storage = .storage( runParamsRange, logger, cfg.referencesDir, cfg.epsilon );
   
   try {
   
     br.run( storage ); 
+    
+    if( cfg.compileTime[ 0 ] ) {
+    
+      printTimeCompilation( cfg.compileTime[ 1 ], storage.timeEntries );
+    
+    }
     
   } catch( Exception e ) {
   
@@ -283,3 +135,37 @@ private void run( RunTestsConfig cfg ) {
   
 }
 
+void printTimeCompilation( R )( File output, R entries ) if ( isInputRange!R && is( ElementType!R == TimeEntry ) ) {
+
+  string COMPILATION_HEADER_FORMAT = "%40s|%18s|%18s|%18s|%18s|%18s|%18s|%15s(s)";
+  //Print header.
+  output.writefln( COMPILATION_HEADER_FORMAT, "file", "algorithm", "number of threads", "number of results", "min length", "max length", "length step", "execution time" );
+  
+  foreach( entry; entries ) {
+  
+    output.printTimeEntry( entry );
+  
+  }
+
+}
+
+void printTimeEntry( File output, in ref TimeEntry entry ) {
+
+  import std.path: baseName;
+  import comet.utils;
+
+  string ENTRY_WRITE_FORMAT = "%40s|%18s|%18s|%18s|%18s|%18s|%18s|%18s";
+  
+  output.writefln( 
+    ENTRY_WRITE_FORMAT, 
+    entry.file.fileName.baseName, 
+    entry.algo, 
+    entry.noThreads.toString(), 
+    entry.noResults.toString(), 
+    entry.length.min.toString(),
+    entry.length.max.toString(), 
+    entry.length.step.toString(), 
+    entry.executionTime.executionTimeInSeconds()
+  );
+
+}

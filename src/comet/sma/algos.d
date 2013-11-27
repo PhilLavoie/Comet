@@ -10,6 +10,7 @@ module comet.sma.algos;
 
 public import comet.sma.mutation_cost;
 public import comet.typedefs: SequencesCount, sequencesCount;
+public import comet.typedefs: SequenceLength, sequenceLength;
 public import comet.configs.algos: Algo;
 
 import comet.sma.pattern;
@@ -22,28 +23,28 @@ import range = std.range;
 /**
   This function constructs and returns an algorithm object based on the given parameters. 
 */
-AlgoI!Molecule algorithmFor( Molecule, MutationCosts )( Algo algo, SequencesCount seqsCount, Molecule[] states, MutationCosts mutationCosts ) {
+AlgoI!Molecule algorithmFor( Molecule, MutationCosts )( Algo algo, SequencesCount seqsCount, SequenceLength length, Molecule[] states, MutationCosts mutationCosts ) {
 
   final switch( algo ) {
   
     case Algo.standard:
     
-      return standard( seqsCount, states, mutationCosts );
+      return standard( seqsCount, length, states, mutationCosts );
       break;
       
     case Algo.cache:
     
-      return cache( seqsCount, states, mutationCosts );
+      return cache( seqsCount, length, states, mutationCosts );
       break;
       
     case Algo.patterns:
     
-      return patterns( seqsCount, states, mutationCosts );
+      return patterns( seqsCount, length, states, mutationCosts );
       break;
       
     case Algo.cachePatterns:  
     
-      return cachePatterns( seqsCount, states, mutationCosts );
+      return cachePatterns( seqsCount, length, states, mutationCosts );
       break;
       
   }
@@ -95,33 +96,47 @@ private mixin template patternColumnCost() {
 }
 
 private mixin template standardCostFor( T ) {
+
   public override Cost costFor( SegmentPairs!( T ) pairs ) {
+  
     real sum = 0;
     foreach( column; pairs.byColumns ) {
+    
       sum += columnCost( column );
+      
     }
+    
     //Normalized sum.
     return sum / pairs.segmentsLength;
+    
   }
+  
 }
 
 private mixin template cacheCostFor( T ) {
+  
   protected Cost[] _cache;
   protected real _costSum;
   
   //Relies on the fact that the outer loop is on period length.
   //Relies on the face that the first duplication for a given length starts at position 0.
   public override Cost costFor( SegmentPairs!( T ) pairs ) {
+  
     //If those are the first segment pairs of a given length.
     size_t segmentsStart = pairs.leftSegmentStart;
     if( segmentsStart == 0 ) {
+    
       _costSum = 0;
       foreach( column; pairs.byColumns ) {      
+      
         auto posCost = columnCost( column );          
-        _cache[ segmentsStart + column.index ] = posCost;
+        _cache[ column.index ] = posCost;
         _costSum += posCost;
+        
       }
+      
       return _costSum / pairs.segmentsLength;
+      
     } 
     
     //Remove the first column cost of the previously processed segment pairs.
@@ -134,7 +149,9 @@ private mixin template cacheCostFor( T ) {
     _costSum += posCost;
     
     return _costSum / pairs.segmentsLength;
+    
   }
+  
 }
 
 class Standard( T, U ): AlgoI!T {
@@ -142,13 +159,15 @@ class Standard( T, U ): AlgoI!T {
 protected:
 
   SequencesCount _seqCount;
+  SequenceLength _seqLength;
   T[] _states;
   U _mutationCosts;
   SMTree!T _smTree;
 
-  this( SequencesCount seqCount, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
+  this( SequencesCount seqCount, SequenceLength length, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
   
     _seqCount = seqCount;
+    _seqLength = length;
     _states = states;
     _mutationCosts = mutationCosts;
    
@@ -166,9 +185,9 @@ public:
   
 }
 
-private auto standard( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
+private auto standard( T, U )( SequencesCount seqCount, SequenceLength length, T[] states, U mutationCosts ) {
 
-  return new Standard!( T, U )( seqCount, states, mutationCosts );
+  return new Standard!( T, U )( seqCount, length, states, mutationCosts );
 
 }
 
@@ -177,7 +196,7 @@ protected:
   
   this( Args... )( Args args ) {
     super( args );
-    _cache = new Cost[ _seqCount.value ];
+    _cache = new Cost[ _seqLength.value ];
   }
 
   mixin standardColumnCost;
@@ -187,9 +206,9 @@ public:
   mixin cacheCostFor!T;
     
 }
-auto cache( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
+auto cache( T, U )( SequencesCount seqCount, SequenceLength length, T[] states, U mutationCosts ) {
 
-  return new Cache!( T, U )( seqCount, states, mutationCosts );
+  return new Cache!( T, U )( seqCount, length, states, mutationCosts );
 
 }
 
@@ -204,9 +223,9 @@ protected:
   mixin standardCostFor!T; 
   
 }
-auto patterns( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
+auto patterns( T, U )( SequencesCount seqCount, SequenceLength length, T[] states, U mutationCosts ) {
 
-  return new Patterns!( T, U )( seqCount, states, mutationCosts );
+  return new Patterns!( T, U )( seqCount, length, states, mutationCosts );
 
 }
 
@@ -215,16 +234,16 @@ protected:
   
   this( Args... )( Args args ) {
     super( args );
-    _cache = new Cost[ _seqCount.value ];
+    _cache = new Cost[ _seqLength.value ];
   }
 
   mixin patternColumnCost;
   mixin cacheCostFor!T;
   
 }
-auto cachePatterns( T, U )( SequencesCount seqCount, T[] states, U mutationCosts ) {
+auto cachePatterns( T, U )( SequencesCount seqCount, SequenceLength length, T[] states, U mutationCosts ) {
 
-  return new CachePatterns!( T, U )( seqCount, states, mutationCosts );
+  return new CachePatterns!( T, U )( seqCount, length, states, mutationCosts );
 
 }
 

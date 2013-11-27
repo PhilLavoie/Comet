@@ -9,6 +9,8 @@ import std.string;
 import std.typecons;
 import std.conv;
 
+alias Cost = double;
+
 /**
   Represents the NUMBER of sequences. Not to be confounded with the LENGTH of the sequences.
 */

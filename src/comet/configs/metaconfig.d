@@ -9,6 +9,8 @@ module comet.configs.metaconfig;
 public import comet.configs.algos;
 public import std.container: Array;
 public import comet.typecons;
+public import std.stdio: File;
+public import std.typecons: Tuple, tuple;
 
 import comet.cli.all;
 import comet.utils: fileName;
@@ -16,12 +18,6 @@ import comet.utils: fileName;
 import std.conv;
 import std.file;
 import std.algorithm;
-
-version( unittest ) {
-
-  import std.stdio;
-
-}
 
 //Interface of the module available to the package.
 public {
@@ -48,7 +44,8 @@ public {
     noThreads,
     algo,
     epsilon,
-    comparedResultsFiles
+    comparedResultsFiles,
+    compileTime
   }
   
   /**
@@ -113,7 +110,7 @@ public {
     with( output ) {
     
       writeln( "-------------------------------------------------" );
-      writeln( "Configuration:" );
+      writeln( "Configuration" );
       
       static if( hasField!( cfg, Field.verbosity ) ) {
         
@@ -207,6 +204,8 @@ public {
   }
   
   unittest {
+  
+    import std.stdio: stdout;
   
     alias fields = std.traits.EnumMembers!Field;
     
@@ -444,6 +443,14 @@ private {
     mixin getter!_testsResultsDir;
   
   }
+  
+  mixin template compileTimeField() {
+  
+    private Tuple!( bool, File ) _compileTime = tuple( false, File.init );
+    
+    mixin getter!_compileTime;
+  
+  }
     
   /*********************************************************************************************************
     Launch initialization.
@@ -580,7 +587,43 @@ private {
   */
   auto argForImpl( Field field, T )( ref T v )  {
   
-    static if( field == Field.referencesDir ) {
+    static if( field == Field.compileTime ) {
+    
+      return flagged(
+        "--compile-time",
+        "Specify that execution time compilation is to be done for the sequences files processed and in which file.",
+        new class ParserI {
+        
+          string[]  _args;
+          File      _compileTimeFile;
+        
+          override string[] take( string[] args ) {
+          
+            enforceEnoughArgs( args, 1 ); //We expect at least two files.
+            _args = args[ 0 .. 1 ];
+            return args[ 1 .. $ ];
+          
+          }
+          
+          override void store() {
+          
+            auto converter = fileConverter( "w" );
+            _compileTimeFile = converter( _args );
+          
+          }
+          
+          override void assign() {
+          
+            v[ 0 ] = true;
+            v[ 1 ] = _compileTimeFile;
+          
+          }       
+        
+        },      
+        Usage.optional
+      );
+    
+    } else static if( field == Field.referencesDir ) {
     
       return indexedRight(
         1,

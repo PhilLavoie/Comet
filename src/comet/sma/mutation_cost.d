@@ -4,7 +4,7 @@
 */
 module comet.sma.mutation_cost;
 
-public import comet.sma.cost: Cost;
+public import comet.typedefs: Cost;
 
 import comet.traits;
 

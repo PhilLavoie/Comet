@@ -1,6 +1,7 @@
 module comet.utils;
 
 public import comet.typedefs: NoThreads, noThreads;
+public import comet.typedefs: MinLength, minLength;
 public import comet.configs.algos: Algo;
 public import comet.bio.dna: Nucleotide;
 
@@ -24,6 +25,12 @@ void enforceValidMinLength( size_t min, size_t mid ) {
     " and is therefore invalid"
   );
 
+}
+
+void enforceValidMinLength( MinLength min, size_t mid ) {
+  
+  enforceValidMinLength( min.value, mid );
+  
 }
 
 
@@ -72,23 +79,28 @@ auto loadMutationCosts() {
 /**
   Prints the execution time value to the given output.
 */
-void printExecutionTime( File output, Duration time ) {
+void printExecutionTime( File output, in Duration time ) {
 
   output.writeln( executionTimeString( time ) );
   
 }
 
-string executionTimeString( Duration time ) {
+string executionTimeString( in Duration time ) {
 
-  return "execution time in seconds: " ~ time.total!"seconds".to!string() ~ "." ~ time.fracSec.msecs.to!string();
+  return "execution time in seconds: " ~ executionTimeInSeconds( time );
 
 }
 
+string executionTimeInSeconds( in Duration time ) {
+
+  return time.total!"seconds".to!string() ~ "." ~ time.fracSec.msecs.to!string();
+
+}
 
 /**
   Small helper function to help print configuration files in a user friendly fashion.
 */
-string fileName( File file ) {
+string fileName( in File file ) {
 
   if( file == stdout ) {
   
