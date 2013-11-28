@@ -97,7 +97,7 @@ private void run( RunTestsConfig cfg ) {
 
   auto logger = comet.logger.logger( cfg.outFile, cfg.verbosity );
 
-  auto runParamsRange = .runParamsRange( logger, cfg.sequencesFiles, [ Algo.standard, Algo.cache, Algo.patterns, Algo.cachePatterns ], [ noThreads( 1 ) ], lengthParameters(
+  auto runParamsRange = .runParamsRange( logger, cfg.sequencesFiles, [ Algo.standard, Algo.cache, Algo.patterns, Algo.cachePatterns ], [ noThreads( 1 ), noThreads( 2 ), noThreads( 4 ), noThreads( 8 ), noThreads( 16 ), noThreads( 24 ), noThreads( 32 ) ], lengthParameters(
       minLength( cfg.minLength ),
       maxLength( cfg.maxLength ),
       lengthStep( cfg.lengthStep )

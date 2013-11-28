@@ -45,7 +45,6 @@ private:
   
     assert( 2 <= sequenceLength );    
     assert( minLength <= maxLength );
-    assert( minLength % lengthStep == 0 ); //Relax this constraint??
     
   } body {
     

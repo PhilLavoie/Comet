@@ -149,7 +149,7 @@ struct Results {
   private RedBlackTree!( Result ) _results;
   private size_t _max;
 
-  @disable this();
+  //@disable this();
   
   /**
     The number of results is intended to be bounded.

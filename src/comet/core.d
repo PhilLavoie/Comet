@@ -27,6 +27,8 @@ import std.traits;
 
 import std.range: isInputRange, ElementType;
 
+import comet.sma.algos: AlgoI;
+
 /**
   Run specific parameters.
 */
@@ -146,42 +148,135 @@ public:
       
       auto sequencesGroup = runParams.sequencesGroup;
       auto noThreads = runParams.noThreads;
-      auto algo = algorithmFor( runParams.algorithm, sequencesCount( sequencesGroup.length ), sequenceLength( sequencesGroup[ 0 ].length ), runParams.states, runParams.mutationCosts );
-        
+
       SysTime startTime = Clock.currTime();
       
-      Results results = Results( _noResults );
-            
-      //Get all segments length possible.
-      auto segmentsLengths = 
-        segmentsLengthsFor(     
-          sequenceLength( sequencesGroup[ 0 ].length ), 
-          _lengthParams
+      if( noThreads == 1 ) {
+                    
+        auto algo = algorithmFor( runParams.algorithm, sequencesCount( sequencesGroup.length ), sequenceLength( sequencesGroup[ 0 ].length ), runParams.states, runParams.mutationCosts );
+        
+        auto results = Results( _noResults );
+        processSegmentsPairs( sequencesGroup, algo, results, _lengthParams );
+        
+        storage.store( runSummary( results, Clock.currTime() - startTime ) );     
+     
+      } else if( noThreads > 1 ) {
+      
+        import std.parallelism;
+        import std.algorithm: min;
+        import std.traits;
+        import comet.bio.dna: Nucleotide;
+      
+        auto maxSegmentsLength = min( sequencesGroup[ 0 ].length / 2, _lengthParams.max.value );
+        auto maxNoThreads = ( ( maxSegmentsLength - _lengthParams.min.value ) / _lengthParams.step.value ) + 1;
+        auto workingThreads = min( maxNoThreads, noThreads.value );
+        auto additionalThreads = workingThreads - 1;
+       
+        auto tasks =
+          Array!( Task!( processSegmentsPairs, ParameterTypeTuple!( processSegmentsPairs!( Nucleotide ) ) ) * )();
+        
+        auto taskResults = Array!Results();
+        for( int i = 0; i < additionalThreads; ++i ) {
+        
+          taskResults.insertBack( Results( _noResults ) );
+          tasks.insertBack( 
+            task!processSegmentsPairs( 
+              sequencesGroup, 
+              algorithmFor( 
+                runParams.algorithm, 
+                sequencesCount( sequencesGroup.length ), 
+                sequenceLength( sequencesGroup[ 0 ].length ), 
+                runParams.states, 
+                runParams.mutationCosts 
+              ),
+              taskResults[ i ], 
+              lengthParameters(
+                minLength( _lengthParams.min + ( i + 1 ) * _lengthParams.step ),
+                _lengthParams.max,
+                lengthStep( _lengthParams.step * workingThreads  )
+              )
+            )
+          );
+          ( tasks[ i ] ).executeInNewThread();
+        
+        }
+                
+        auto results = Results( _noResults );
+        processSegmentsPairs( 
+          sequencesGroup, 
+          algorithmFor( 
+            runParams.algorithm, 
+            sequencesCount( sequencesGroup.length ), 
+            sequenceLength( sequencesGroup[ 0 ].length ), 
+            runParams.states, 
+            runParams.mutationCosts 
+          ), 
+          results, 
+          lengthParameters( 
+            _lengthParams.min,
+            _lengthParams.max,
+            lengthStep( _lengthParams.step * workingThreads )
+          ) 
         );
-              
-      //For every segments length, generate segments pairs.
-      foreach( segmentsLength; segmentsLengths ) {    
-          
-        auto segmentsPairsRange = sequencesGroup.segmentPairsForLength( segmentsLength );
         
-        //The segments pairs start on index 0 and increment by 1 index every time.
-        foreach( segmentsPairs; segmentsPairsRange ) {
+        //Do this thread's processing.
         
-          //Get the cost of the segments pairs using the appropriate algorithm.
-          auto cost = algo.costFor( segmentsPairs );
-          //Store the structured result.
-          results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
-          
-        }  
+        for( int i = 0; i < tasks.length; ++i ) {
+        
+          tasks[ i ].yieldForce();
+          results.add( taskResults[ i ][] );
+        
+        }
+        
+        storage.store( runSummary( results, Clock.currTime() - startTime ) );     
+      
+      } else {
+      
+        assert( false );
       
       }
       
-      storage.store( runSummary( results, Clock.currTime() - startTime ) );     
+      
     
     }
     
   } 
   
+}
+
+
+
+public void processSegmentsPairs( T )( 
+  T[][] sequencesGroup, 
+  AlgoI!T algorithm,
+  Results results, 
+  LengthParameters length 
+) {
+  
+  //Get all segments length possible.
+  auto segmentsLengths = 
+    segmentsLengthsFor(     
+      sequenceLength( sequencesGroup[ 0 ].length ), 
+      length
+    );
+          
+  //For every segments length, generate segments pairs.
+  foreach( segmentsLength; segmentsLengths ) {    
+      
+    auto segmentsPairsRange = sequencesGroup.segmentPairsForLength( segmentsLength );
+    
+    //The segments pairs start on index 0 and increment by 1 index every time.
+    foreach( segmentsPairs; segmentsPairsRange ) {
+    
+      //Get the cost of the segments pairs using the appropriate algorithm.
+      auto cost = algorithm.costFor( segmentsPairs );
+      //Store the structured result.
+      results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
+      
+    }  
+  
+  }
+
 }
 
 /**
