@@ -6,6 +6,7 @@ module comet.cli.arguments;
 import comet.cli.utils;
 import comet.cli.parsers;
 import comet.cli.exceptions;
+import comet.cli.converters;
 
 import std.algorithm;
 import std.conv;
@@ -278,7 +279,7 @@ auto value( T )( string flag, string description, ref T value ) {
   return custom( 
     flag, 
     description, 
-    commonParser( toConverter!T(), value )
+    oneArgParser( toConverter!T(), value )
  );
 }
 
@@ -292,7 +293,7 @@ auto bounded( T )( string flag, string description, ref T value, T min, T max ) 
   return custom( 
     flag,
     description, 
-    commonParser( boundedConverter( min, max ), value )
+    oneArgParser( boundedConverter( min, max ), value )
   );
 }
 
@@ -304,7 +305,7 @@ auto mapped( T )( string flag, string description, ref T value, in T[ string ] m
   return custom(
     flag,
     description,
-    commonParser( mappedConverter( map ), value )
+    oneArgParser( mappedConverter( map ), value )
   );
 }
 
@@ -319,7 +320,7 @@ auto file( string flag, string description, ref File file, string mode ) {
   return custom(
     flag,
     description,
-    commonParser( fileConverter( mode ), file )
+    oneArgParser( fileConverter( mode ), file )
   );
 }
 
@@ -336,7 +337,7 @@ auto dir( string name, string description, ref string dir ) {
   return custom(
     name,
     description,
-    commonParser( dirConverter(), dir )
+    oneArgParser( dirConverter(), dir )
   ); 
 }  
 

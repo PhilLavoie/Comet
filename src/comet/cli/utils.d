@@ -1,7 +1,10 @@
+/**
+  Utility related functions.
+*/
 module comet.cli.utils;
 
-import std.string;
-import std.path;
+import std.string: strip;
+import std.path: baseName, stripExtension;
 
 /**
   Returns the name of the command used on the command line. It was meant to be called with the
@@ -11,17 +14,23 @@ import std.path;
   The slice version passes the first string to the single string version.
 */
 string commandName( string[] tokens ) {
+
   return commandName( tokens[ 0 ] );
+  
 }
 ///Ditto
 string commandName( string token ) {
+
   //Strip leading directories and extension.
   return token.baseName().stripExtension();  
+  
 }
 
 /**
     Make sure that the strings contains at least 1 character that is not whitespace.
   */
 package void checkNonEmpty( string stringName, string s ) {
+
   assert( s.strip.length, "expected the " ~ stringName ~ " to be non empty" );
+  
 }  

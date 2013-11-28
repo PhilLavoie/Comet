@@ -629,7 +629,7 @@ private {
         1,
         "referencesDirectory",
         "This is the directory where the references files are located.",
-        commonParser( dirConverter(), v )
+        oneArgParser( dirConverter(), v )
       );
     
     } else static if( field == Field.testsResultsDir ) {
@@ -638,7 +638,7 @@ private {
         2,
         "testsResultsDirectory",
         "This is the directory where the tests results will be generated.",
-        commonParser( dirConverter(), v )    
+        oneArgParser( dirConverter(), v )    
       );    
     
     } else static if( field == Field.epsilon ) {
@@ -696,7 +696,7 @@ private {
         0u,
         "sequencesFile", 
         "This argument is the file holding the sequences to process.", 
-        commonParser( fileConverter( "r" ), v  ),
+        oneArgParser( fileConverter( "r" ), v  ),
         Usage.mandatory
       );
       
@@ -706,7 +706,7 @@ private {
         0u,
         "sequences directory", 
         "This argument indicates the directory where the sequences files are located. All files are used, so make sure only sequences files are there.", 
-        commonParser(
+        oneArgParser(
           //Converter, do nothing.
           ( string[] args ) => args[ 0 ],
           //Eagerly read the directory for sequences files.
