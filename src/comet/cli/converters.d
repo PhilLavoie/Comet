@@ -38,117 +38,148 @@ package template isConverter( T... ) if( 1 == T.length ) {
   
 }
 
-//Predefined converters for ease of use.
-
 /**
-  Returns a converter that always returns the same value, regardless of the parameters passed.
+  Converters factory. Forces a namespace.
 */
-auto constantConverter( T )( T value ) {
+final abstract class Converters {
 
-  return ( string[] ) => value;
-  
-}
+static:
 
-/**
-  Returns a converter that uses std.conv.to function to convert to the given type.
-*/
-auto toConverter( T )() {
+  /**
+    Returns a converter that always returns the same value, regardless of the parameters passed.
+  */
+  auto constant( T )( T value ) out( value ) {
 
-  return ( string[] tokens ) => tokens[ 0 ].to!T();
-  
-}
+    static assert( isConverter!( typeof( value ) ) );
 
-/**
-  Returns a converter that, in addition to using std.conv.to, it makes sure that the value is
-  within given bounds. Bounds are inclusive.
-*/
-auto boundedConverter( T )( T min, T max ) {
+  } body {
 
-  return ( string[] tokens ) { 
-  
-    auto t = tokens[ 0 ].to!T(); 
-    enforce( min <= t, tokens[ 0 ] ~ " is under the minimum boundary allowed: " ~ min.to!string() );
-    enforce( t <= max, tokens[ 0 ] ~ " is above the maximum boundary allowed: " ~ max.to!string() ); 
-    return t;
+    return ( string[] ) => value;
     
-  };
-  
-}
-
-/**
-  A converter that simply:
-    1 - Guarantees the token is in the map.
-    2 - Returns its associated values.
-  This converter is very useful for enumerated values:
-  enum Level {
-    low,
-    medium,
-    highAsHell
   }
-  auto conv = mappedConverter( [ "low": Level.low, "Okay": Level.medium, "IMissMyMomma": Level.highAsHell );
-*/
-auto mappedConverter( T )( in T[ string ] map ) {
 
-  return ( string[] tokens ) {
-  
-    string temp = tokens[ 0 ];
-    enforce( temp in map, temp ~ " is not one of possible values: " ~ map.keys.to!string );
-    return map[ temp ];
+  /**
+    Returns a converter that uses std.conv.to function to convert to the given type.
+  */
+  auto to( T )() out( value ) {
+
+    static assert( isConverter!( typeof( value ) ) );
+
+  } body {
+
+    return ( string[] tokens ) => tokens[ 0 ].to!T();
     
-  };
-  
-}
+  }
 
-/**
-  A converter that opens a file with the given mode. It supports those constants:
-  stdout, stdin and stderr.
-*/
-auto fileConverter( string mode ) {
+  /**
+    Returns a converter that, in addition to using std.conv.to, it makes sure that the value is
+    within given bounds. Bounds are inclusive.
+  */
+  auto bounded( T )( T min, T max ) out( value ) {
 
-  return ( string[] tokens ) {
-  
-    if( tokens[ 0 ] == "stdout" ) {
+    static assert( isConverter!( typeof( value ) ) );
+
+  } body {
+
+    return ( string[] tokens ) { 
     
-      enforce( !mode.startsWith( "r" ), "stdout is used as input with mode " ~ mode );
-      return stdout;
+      auto t = tokens[ 0 ].to!T(); 
+      enforce( min <= t, tokens[ 0 ] ~ " is under the minimum boundary allowed: " ~ min.to!string() );
+      enforce( t <= max, tokens[ 0 ] ~ " is above the maximum boundary allowed: " ~ max.to!string() ); 
+      return t;
       
-    } else if( tokens[ 0 ] == "stderr" ) {
+    };
     
-      enforce( !mode.startsWith( "r" ), "stderr is used as input with mode " ~ mode );
-      return stderr;
-      
-    } else if( tokens[ 0 ] == "stdin" ) {
-    
-      enforce( mode.startsWith( "r" ), "stdin is used as output with mode " ~ mode );
-      return stdin;
-      
-    } else {          
-    
-      return File( tokens[ 0 ], mode );
-      
-    } 
-    
-  };
-  
-}
+  }
 
-/**
-  A converter that makes sure that the received token is a directory. It also guarantees
-  that the returned string ends with a directory separator, ensuring the format on the client
-  end.
-*/
-auto dirConverter() {
+  /**
+    A converter that simply:
+      1 - Guarantees the token is in the map.
+      2 - Returns its associated values.
+    This converter is very useful for enumerated values:
+    enum Level {
+      low,
+      medium,
+      highAsHell
+    }
+    auto conv = Converters.mapped( [ "low": Level.low, "Okay": Level.medium, "IMissMyMomma": Level.highAsHell );
+  */
+  auto mapped( T )( in T[ string ] map ) out( value ) {
 
-  return ( string[] tokens ) {
-  
-    auto dir = tokens[ 0 ];
-    auto makeSure = dirEntries( dir, SpanMode.shallow ); //This will throw if if is not a dir.
+    static assert( isConverter!( typeof( value ) ) );
 
-    if( dir.endsWith( dirSeparator ) ) {
-      return dir;
-    }    
-    return dir ~ dirSeparator;
+  } body {
+
+    return ( string[] tokens ) {
     
-  };
+      string temp = tokens[ 0 ];
+      enforce( temp in map, temp ~ " is not one of possible values: " ~ map.keys.to!string );
+      return map[ temp ];
+      
+    };
+    
+  }
+
+  /**
+    A converter that opens a file with the given mode. It supports those constants:
+    stdout, stdin and stderr.
+  */
+  auto file( string mode ) out( value ) {
+
+    static assert( isConverter!( typeof( value ) ) );
+
+  } body {
+
+    return ( string[] tokens ) {
+    
+      if( tokens[ 0 ] == "stdout" ) {
+      
+        enforce( !mode.startsWith( "r" ), "stdout is used as input with mode " ~ mode );
+        return stdout;
+        
+      } else if( tokens[ 0 ] == "stderr" ) {
+      
+        enforce( !mode.startsWith( "r" ), "stderr is used as input with mode " ~ mode );
+        return stderr;
+        
+      } else if( tokens[ 0 ] == "stdin" ) {
+      
+        enforce( mode.startsWith( "r" ), "stdin is used as output with mode " ~ mode );
+        return stdin;
+        
+      } else {          
+      
+        return File( tokens[ 0 ], mode );
+        
+      } 
+      
+    };
+    
+  }
+
+  /**
+    A converter that makes sure that the received token is a directory. It also guarantees
+    that the returned string ends with a directory separator, ensuring the format on the client
+    end.
+  */
+  auto dir() out( value ) {
+
+    static assert( isConverter!( typeof( value ) ) );
+
+  } body {
+
+    return ( string[] tokens ) {
+    
+      auto dir = tokens[ 0 ];
+      auto makeSure = dirEntries( dir, SpanMode.shallow ); //This will throw if if is not a dir.
+
+      if( dir.endsWith( dirSeparator ) ) {
+        return dir;
+      }    
+      return dir ~ dirSeparator;
+      
+    };
+    
+  }
   
 }

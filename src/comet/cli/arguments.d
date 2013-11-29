@@ -18,13 +18,16 @@ import std.range;
 import std.typecons: Flag;
 
 
-//TODO add names for parser arguments somehow.
-//TODO maybe support mutually exclusive flagged and indexed?????????
 //TODO add support for "float" parsers that are tested in order against unrecognized tokens. Can be mandatory.
 
+/**
+  Tells whether the argument is mandatory or optional.
+*/
 enum Usage: bool {
+
   optional = true,
   mandatory = false
+  
 }
 
 /**
@@ -34,7 +37,9 @@ enum Usage: bool {
   of the arguments, if any.
 */
 private abstract class Argument{
+
 protected:
+
   //The argument's parser.
   ParserI _parser;
   @property ParserI parser() { return _parser; }
@@ -54,10 +59,12 @@ protected:
   bool _optional;
       
   this( string description, ParserI parser, bool optional ) {
+  
     _description = description;
     _optional = optional;
     _parser = parser;
     _used = false;
+    
   }
   
   /**
@@ -68,9 +75,22 @@ protected:
   }  
   
 public:
+
+  /**
+    Sets or return the description.
+  */
   @property string description() { return _description; }
+  ///Ditto.
   @property void description( string desc ) { _description = desc; }  
+  
+  /**
+    Returns true if the argument has been used by the parser.
+  */
   @property bool used() { return _used; }   
+  
+  /**
+    Returns a string that identifies the argument in a unique way preferably.
+  */
   abstract @property string identification();
 
   /**
@@ -81,6 +101,7 @@ public:
     Returns true if this argument is mandatory, false otherwise.
   */
   bool isMandatory() { return !isOptional(); }
+  
 }
 
 /**
@@ -88,21 +109,29 @@ public:
   are arguments that have to respect a certain position on the command line.
 */
 private abstract class Indexed: Argument {
+
 protected:
+
   //The index where the argument is expected. Starts at 0.
   size_t _index;
   //The argument name, for identification.
   string _name;
   
   this( T... )( T args ) {
+  
     super( args[ 2 .. $ ] );
+    
     _index = args[ 0 ];    
     _name = args[ 1 ];
+    
   }
+  
 public:
+
   @property auto index() { return _index; }
   @property auto name() { return _name; }
   override @property string identification() { return _name; }
+  
 }
 
 /**
@@ -163,19 +192,29 @@ auto indexedRight( size_t index, string name, string description, ParserI parser
   "program [ indexedLeft ] -f flagOne --no-argument -anotherFlag withAnArgument -f somefile.txt [ indexedRight ]" 
 */
 class Flagged: Argument {
+
 protected:
+
   //The flag identifying the argument.
   string _flag;
+  //The name of the argument's arguments, if any.
+  string _argumentName;
+  
+  //Returns the flag.
   @property void flag( string f ) { _flag = f; }
     
   this( T... )( T args ) {
-    super( args[ 1 .. $ ] );
+  
+    super( args[ 2 .. $ ] );
     _flag = args[ 0 ];    
+    _argumentName = args[ 1 ];
+    
   }
   
   //Mutually exclusive flagged argument.
   SList!( Flagged ) _mutuallyExclusives;
-  @property auto mutuallyExclusives() { return _mutuallyExclusives; }
+  @property auto mutuallyExclusives() { return _mutuallyExclusives[]; }
+  
   /**
     Returns true if this argument has any mutually exclusives, false otherwise.
   */
@@ -188,8 +227,10 @@ protected:
   }   
     
 public:
+
   @property string flag() { return _flag; }
   override @property string identification() { return _flag; }
+  
 }
 
 /**
@@ -246,17 +287,10 @@ private void enforceMandatoryUse( A )( A arg ) if( is( A : Argument ) ) {
   If no predefined arguments satisfy the user's needs, this one is the most
   general factory method. It lets the user specify the tokens parser.
 */
-Flagged flagged( string flag, string description, ParserI parser, Usage usage = Usage.optional ) {
-  return new Flagged( flag, description, parser, usage );    
+Flagged flagged( string flag, string argName, string description, ParserI parser, Usage usage = Usage.optional ) {
+  return new Flagged( flag, argName, description, parser, usage );    
 } 
 
-
-//Find a way to uniformize the predefined flagged arguments with the indexed ones.
-
-
-auto custom( string flag, string description, ParserI parser ) {
-  return flagged( flag, description, parser );
-}
 
 /**
   A simple flag that reverses the boolean value when found on the command line.     
@@ -265,10 +299,10 @@ auto toggle( string flag, string description, ref bool toggled ) {
   return setter( flag, description, toggled, !toggled );
 } 
 auto setter( T )( string flag, string description, ref T settee, T setTo ) {
-  return custom( flag, description, noArgParser( settee, setTo ) );
+  return flagged( flag, "", description, noArgParser( settee, setTo ) );
 }
 auto caller( T )( string flag, string description, T callee ) if( isCallable!T ) {
-  return custom( flag, description, noArgParser( callee ) );
+  return flagged( flag, "", description, noArgParser( callee ) );
 }  
 
 /**
@@ -276,10 +310,11 @@ auto caller( T )( string flag, string description, T callee ) if( isCallable!T )
   standard conversion function: to.
 */
 auto value( T )( string flag, string description, ref T value ) {
-  return custom( 
+  return flagged( 
     flag, 
+    "",
     description, 
-    oneArgParser( toConverter!T(), value )
+    oneArgParser( Converters.to!T(), value )
  );
 }
 
@@ -290,10 +325,11 @@ auto value( T )( string flag, string description, ref T value ) {
   1 as min and 10 as max.
 */
 auto bounded( T )( string flag, string description, ref T value, T min, T max ) {
-  return custom( 
+  return flagged( 
     flag,
+    "",
     description, 
-    oneArgParser( boundedConverter( min, max ), value )
+    oneArgParser( Converters.bounded( min, max ), value )
   );
 }
 
@@ -302,10 +338,11 @@ auto bounded( T )( string flag, string description, ref T value, T min, T max ) 
   then the value is set to the token's mapped value.
 */
 auto mapped( T )( string flag, string description, ref T value, in T[ string ] map ) {
-  return custom(
+  return flagged(
     flag,
+    "",
     description,
-    oneArgParser( mappedConverter( map ), value )
+    oneArgParser( Converters.mapped( map ), value )
   );
 }
 
@@ -317,10 +354,11 @@ auto mapped( T )( string flag, string description, ref T value, in T[ string ] m
   must start with an "r" for stdin.
 */
 auto file( string flag, string description, ref File file, string mode ) {
-  return custom(
+  return flagged(
     flag,
+    "",
     description,
-    oneArgParser( fileConverter( mode ), file )
+    oneArgParser( Converters.file( mode ), file )
   );
 }
 
@@ -334,17 +372,17 @@ auto file( string flag, string description, ref File file, string mode ) {
   to the reference value will end with a separator: "a/directory/".
 */
 auto dir( string name, string description, ref string dir ) {
-  return custom(
+  return flagged(
     name,
+    "",
     description,
-    oneArgParser( dirConverter(), dir )
+    oneArgParser( Converters.dir(), dir )
   ); 
 }  
 
 
 alias DropFirst = std.typecons.Flag!"DropFirst";
 
-//TODO add flag names in exceptions.
 /**
   Command line parser.
   It provides the user with facilities to create flags and register
@@ -360,12 +398,18 @@ protected:
   Array!Argument _mandatories;
   
   auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
+  
     try {
+    
       return mixin( "arg.parser." ~ method )( args );
+      
     } catch( Exception e ) {
+    
       e.msg = "argument " ~ arg.identification ~ ": " ~ e.msg;
       throw e;
+      
     }
+    
   }
   
   void addMandatory( Argument arg ) in {
@@ -692,8 +736,7 @@ public:
       
     } catch( HelpMenuRequested e ) {
     
-      e.msg = "";
-      throw e;
+      throw new AbortExecution( e );
       
     } catch( Exception e ) {
     
@@ -707,9 +750,7 @@ public:
       _out.writeln( "use " ~ _helpFlag ~ " for help" );      
       _out.writeln();
       
-      //TODO: throw another exception that means program abortion.
-      e.msg = "";
-      throw e;
+      throw new AbortExecution( e );
       
     }
     

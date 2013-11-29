@@ -76,11 +76,16 @@ mixin template loadConfigMixin() {
     
       cfg = parse( commandName, args );
     
-    } catch( Exception e ) {
+    } catch( AbortExecution e ) {
       
       //The exception has been handled by the parser.
       return false;
 
+    } catch( Exception e ) {
+    
+      //Unsupported exception by the parser, might be important.
+      throw e;
+    
     }
     
     return true;
