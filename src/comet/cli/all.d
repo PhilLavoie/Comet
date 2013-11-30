@@ -3,6 +3,7 @@
 */
 module comet.cli.all;
 
+public import comet.cli.parser;
 public import comet.cli.arguments;
 public import comet.cli.utils;
 public import comet.cli.parsers;

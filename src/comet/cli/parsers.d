@@ -7,6 +7,8 @@ module comet.cli.parsers;
 import comet.cli.exceptions;
 import comet.cli.converters;
 
+import std.traits: Unqual, ParameterTypeTuple;
+
 /**
   This interface is for objects designed to parse arguments from the command line.
   They can be referred to as "lazy parsers": they offer a three steps parsing, instead

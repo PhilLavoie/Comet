@@ -76,7 +76,7 @@ mixin template loadConfigMixin() {
     
       cfg = parse( commandName, args );
     
-    } catch( AbortExecution e ) {
+    } catch( comet.cli.exceptions.AbortExecution e ) {
       
       //The exception has been handled by the parser.
       return false;

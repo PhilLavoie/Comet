@@ -15,7 +15,6 @@ import std.exception;
 import std.string;
 import std.container;
 import std.range;
-import std.typecons: Flag;
 
 
 //TODO add support for "float" parsers that are tested in order against unrecognized tokens. Can be mandatory.
@@ -36,14 +35,13 @@ enum Usage: bool {
   a parser. The parser is designed to carry the tasks related to interpreting the associated values
   of the arguments, if any.
 */
-private abstract class Argument{
+package abstract class Argument{
 
 protected:
 
   //The argument's parser.
   ParserI _parser;
-  @property ParserI parser() { return _parser; }
-  
+    
   //The description, as presented to the user on the help menu.
   string _description;
   
@@ -52,7 +50,7 @@ protected:
   //as a quick way to verify that mutually exclusive flags aren't already
   //being used for example.
   bool _used = false;
-  @property void used( bool u ) { _used = u; }
+  
   
   //Indicates whether or not the argument is optional. Useful for quickly determining
   //how an argument should appear on the help menu (as mandatory or optional ).
@@ -66,6 +64,11 @@ protected:
     _used = false;
     
   }
+    
+package:
+
+  @property ParserI parser() { return _parser; }
+  @property void used( bool u ) { _used = u; }
   
   /**
     Prepares the argument for a parser run. Sets the used status to false.
@@ -108,7 +111,7 @@ public:
   A specialization of argument representing indexed arguments. Indexed arguments
   are arguments that have to respect a certain position on the command line.
 */
-private abstract class Indexed: Argument {
+package abstract class Indexed: Argument {
 
 protected:
 
@@ -155,13 +158,6 @@ class IndexedLeft: Indexed {
 }
 
 /**
-  Factory function that create an indexed argument whose index starts right after the command invocation.
-*/
-auto indexedLeft( size_t index, string name, string description, ParserI parser, Usage usage = Usage.mandatory ) {
-  return new IndexedLeft( index, name, description, parser, usage );
-}
-
-/**
   Those objects follow the same logic as the indexed left argument, but their index starts right
   after the flagged arguments region:
   
@@ -171,13 +167,6 @@ class IndexedRight: Indexed {
   this( T... )( T args ) {
     super( args );    
   }
-}
-
-/**
-  Factory function that create an indexed argument whose index starts right after the flagged arguments region.
-*/
-auto indexedRight( size_t index, string name, string description, ParserI parser, Usage usage = Usage.mandatory ) {
-  return new IndexedRight( index, name, description, parser, usage );
 }
 
 /**
@@ -233,6 +222,153 @@ public:
   
 }
 
+
+
+
+final abstract class Arguments {
+
+static:
+
+  auto indexed( string leftOrRight )( ParserI parser, int index, string name, string description, Usage use = Usage.mandatory  ) in {
+    
+    assert( 0 <= index );
+    
+  } body {
+  
+    static if( leftOrRight == "left" ) {
+    
+      return new IndexedLeft( index, name, description, parser, use );
+    
+    } else static if( leftOrRight == "right" ) {
+    
+      return new IndexedRight( index, name, description, parser, use );
+    
+    } else {
+    
+      static assert( false );
+    
+    }
+  
+  }
+  
+  alias indexedLeft = indexed!"left";
+  alias indexedRight = indexed!"right";
+  
+  auto flagged( ParserI parser, string flag, string argName, string description, Usage use = Usage.optional  ) {
+  
+    return new Flagged( flag, argName, description, parser, use );
+  
+  }
+  
+  auto flagged( ParserI parser, string flag, string description, Usage use = Usage.optional  ) {
+  
+    return flagged( parser, flag, "", description, use );
+  
+  }
+  
+  private auto guess( T... )( T args ) {
+  
+    static if( is( T[ 1 ] == int ) ) {
+  
+      return indexed( args );
+      
+    } else static if( is( T[ 1 ] == string ) ) {
+    
+      return flagged( args );
+    
+    } else {
+    
+      static assert( false );
+    
+    }
+  
+  }
+  
+  /**
+    A simple argument that reverses the boolean value when found on the command line.     
+  */
+  auto toggle( Args... )( ref bool toggled, Args args ) {
+    return setter( toggled, !toggled, args );
+  } 
+  auto setter( T, Args... )( ref T settee, T setTo, Args args  ) {
+    return guess( noArgParser( settee, setTo ), args );
+  }
+  auto caller( T, Args... )( T callee, Args args ) if( isCallable!T ) {
+    return guess( noArgParser( callee ), args );
+  }  
+
+  /**
+    Argument expecting one argument of type T. The argument is set using the
+    standard conversion function "to".
+  */
+  auto value( T, Args... )( ref T value, Args args  ) {
+    return guess( 
+      oneArgParser( Converters.to!T(), value ),
+      args      
+    );
+  }
+
+  /**
+    Same as value, but with an additional bounds check for the argument. The minimum
+    and maximum bounds value are inclusive and are tested using the "<" operator.
+    If a flag should expect a number from 1 to 10, then the call should pass
+    1 as min and 10 as max.
+  */
+  auto bounded( T, Args... )( ref T value, T min, T max, Args args ) {
+    return guess( 
+      oneArgParser( Converters.bounded( min, max ), value ),
+      args
+    );
+  }
+
+  /**
+    This facility uses a map of words listing the possible values. If the token found was one of them,
+    then the value is set to the token's mapped value.
+  */
+  auto mapped( T, Args... )( ref T value, in T[ string ] map, Args args ) {
+    return guess(
+      oneArgParser( Converters.mapped( map ), value ),
+      args
+    );
+  }
+
+  /**
+    This factory method builds an argument that expects a string referring to a file. The
+    file is eagerly opened in the provided mode.
+    This flag supports stdin, stdout and stderr files as values from the user.
+    The mode of the file must not start with an "r" for both stdout and stderr but
+    must start with an "r" for stdin.
+  */
+  auto file( Args... )( ref File file, string mode, Args args ) {
+    return guess(
+      oneArgParser( Converters.file( mode ), file ),
+      args 
+    );
+  }
+
+
+
+  /**
+    This method builds a flag that expects an existing directory as an argument.
+    If the string provided points to a directory, it is assigned to the reference value.
+    Automatically adds a directory separator to the argument if it did not end with one.
+    Ex: With "-dir a/directory", the argument assigned
+    to the reference value will end with a separator: "a/directory/".
+  */
+  auto dir( Args... )( ref string dir, Args args ) {
+    return guess(
+      oneArgParser( Converters.dir(), dir ),
+      args
+    ); 
+  }  
+
+
+
+
+}
+
+
+
 /**
   Specifies that the program arguments are mutually exclusive and cannot
   be found at the same time on the command line. Must provide a group of at least two arguments.
@@ -256,7 +392,7 @@ void mutuallyExclusive( Flagged[] flags ... ) in {
   Verifies that all mutually exclusive arguments for the one provided are not
   already in use.
 */
-private void enforceNoMutuallyExclusiveUsed( Flagged f ) {
+package void enforceNoMutuallyExclusiveUsed( Flagged f ) {
   foreach( me; f.mutuallyExclusives ) {
     enforce( !me.used, "flag " ~ f.flag ~ " was found but is mutually exclusive with " ~ me.flag );
   }
@@ -265,570 +401,19 @@ private void enforceNoMutuallyExclusiveUsed( Flagged f ) {
 /**
   Makes sure that the flag has not been used before, throws otherwise.
 */
-private void enforceNotUsedBefore( Flagged f ) {
+package void enforceNotUsedBefore( Flagged f ) {
   enforce( !f.used, "flagged argument: " ~ f.flag ~ " is used twice" );
 }
 
 /**
   Enforce that the mandatory flagged arguments have all been used.
 */
-private void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
+package void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
   foreach( f; range ) {
     enforceMandatoryUse( f );
   }
 }
 ///DITTO
-private void enforceMandatoryUse( A )( A arg ) if( is( A : Argument ) ) {
+package void enforceMandatoryUse( A )( A arg ) if( is( A : Argument ) ) {
   enforce( arg.used, "user must provide argument " ~ arg.identification );
-}
-
-
-/**
-  If no predefined arguments satisfy the user's needs, this one is the most
-  general factory method. It lets the user specify the tokens parser.
-*/
-Flagged flagged( string flag, string argName, string description, ParserI parser, Usage usage = Usage.optional ) {
-  return new Flagged( flag, argName, description, parser, usage );    
-} 
-
-
-/**
-  A simple flag that reverses the boolean value when found on the command line.     
-*/
-auto toggle( string flag, string description, ref bool toggled ) {
-  return setter( flag, description, toggled, !toggled );
-} 
-auto setter( T )( string flag, string description, ref T settee, T setTo ) {
-  return flagged( flag, "", description, noArgParser( settee, setTo ) );
-}
-auto caller( T )( string flag, string description, T callee ) if( isCallable!T ) {
-  return flagged( flag, "", description, noArgParser( callee ) );
-}  
-
-/**
-  Flagged expecting one argument of type T. The argument is set using the
-  standard conversion function: to.
-*/
-auto value( T )( string flag, string description, ref T value ) {
-  return flagged( 
-    flag, 
-    "",
-    description, 
-    oneArgParser( Converters.to!T(), value )
- );
-}
-
-/**
-  Same as value, but with an additional bounds check for the argument. The minimum
-  and maximum bounds value are inclusive and are tested using the "<" operator.
-  If a flag should expect a number from 1 to 10, then the call should pass
-  1 as min and 10 as max.
-*/
-auto bounded( T )( string flag, string description, ref T value, T min, T max ) {
-  return flagged( 
-    flag,
-    "",
-    description, 
-    oneArgParser( Converters.bounded( min, max ), value )
-  );
-}
-
-/**
-  This facility uses a map of words listing the possible values. If the token found was one of them,
-  then the value is set to the token's mapped value.
-*/
-auto mapped( T )( string flag, string description, ref T value, in T[ string ] map ) {
-  return flagged(
-    flag,
-    "",
-    description,
-    oneArgParser( Converters.mapped( map ), value )
-  );
-}
-
-/**
-  This factory method builds a flag that expect a string referring to a file. The
-  file is eagerly opened in the provided mode.
-  This flag supports stdin, stdout and stderr files as values from the user.
-  The mode of the file must not start with an "r" for both stdout and stderr but
-  must start with an "r" for stdin.
-*/
-auto file( string flag, string description, ref File file, string mode ) {
-  return flagged(
-    flag,
-    "",
-    description,
-    oneArgParser( Converters.file( mode ), file )
-  );
-}
-
-
-
-/**
-  This method builds a flag that expects an existing directory as an argument.
-  If the string provided points to a directory, it is assigned to the reference value.
-  Automatically adds a directory separator to the argument if it did not end with one.
-  Ex: With "-dir a/directory", the argument assigned
-  to the reference value will end with a separator: "a/directory/".
-*/
-auto dir( string name, string description, ref string dir ) {
-  return flagged(
-    name,
-    "",
-    description,
-    oneArgParser( Converters.dir(), dir )
-  ); 
-}  
-
-
-alias DropFirst = std.typecons.Flag!"DropFirst";
-
-/**
-  Command line parser.
-  It provides the user with facilities to create flags and register
-  them to the current parser.
-  Every factory method returns a flag, but the flag is also immediately
-  added to the parser's list.
-*/
-class Parser {  
-protected:
-
-  Array!Indexed _indexedLeft;
-  Array!Indexed _indexedRight;
-  Array!Argument _mandatories;
-  
-  auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
-  
-    try {
-    
-      return mixin( "arg.parser." ~ method )( args );
-      
-    } catch( Exception e ) {
-    
-      e.msg = "argument " ~ arg.identification ~ ": " ~ e.msg;
-      throw e;
-      
-    }
-    
-  }
-  
-  void addMandatory( Argument arg ) in {
-    assert( arg.isMandatory(), "adding an optional argument as mandatory" );
-  } body {
-    _mandatories.insertBack( arg );
-  }
-  
-  string[] takeIndexed( string s )( string[] tokens ) if( s == "left" || s == "right" ) {
-      
-    static if( s == "left" ) {
-    
-      auto container = _indexedLeft;     
-      
-    } else {
-    
-      auto container = _indexedRight;
-      
-    }
-        
-    foreach( indexed; container ) {
-      auto previousTokens = tokens;
-      tokens = argProxy!"take"( indexed, tokens );
-      assert( tokens !is previousTokens || indexed.isOptional, "indexed " ~ s ~ " argument " ~ indexed.index.to!string ~ " did not take any argument but is mandatory" );
-      indexed.used = true;
-      _used.insertBack( indexed );
-    }
-    return tokens;
-  }
-  
-  string[] takeFlagged( string[] tokens ) {
-  
-    while( tokens.length && tokens[ 0 ] in _flags ) {
-      auto f = flagOf( tokens[ 0 ] );
-      enforceNotUsedBefore( f );
-      enforceNoMutuallyExclusiveUsed( f );
-      tokens = argProxy!"take"( f, tokens[ 1 .. $ ] );
-      f.used = true;
-      _used.insertBack( f );
-    }
-    
-    //TODO, maybe not in the right place?
-    if( _help.used ) {
-      printHelp();
-      throw new HelpMenuRequested();
-    }          
-    return tokens;
-  }
-    
-  string[] take( string[] tokens ) {
-    //TODO Might not be useful anymore.
-    _args = tokens;
-    
-    tokens = takeIndexed!"right"( takeFlagged( takeIndexed!"left"( tokens ) ) );
-    
-    if( tokens.length ) 
-      enforceNoUnrecognizedTokens( tokens[ 0 ] );    
-    
-    enforceMandatoryUse( _mandatories[] );
-      
-    return [];
-  }
-  
-  Array!Argument _used;
-  void store() {
-    foreach( arg; _used ) {
-      argProxy!"store"( arg );      
-    }
-  }
-  void assign() {
-    foreach( arg; _used ) {
-      argProxy!"assign"( arg );      
-    }
-  }  
-
-
-  
-
-  //Maps the flagged arguments with their flags.
-  Flagged[ string ] _flags;  
-  
-  /**
-    Returns the flag info associated with the program argument.
-  */
-  Flagged flagOf( string flag ) {
-    return _flags[ flag ];
-  }
-  
-  /**
-    Returns true if the flag is known by the parser. Only checks if the name is known, it 
-    does not compare any other information.
-    
-    @return true if flag is known by parser, false otherwise.
-  */
-  public bool isMember( Flagged flag ) {
-    if( flag.flag in _flags ) { return true; }
-    return false;
-  }
-  /**
-    Makes sure the flag name's is known by the parser.
-  */
-  void checkMembership( Flagged[] flags ... ) {
-    foreach( flag; flags ) {
-      assert( isMember( flag ), "unknown flag: " ~ flag.flag );
-    }
-  }  
-   
-  //Help flag. When present, shows the command line menu.
-  string _helpFlag = "-h";
-  bool _helpNeeded = false;  
-  Flagged _help;
-  
-  @property public {
-    //TODO: add the possibility to change/remove the help flag.
-    string helpFlag() { return _helpFlag; }
-  }
-  
-    
-  //Program name.
-  string _name;
-  @property public {
-    string name() { return _name; }
-    void name( string name ) in {
-      //checkNonEmpty( "name", name );
-    } body {
-      _name = name;
-    }
-  }
-  
-  //Program description.
-  string _description;
-  @property public {
-    string description() {  return _description; }
-    void description( string d ) in {
-      //checkNonEmpty( "description", d );
-    } body {
-      _description = d;
-    }    
-  }
-    
-  //Arguments that will be parsed.
-  string[] _args;  
-  
-  //Program output, on which help messages are printed.
-  File _out;  
-  File _err;
-  
-  string _usage;
-  //TODO add the mantadory flags here.
-  @property string usage() {
-    if( !_usage.length ) {
-      _usage = _name ~ " [ options ]";
-    }
-    return _usage;
-  }
-    
-  /**
-    Prepares all data for a parsing.
-  */
-  void resetAll() {
-    foreach( _, Flagged f; _flags ) {
-      f.reset();
-    }
-  }
-  
-  void checkIndex( I )( I i ) if( is( I : Indexed ) ) {
-    static if( is( I == IndexedLeft ) ) {
-      auto container = _indexedLeft;
-      auto position = "left";
-    } else {
-      auto container = _indexedRight;
-      auto position = "right";
-    }    
-    auto errorPrefix = position ~ " indexed argument " ~ i.name ~ " at position " ~ i.index.to!string() ~ ": ";
-    if( container.length ) {
-      auto previous = container[ $ - 1 ];
-      assert( 
-        previous.index == i.index ||
-        previous.index == i.index - 1, 
-        errorPrefix ~ 
-        "can only index an argument on the previously used index: " ~ previous.index.to!string() ~ 
-        " or the one right after"
-      );
-      if( previous.index == i.index ) {
-        assert( 
-          previous.isOptional, 
-          errorPrefix ~
-          "cannot index on the same position as a previously indexed mandatory argument: " ~ previous.name 
-        );        
-      } else {
-        assert( 
-          previous.isMandatory, 
-          errorPrefix ~
-          "cannot index next to a sequence of optional arguments"
-        );
-      }      
-    } else {
-      assert( 
-        i.index == 0, 
-        errorPrefix ~
-        "the first indexed argument must be located at position 0" 
-      );
-    }
-  }
-  
-public:
-
-  
-
-  /**
-    Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
-  */
-  this( string theName = "", string desc = "", string usage = "", File output = stdout, File error = stderr ) {
-  
-    name = theName;
-    description = desc;
-    _usage = usage;
-    _out = output;
-    _err = stderr;    
-    _help = toggle( _helpFlag, "Prints the help menu.", _helpNeeded );
-    add( _help );
-    
-  }    
-  
-  
-  /**
-    Adds arguments to the parser. Their identifying strings must be unique amongst the ones known
-    by the parser. Exemple, "-f" can only be used once.
-    
-    This method can use an input ranges, and argument tuples as entries.
-  */
-  void add( Args... )( Args args ) if( 1 < args.length ) {
-  
-    add( args[ 0 ] );
-    static if( 2 <= args.length ) {
-    
-      add( args[ 1 .. $ ] );
-      
-    }
-    
-  } 
-  ///Ditto.
-  void add( Range )( Range args ) if( isForwardRange!Range ) {
-  
-    foreach( arg; args ) {
-    
-      add( arg );
-      
-    }
-    
-  }    
-  ///Ditto.
-  void add( F )( F f ) if( is( F == Flagged ) ) in {
-  
-    assert( !isMember( f ), "flags must be unique and " ~ f.flag ~ " is already known" );
-    
-  } body {
-  
-    _flags[ f.flag ] = f;
-    if( f.isMandatory ) { addMandatory( f ); }
-    
-  } 
-  ///Ditto.
-  void add( I )( I i ) if( is( I : Indexed ) ) in {
-  
-    checkIndex( i );
-    
-  } body {
-  
-    static if( is( I == IndexedLeft ) ) {
-    
-      _indexedLeft.insertBack( i );
-      
-    } else {
-    
-      _indexedRight.insertBack( i );
-      
-    }
-    
-    if( i.isMandatory() ) { addMandatory( i ); }
-    
-  }   
-  
-  
-  /**
-    Main method of the parser.
-    It parses the arguments using the internal list of known flags.    
-    This is a lazy parsing so it first makes sure that the arguments provided are legal first before 
-    assigning any values.    
-    
-    By default, it drops the first argument received. The user has the possibility to
-    pass the tokens where the parsing begins immediately by specifying it.
-    
-  */
-  public string[] parse( DropFirst drop = DropFirst.yes )( string[] tokens ) in {
-    
-    static if( drop ) {
-      
-      assert( tokens.length );
-      
-    }
-    
-  } body {
-  
-    if( !name.length ) {
-    
-      _name = commandName( tokens );
-      
-    }
-    
-    resetAll();
-    
-    static if( drop ) {
-    
-      tokens = tokens[ 1 .. $ ];    
-      
-    }
-    
-    try {
-    
-      tokens = take( tokens );
-      store();
-      assign();
-      
-    } catch( HelpMenuRequested e ) {
-    
-      throw new AbortExecution( e );
-      
-    } catch( Exception e ) {
-    
-      _out.writeln();
-      _out.writeln( e.msg );
-      
-      _out.writeln();
-      printUsage();
-      _out.writeln();
-      
-      _out.writeln( "use " ~ _helpFlag ~ " for help" );      
-      _out.writeln();
-      
-      throw new AbortExecution( e );
-      
-    }
-    
-    return tokens;
-  }
-  
-  public void printUsage() {
-  
-    with( _out ) {
-    
-      writeln( "Usage: ", usage );    
-    
-    }
-  
-  }
-  
-  /**
-    Prints a help message based using the description
-    strings held by this parser. It lists all known flags and their descriptions.
-    It uses the parser's output.
-  */
-  public void printHelp() {
-    if( _description.length ) {
-      _out.writeln( "\nDescription: ", _description, "\n" );
-    }
-        
-    printUsage();
-    
-    _out.writeln( "Flagged arguments:" );    
-    //Get the longest flag to determine the first column size.
-    size_t longest = 0;
-    foreach( string name, _; _flags ) {
-      longest = max( longest, name.length );
-    }
-    
-    foreach( string name, flag; _flags ) {
-      _out.writefln( "%-*s : %s", longest, name, flag.description );
-    }
-    _out.writeln();
-  }
-}
-
-auto parser() {
-
-  return new Parser();
-  
-}
-
-unittest {
-  string[] args = [ "unittest.exe", "-i", "0", "-s", "toto", "--silent", /* "-v", "4" */ ];
-  
-  //The config.
-  int i = 400;
-  string s = "tata";
-  bool toggled = false;
-  
-  auto parser = new Parser( "This is a unit test" );
-  parser.add(
-    value( "-i", "The integer flag.", i ),
-    value( "-s", "The string flag.", s ),
-    toggle( "-t", "The flagged toggle.", toggled ),
-  );
-  
-  size_t verbosity = 1000;
-  auto silentFlag = setter( "--silent", "SILENCE!", verbosity, 0u );
-  auto verbosityFlag = value( "-v", "The verbosity fag.", verbosity );
-  
-  parser.add( silentFlag, verbosityFlag );
-  mutuallyExclusive( silentFlag, verbosityFlag );
- 
-  try {
-    parser.parse( args );
-  } catch( Exception e ) {
-    writeln( "Error with parser " ~ parser.name );
-    return;
-  }
-  
-  assert( i == 0 );
-  assert( s == "toto" );
-  assert( verbosity == 0 );
 }

@@ -88,10 +88,10 @@ public {
   
   } body {
   
-    return toggle( 
-      "--print-config", 
-      "Prints the used configuration before starting the process if the flag is present.",
+    return Arguments.toggle( 
       printConfig,      
+      "--print-config", 
+      "Prints the used configuration before starting the process if the flag is present."
     );
 
   }     
@@ -589,9 +589,7 @@ private {
   
     static if( field == Field.compileTime ) {
     
-      return flagged(
-        "--compile-time",
-        "Specify that execution time compilation is to be done for the sequences files processed and in which file.",
+      return Arguments.flagged(
         new class ParserI {
         
           string[]  _args;
@@ -607,7 +605,7 @@ private {
           
           override void store() {
           
-            auto converter = fileConverter( "w" );
+            auto converter = Converters.file( "w" );
             _compileTimeFile = converter( _args );
           
           }
@@ -620,43 +618,44 @@ private {
           }       
         
         },      
+        "--compile-time",
+        "timeFile",
+        "Specify that execution time compilation is to be done for the sequences files processed and in which file.",
         Usage.optional
       );
     
     } else static if( field == Field.referencesDir ) {
     
-      return indexedRight(
+      return Arguments.indexedRight(
+        oneArgParser( Converters.dir(), v ),
         1,
         "referencesDirectory",
         "This is the directory where the references files are located.",
-        oneArgParser( dirConverter(), v )
       );
     
     } else static if( field == Field.testsResultsDir ) {
     
-      return indexedRight(
+      return Arguments.indexedRight(
+        oneArgParser( Converters.dir(), v ),
         2,
         "testsResultsDirectory",
         "This is the directory where the tests results will be generated.",
-        oneArgParser( dirConverter(), v )    
       );    
     
     } else static if( field == Field.epsilon ) {
     
-      return bounded(
-        "-e",
-        "Sets the comparison epsilon for results costs. Default is " ~ v.to!string() ~ ".",
+      return Arguments.bounded(
         v,
         0.,
-        10.
+        10.,
+        "-e",
+        "epsilon",
+        "Sets the comparison epsilon for results costs. Default is " ~ v.to!string() ~ "."
       );    
     
     } else static if( field == Field.comparedResultsFiles ) {
     
-      return indexedRight(
-        0u,
-        "comparedResultsFiles",
-        "The user specifies a list of files holding previously obtained results.",
+      return Arguments.indexedRight(
         new class ParserI {
         
           private string[] _args;
@@ -686,26 +685,26 @@ private {
           override void assign() {}
         
         },
+        0,
+        "comparedResultsFiles",
+        "The user specifies a list of files holding previously obtained results.",
         Usage.mandatory      
       );
     
     
     } else static if( field == Field.sequencesFile ) {
 
-      return indexedRight( 
-        0u,
+      return Arguments.indexedRight( 
+        oneArgParser( Converters.file( "r" ), v  ),
+        0,
         "sequencesFile", 
-        "This argument is the file holding the sequences to process.", 
-        oneArgParser( fileConverter( "r" ), v  ),
+        "This argument is the file holding the sequences to process.",         
         Usage.mandatory
       );
       
     } else static if( field == Field.sequencesDir ) {
 
-      return indexedRight( 
-        0u,
-        "sequences directory", 
-        "This argument indicates the directory where the sequences files are located. All files are used, so make sure only sequences files are there.", 
+      return Arguments.indexedRight( 
         oneArgParser(
           //Converter, do nothing.
           ( string[] args ) => args[ 0 ],
@@ -716,78 +715,74 @@ private {
             }
           } 
         ),
+        0,
+        "sequences directory", 
+        "This argument indicates the directory where the sequences files are located. All files are used, so make sure only sequences files are there.", 
         Usage.mandatory
       );
       
     } else static if( field == Field.resultsFile ) {
 
-      return file( 
-        "--rf",
-        "Results file. This is where the program prints the results. Default is stdout.",
+      return Arguments.file(  
         v, 
-        "w"
+        "w",
+        "--rf",
+        "Results file. This is where the program prints the results. Default is stdout."        
       );  
       
     } else static if( field == Field.verbosity ) {
 
-      return value( 
+      return Arguments.value( 
+        v,
         "-v", 
-        "Verbosity level. Default is " ~ v.to!string() ~ ".", 
-        v        
+        "verbosity",
+        "Verbosity level. Default is " ~ v.to!string() ~ ".",                 
       );
-      
-    /+ } else static if( field == Field.outFile ) {
-
-      return file( 
-        "--of", 
-        "Output file. This is where the program emits statements. Default is stdout.", 
-        v, 
-        "w" 
-      ); +/
       
     } else static if( field == Field.printResults ) {
 
-      return toggle( "--no-res", "Prevents the results from being printed.", v );
+      return Arguments.toggle( v, "--no-res", "Prevents the results from being printed." );
       
     } else static if( field == Field.noResults ) {
 
-      return value(  
+      return Arguments.value(  
+        v,
         "--nr ",  
-        "Number of results to keep in memory. Default is  " ~ v.to!string() ~  ". ",
-        v
+        "noResults",
+        "Number of results to keep in memory. Default is  " ~ v.to!string() ~  ". ",        
       );
       
     } else static if( field == Field.printExecutionTime ) {
 
-      return toggle(
+      return Arguments.toggle(
+        v,
         "--no-time ",
-        "Removes the execution time from the results. ",
-        v 
+        "Removes the execution time from the results. "
       );
       
     } else static if( field == Field.minLength ) {
 
-      return value(  
+      return Arguments.value(  
+        v,
         "--min ",  
-        "Minimum period length. Default is  " ~ v.to!string() ~  ". ", 
-        v
+        "Minimum period length. Default is  " ~ v.to!string() ~  ". "
       );
       
     } else static if( field == Field.maxLength ) {
 
-      return value( 
+      return Arguments.value( 
+        v,
         "--max",
-        "Maximum period length. Default is the biggest value held by a word. The mid sequence position is used if it is lower than this value.",
-        v 
+        "Maximum period length. Default is the biggest value held by a word. The mid sequence position is used if it is lower than this value."
       );
       
     } else static if( field == Field.lengthStep ) {
 
-      return setter( 
-        "--single-step",
-        "Sets the segment pair length step to be 1. The default is " ~ v.to!string() ~ " instead of 3.",
+      return Arguments.setter( 
         v,
-        1u
+        1u,
+        "--single-step",
+        "Sets the segment pair length step to be 1. The default is " ~ v.to!string() ~ " instead of 3.",        
       );
       
     } else static if( field == Field.noThreads ) {
@@ -796,11 +791,12 @@ private {
       
     } else static if( field == Field.algo ) {
 
-      return mapped( 
-        "--algo", 
-        "Sets the segment pair cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\". The default is standard.", 
+      return Arguments.mapped( 
         v,
-        comet.configs.algos.algosByStrings        
+        comet.configs.algos.algosByStrings,        
+        "--algo", 
+        "algorithm",
+        "Sets the segment pair cost calculation algorithm. Possible values are \"standard\", \"cache\", \"patterns\" and \"cache-patterns\". The default is standard."
       );
       
     } else {
