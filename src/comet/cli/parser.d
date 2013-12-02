@@ -13,7 +13,7 @@ import comet.cli.exceptions;
 
 import std.container: Array;
 import std.typecons: Flag;
-import std.range: isForwardRange;
+import std.range: isForwardRange, ElementType;
 import std.algorithm: max;
 import std.stdio;
 
@@ -26,23 +26,6 @@ alias DropFirst = Flag!"DropFirst";
   most likely the ones received by the program entry point.  
 */
 class Parser {  
-
-private:
-
-auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
-  
-  try {
-  
-    return mixin( "arg.parser." ~ method )( args );
-    
-  } catch( Exception e ) {
-  
-    e.msg = "argument " ~ arg.identification ~ ": " ~ e.msg;
-    throw e;
-    
-  }
-  
-}
 
 protected:
 
@@ -65,43 +48,54 @@ protected:
   string _name;  
   //Program description.
   string _description;
+  //The usage string.
+  string _usage;
   //Program output, on which help messages are printed.
   File _out;  
   File _err;
-  //Arguments that will be parsed.
-  string[] _args;  
   
-    
-  
-  
+  /**
+    Adds the argument as mandatory.
+  */  
   void addMandatory( Argument arg ) in {
+  
     assert( arg.isMandatory(), "adding an optional argument as mandatory" );
+    
   } body {
+  
     _mandatories.insertBack( arg );
+    
   }
   
+  /**
+    A template function that calls take for all indexed arguments.
+    The template argument string is either "left" or "right" to identify which
+    indexed arguments are to be treated.
+  */  
   string[] takeIndexed( string s )( string[] tokens ) if( s == "left" || s == "right" ) {
       
-    static if( s == "left" ) {
-    
-      auto container = _indexedLeft;     
+    import std.string: toUpper;
       
-    } else {
-    
-      auto container = _indexedRight;
-      
-    }
-        
+    auto container = mixin( "_indexed" ~ toUpper( s[ 0 .. 1 ] ) ~ s[ 1 .. $ ] );
+            
     foreach( indexed; container ) {
+    
       auto previousTokens = tokens;
       tokens = argProxy!"take"( indexed, tokens );
+      
       assert( tokens !is previousTokens || indexed.isOptional, "indexed " ~ s ~ " argument " ~ indexed.index.to!string ~ " did not take any argument but is mandatory" );
+      
       indexed.used = true;
       _used.insertBack( indexed );
+      
     }
+    
     return tokens;
   }
   
+  /**
+    Calls take for all flagged arguments found on the command line.
+  */
   string[] takeFlagged( string[] tokens ) {
   
     while( tokens.length && tokens[ 0 ] in _flags ) {
@@ -122,8 +116,6 @@ protected:
   }
     
   string[] take( string[] tokens ) {
-    //TODO Might not be useful anymore.
-    _args = tokens;
     
     tokens = takeIndexed!"right"( takeFlagged( takeIndexed!"left"( tokens ) ) );
     
@@ -195,74 +187,7 @@ protected:
       _description = d;
     }    
   }
-    
-  string _usage;
-  
-  private string wrap( string s, Usage usage ) {
-  
-    final switch( usage ) {
-    
-      case Usage.mandatory:
       
-        return "< " ~ s ~ " >";
-      
-      case Usage.optional:
-    
-        return "[ " ~ s ~ " ]";
-    
-    }
-    
-    assert( false );  
-  }
-  
-  
-  private string indexedString( R )( R range ) if( isForwardRange!R ) {
-  
-    import std.algorithm: count;
-  
-    auto noArgs = count( range );
-    auto current = 0;
-    Usage usage = Usage.optional;
-    string s = "";
-    
-    foreach( arg; range ) {
-    
-      if( arg.isMandatory() ) { usage = Usage.mandatory; }
-      
-      s ~= arg.identification();
-      
-      if( noArgs >= 2 && current <= noArgs - 2 ) { s ~= " | "; }
-            
-      ++current;
-      
-    }
-    
-    return wrap( s, usage );
-  
-  }
-  
-  private string indexedStringForAllIndexes( R )( R range ) if( isForwardRange!R ) {
-  
-    import std.algorithm: until;
-    
-    string s = "";        
-    
-    while( !range.empty ) {
-      
-      auto index = range.front.index;
-      auto sameIndexArguments = range.until!( a => a.index != index );
-      
-      s ~= indexedString( sameIndexArguments );
-      
-      while( !range.empty && range.front.index == index ) { range.popFront(); }
-      
-    }     
-    
-    return s;
-    
-  } 
-  
-  
   //TODO add the mantadory flags here.
   @property string usage() {
   
@@ -497,13 +422,20 @@ public:
     It uses the parser's output.
   */
   public void printHelp() {
+  
+    _out.writeln();
+  
     if( _description.length ) {
+      
       _out.writeln( "\nDescription: ", _description, "\n" );
+      
     }
         
     printUsage();
     
+    _out.writeln();    
     _out.writeln( "Flagged arguments:" );    
+    
     //Get the longest flag to determine the first column size.
     size_t longest = 0;
     foreach( string name, _; _flags ) {
@@ -513,20 +445,24 @@ public:
     foreach( string name, flag; _flags ) {
       _out.writefln( "%-*s : %s", longest, name, flag.description );
     }
+    
     _out.writeln();
+    
   }
+  
 }
 
 /**
   Factory function to create a parser.
 */
-auto makeParser() {
+auto makeParser( T... )( T args ) {
 
-  return new Parser();
+  return new Parser( args );
   
 }
 
 unittest {
+
   string[] args = [ "unittest.exe", "-i", "0", "-s", "toto", "--silent", /* "-v", "4" */ ];
   
   //The config.
@@ -558,4 +494,108 @@ unittest {
   assert( i == 0 );
   assert( s == "toto" );
   assert( verbosity == 0 );
+  
 }
+
+/**  
+    This is a proxy function whose sole purpose is to wrap around any exception thrown by the argument
+    so that the caller function has an exception message in which the argument appear.s  
+  */
+private auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
+    
+  try {
+  
+    return mixin( "arg.parser." ~ method )( args );
+    
+  } catch( Exception e ) {
+  
+    e.msg = "argument " ~ arg.identification ~ ": " ~ e.msg;
+    throw e;
+    
+  }
+  
+}
+
+/**
+  Wraps the string inside enclosing symbols associated with the mandatory/optional states.
+*/
+private string wrap( string s, Usage usage ) {
+  
+  final switch( usage ) {
+  
+    case Usage.mandatory:
+    
+      return "<" ~ s ~ ">";
+    
+    case Usage.optional:
+  
+      return "[" ~ s ~ "]";
+  
+  }
+  
+  assert( false );  
+  
+}
+
+/**
+  Returns a string of all the indexed arguments for one particular index.
+*/
+private string indexedString( R )( R range ) if( isForwardRange!R && is( ElementType!R : Indexed ) ) in {
+
+  assert( std.algorithm.isSorted!( ( a, b ) => a.index == b.index )( range ) );
+
+} body {
+
+  import std.algorithm: count;
+
+  auto noArgs = count( range );
+  auto current = 0;
+  Usage usage = Usage.optional;
+  string s = "";
+  
+  foreach( arg; range ) {
+  
+    if( arg.isMandatory() ) { usage = Usage.mandatory; }
+    
+    s ~= arg.identification();
+    
+    if( noArgs >= 2 && current <= noArgs - 2 ) { s ~= "|"; }
+          
+    ++current;
+    
+  }
+  
+  return wrap( s, usage );
+
+}
+
+/**
+  Generates the usage string for all the given indexed arguments. Note that this function is dependant on how
+  the arguments are stored in the range. It expects them to be in ascending order of index.
+*/
+private string indexedStringForAllIndexes( R )( R range ) if( isForwardRange!R && is( ElementType!R : Indexed ) ) in {
+
+  assert( std.algorithm.isSorted!( ( a, b ) => a.index <= b.index )( range ) );
+
+} body {
+
+  import std.algorithm: until;
+  
+  string s = "";        
+  
+  while( !range.empty ) {
+    
+    if( s != "" ) { s ~= " "; }
+    
+    auto index = range.front.index;
+    auto sameIndexArguments = range.until!( a => a.index != index );
+    
+    s ~= indexedString( sameIndexArguments );
+    
+    while( !range.empty && range.front.index == index ) { range.popFront(); }
+    
+  }     
+  
+  return s;
+  
+} 
