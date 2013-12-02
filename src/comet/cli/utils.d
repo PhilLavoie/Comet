@@ -31,6 +31,15 @@ string commandName( string token ) {
   */
 package void checkNonEmpty( string stringName, string s ) {
 
-  assert( s.strip.length, "expected the " ~ stringName ~ " to be non empty" );
+  assert( !s.isEmpty(), "expected the " ~ stringName ~ " to be non empty" );
   
 }  
+
+/**
+  Returns true if the string has no meaningful characters (if it is either empty or made of whitespaces).
+*/
+package bool isEmpty( string s ) {
+
+  return !s.strip.length;
+
+}

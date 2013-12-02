@@ -1,5 +1,5 @@
 /**
-  Module defining a set of facilities to ease the parsing of the command line.
+  Module defining command line arguments.
 */
 module comet.cli.arguments;
 
@@ -8,16 +8,11 @@ import comet.cli.parsers;
 import comet.cli.exceptions;
 import comet.cli.converters;
 
-import std.algorithm;
-import std.conv;
-import std.stdio;
-import std.exception;
-import std.string;
-import std.container;
-import std.range;
+import std.exception: enforce;
+import std.container: SList;
+import std.range: isForwardRange;
+import std.traits: isCallable, ParameterTypeTuple;
 
-
-//TODO add support for "float" parsers that are tested in order against unrecognized tokens. Can be mandatory.
 
 /**
   Tells whether the argument is mandatory or optional.
@@ -67,7 +62,14 @@ protected:
     
 package:
 
+  /**
+    Returns the argument parser.
+  */
   @property ParserI parser() { return _parser; }
+  
+  /**
+    Sets whether or not the argument is in use.
+  */
   @property void used( bool u ) { _used = u; }
   
   /**
@@ -87,12 +89,12 @@ public:
   @property void description( string desc ) { _description = desc; }  
   
   /**
-    Returns true if the argument has been used by the parser.
+    Returns true if the argument has been used by the parser (seen in the tokens parsed).
   */
   @property bool used() { return _used; }   
   
   /**
-    Returns a string that identifies the argument in a unique way preferably.
+    Returns a string that identifies the argument in a unique way.
   */
   abstract @property string identification();
 
@@ -100,6 +102,7 @@ public:
     Returns true if this argument is optional, false otherwise.
   */
   bool isOptional() { return _optional; }
+  
   /**
     Returns true if this argument is mandatory, false otherwise.
   */
@@ -131,8 +134,19 @@ protected:
   
 public:
 
+  /**
+    Returns the index of the argument.
+  */
   @property auto index() { return _index; }
+  
+  /**
+    Returns the name of the argument.
+  */
   @property auto name() { return _name; }
+  
+  /**
+    The identification string of an indexed argument is its name.
+  */
   override @property string identification() { return _name; }
   
 }
@@ -152,9 +166,13 @@ public:
   can have multiple optionals on the same, see the program parser's way of handling this.
 */
 class IndexedLeft: Indexed {
+
   this( T... )( T args ) {
+  
     super( args );    
+    
   }
+  
 }
 
 /**
@@ -164,9 +182,13 @@ class IndexedLeft: Indexed {
   "program [ indexedLeft ] [ flagged ] indexedRight0 indexedRight1"
 */
 class IndexedRight: Indexed {
+
   this( T... )( T args ) {
+  
     super( args );    
+    
   }
+  
 }
 
 /**
@@ -188,10 +210,9 @@ protected:
   string _flag;
   //The name of the argument's arguments, if any.
   string _argumentName;
+  //Mutually exclusive flagged argument.
+  SList!( Flagged ) _mutuallyExclusives;
   
-  //Returns the flag.
-  @property void flag( string f ) { _flag = f; }
-    
   this( T... )( T args ) {
   
     super( args[ 2 .. $ ] );
@@ -199,36 +220,61 @@ protected:
     _argumentName = args[ 1 ];
     
   }
-  
-  //Mutually exclusive flagged argument.
-  SList!( Flagged ) _mutuallyExclusives;
+    
   @property auto mutuallyExclusives() { return _mutuallyExclusives[]; }
   
   /**
     Returns true if this argument has any mutually exclusives, false otherwise.
   */
   bool hasMEs() { return !_mutuallyExclusives.empty; }
+  
   /**
     Makes the argument mutually exclusive to this one.
   */
   void addME( Flagged f ) {
     _mutuallyExclusives.insertFront( f );
-  }   
+  }  
+
+package:
+
+  /**  
+    Returns true if the user has provided a name for the arguments expected following the flag.  
+  */
+  bool hasArgumentName() {
+  
+    return !_argumentName.isEmpty();
+  
+  }
     
 public:
 
+  /**
+    Returns the flag.
+  */
   @property string flag() { return _flag; }
-  override @property string identification() { return _flag; }
+  
+  /**
+    The identification string of this type of argument is its flag.
+  */
+  override @property string identification() { 
+  
+    return _flag ~ ( hasArgumentName() ? _argumentName : "" ); 
+    
+  }
   
 }
 
 
-
-
+/**
+  Arguments factory.
+*/
 final abstract class Arguments {
 
 static:
 
+  /**
+    Returns an indexed argument.
+  */
   auto indexed( string leftOrRight )( ParserI parser, int index, string name, string description, Usage use = Usage.mandatory  ) in {
     
     assert( 0 <= index );
@@ -251,21 +297,33 @@ static:
   
   }
   
+  //Returns an indexed left argument.
   alias indexedLeft = indexed!"left";
+  //Returns an indexed right argument.
   alias indexedRight = indexed!"right";
   
+  /**
+    Returns a flagged argument.
+  */
   auto flagged( ParserI parser, string flag, string argName, string description, Usage use = Usage.optional  ) {
   
     return new Flagged( flag, argName, description, parser, use );
   
   }
   
+  /**
+    Returns a flagged argument that has no identifier for its expected argument. Should only be used
+    by toggles, setters and such arguments whose parser does not take any token.
+  */
   auto flagged( ParserI parser, string flag, string description, Usage use = Usage.optional  ) {
   
     return flagged( parser, flag, "", description, use );
   
   }
   
+  /**
+    This function will try and construct an argument based on the parameters received.
+  */
   private auto guess( T... )( T args ) {
   
     static if( is( T[ 1 ] == int ) ) {
@@ -290,10 +348,20 @@ static:
   auto toggle( Args... )( ref bool toggled, Args args ) {
     return setter( toggled, !toggled, args );
   } 
+  
+  /**
+    A simple argument that sets the given value to the one provided when found amongts the tokens
+    parsed.
+  */
   auto setter( T, Args... )( ref T settee, T setTo, Args args  ) {
     return guess( noArgParser( settee, setTo ), args );
   }
-  auto caller( T, Args... )( T callee, Args args ) if( isCallable!T ) {
+  
+  /**
+    A simple argument that uses the callable object on value assignation and that
+    expects no parameter.
+  */
+  auto caller( T, Args... )( T callee, Args args ) if( isCallable!T && ( ParameterTypeTuple!T ).length == 0 ) {
     return guess( noArgParser( callee ), args );
   }  
 
@@ -349,7 +417,7 @@ static:
 
 
   /**
-    This method builds a flag that expects an existing directory as an argument.
+    This function builds a flag that expects an existing directory as an argument.
     If the string provided points to a directory, it is assigned to the reference value.
     Automatically adds a directory separator to the argument if it did not end with one.
     Ex: With "-dir a/directory", the argument assigned
@@ -361,10 +429,7 @@ static:
       args
     ); 
   }  
-
-
-
-
+  
 }
 
 
@@ -374,18 +439,27 @@ static:
   be found at the same time on the command line. Must provide a group of at least two arguments.
 */
 void mutuallyExclusive( Flagged[] flags ... ) in {
+
   assert( 2 <= flags.length, "expected at least two mutually exclusive flags" );
-  //TODO: maybe make sure that those aren't already mutually exclusive?
+
 } body {
+
   for( size_t i = 0; i < flags.length; ++i ) {
+  
     auto current = flags[ i ];
+    
+    //Make sure that each argument has the other ones as mutually exclusives.
     for( size_t j = i + 1; j < flags.length; ++j ) {
+    
       auto next = flags[ j ];
       
       current.addME( next );
       next.addME( current );
+      
     }
+    
   }
+  
 }      
 
 /**
@@ -393,27 +467,39 @@ void mutuallyExclusive( Flagged[] flags ... ) in {
   already in use.
 */
 package void enforceNoMutuallyExclusiveUsed( Flagged f ) {
+
   foreach( me; f.mutuallyExclusives ) {
+  
     enforce( !me.used, "flag " ~ f.flag ~ " was found but is mutually exclusive with " ~ me.flag );
+    
   }
+  
 }  
 
 /**
   Makes sure that the flag has not been used before, throws otherwise.
 */
 package void enforceNotUsedBefore( Flagged f ) {
+
   enforce( !f.used, "flagged argument: " ~ f.flag ~ " is used twice" );
+  
 }
 
 /**
   Enforce that the mandatory flagged arguments have all been used.
 */
 package void enforceMandatoryUse( Range )( Range range ) if( isForwardRange!Range ) {
-  foreach( f; range ) {
-    enforceMandatoryUse( f );
+
+  foreach( a; range ) {
+  
+    enforceMandatoryUse( a );
+    
   }
+  
 }
 ///DITTO
 package void enforceMandatoryUse( A )( A arg ) if( is( A : Argument ) ) {
+
   enforce( arg.used, "user must provide argument " ~ arg.identification );
+  
 }

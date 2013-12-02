@@ -10,7 +10,7 @@ Configuration.
 
 import comet.configs.metaconfig;
 
-import comet.cli.all: Parser, parser, DropFirst;
+import comet.cli.all: Parser, makeParser, DropFirst;
 
 alias RunTestsConfig = typeof( makeConfig() );
   
@@ -43,7 +43,7 @@ auto parse( string commandName, string[] args ) {
 
   auto cfg = makeConfig();  
     
-  auto parser = parser();
+  auto parser = makeParser();
   
   parser.name = commandName;
   

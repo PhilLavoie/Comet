@@ -22,32 +22,57 @@ alias DropFirst = Flag!"DropFirst";
 
 /**
   Command line parser.
-  It provides the user with facilities to create flags and register
-  them to the current parser.
-  Every factory method returns a flag, but the flag is also immediately
-  added to the parser's list.
+  It provides the user with facilities to register arguments and rules and parse a series of tokens, 
+  most likely the ones received by the program entry point.  
 */
 class Parser {  
-protected:
 
-  Array!Indexed _indexedLeft;
-  Array!Indexed _indexedRight;
-  Array!Argument _mandatories;
+private:
+
+auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
   
-  auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
+  try {
   
-    try {
+    return mixin( "arg.parser." ~ method )( args );
     
-      return mixin( "arg.parser." ~ method )( args );
-      
-    } catch( Exception e ) {
-    
-      e.msg = "argument " ~ arg.identification ~ ": " ~ e.msg;
-      throw e;
-      
-    }
+  } catch( Exception e ) {
+  
+    e.msg = "argument " ~ arg.identification ~ ": " ~ e.msg;
+    throw e;
     
   }
+  
+}
+
+protected:
+
+  //The arguments expected before the flagged ones.
+  Array!Indexed _indexedLeft;
+  //The arguments expected after the flagged ones.
+  Array!Indexed _indexedRight;
+  //The flagged arguments mapped by their flags.
+  Flagged[ string ] _flags;    
+  //The arguments expected to be found on the command line.
+  Array!Argument _mandatories;
+  //The arguments that have been found on the command line.
+  Array!Argument _used;
+  
+  //Help flag. When present, shows the command line menu.
+  string _helpFlag = "-h";
+  bool _helpNeeded = false;  
+  Flagged _help;
+  //Program name as presented to the user.
+  string _name;  
+  //Program description.
+  string _description;
+  //Program output, on which help messages are printed.
+  File _out;  
+  File _err;
+  //Arguments that will be parsed.
+  string[] _args;  
+  
+    
+  
   
   void addMandatory( Argument arg ) in {
     assert( arg.isMandatory(), "adding an optional argument as mandatory" );
@@ -110,7 +135,7 @@ protected:
     return [];
   }
   
-  Array!Argument _used;
+  
   void store() {
     foreach( arg; _used ) {
       argProxy!"store"( arg );      
@@ -125,8 +150,7 @@ protected:
 
   
 
-  //Maps the flagged arguments with their flags.
-  Flagged[ string ] _flags;  
+  
   
   /**
     Returns the flag info associated with the program argument.
@@ -154,19 +178,6 @@ protected:
     }
   }  
    
-  //Help flag. When present, shows the command line menu.
-  string _helpFlag = "-h";
-  bool _helpNeeded = false;  
-  Flagged _help;
-  
-  @property public {
-    //TODO: add the possibility to change/remove the help flag.
-    string helpFlag() { return _helpFlag; }
-  }
-  
-    
-  //Program name.
-  string _name;
   @property public {
     string name() { return _name; }
     void name( string name ) in {
@@ -176,8 +187,6 @@ protected:
     }
   }
   
-  //Program description.
-  string _description;
   @property public {
     string description() {  return _description; }
     void description( string d ) in {
@@ -187,19 +196,87 @@ protected:
     }    
   }
     
-  //Arguments that will be parsed.
-  string[] _args;  
-  
-  //Program output, on which help messages are printed.
-  File _out;  
-  File _err;
-  
   string _usage;
+  
+  private string wrap( string s, Usage usage ) {
+  
+    final switch( usage ) {
+    
+      case Usage.mandatory:
+      
+        return "< " ~ s ~ " >";
+      
+      case Usage.optional:
+    
+        return "[ " ~ s ~ " ]";
+    
+    }
+    
+    assert( false );  
+  }
+  
+  
+  private string indexedString( R )( R range ) if( isForwardRange!R ) {
+  
+    import std.algorithm: count;
+  
+    auto noArgs = count( range );
+    auto current = 0;
+    Usage usage = Usage.optional;
+    string s = "";
+    
+    foreach( arg; range ) {
+    
+      if( arg.isMandatory() ) { usage = Usage.mandatory; }
+      
+      s ~= arg.identification();
+      
+      if( noArgs >= 2 && current <= noArgs - 2 ) { s ~= " | "; }
+            
+      ++current;
+      
+    }
+    
+    return wrap( s, usage );
+  
+  }
+  
+  private string indexedStringForAllIndexes( R )( R range ) if( isForwardRange!R ) {
+  
+    import std.algorithm: until;
+    
+    string s = "";        
+    
+    while( !range.empty ) {
+      
+      auto index = range.front.index;
+      auto sameIndexArguments = range.until!( a => a.index != index );
+      
+      s ~= indexedString( sameIndexArguments );
+      
+      while( !range.empty && range.front.index == index ) { range.popFront(); }
+      
+    }     
+    
+    return s;
+    
+  } 
+  
+  
   //TODO add the mantadory flags here.
   @property string usage() {
+  
+    //If the user hasn't provided the usage string.
     if( !_usage.length ) {
-      _usage = _name ~ " [ options ]";
+        
+      _usage = 
+        _name ~ " " ~
+        indexedStringForAllIndexes( _indexedLeft[] ) ~ " " ~ 
+        wrap( "options", Usage.optional ) ~ " " ~
+        indexedStringForAllIndexes( _indexedRight[] );
+      
     }
+    
     return _usage;
   }
     
@@ -207,9 +284,21 @@ protected:
     Prepares all data for a parsing.
   */
   void resetAll() {
-    foreach( _, Flagged f; _flags ) {
-      f.reset();
+  
+    import std.algorithm: chain;
+  
+    foreach( arg; chain( _indexedLeft[], _indexedRight[] ) ) {
+    
+      arg.reset();
+    
     }
+    
+    foreach( _, Flagged f; _flags ) {
+    
+      f.reset();
+      
+    }    
+    
   }
   
   void checkIndex( I )( I i ) if( is( I : Indexed ) ) {
@@ -253,8 +342,6 @@ protected:
   }
   
 public:
-
-  
 
   /**
     Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
@@ -398,7 +485,7 @@ public:
   
     with( _out ) {
     
-      writeln( "Usage: ", usage );    
+      writeln( "Usage: ", usage() );    
     
     }
   
@@ -430,7 +517,10 @@ public:
   }
 }
 
-auto parser() {
+/**
+  Factory function to create a parser.
+*/
+auto makeParser() {
 
   return new Parser();
   
