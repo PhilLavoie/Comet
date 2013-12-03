@@ -76,7 +76,9 @@ package:
     Prepares the argument for a parser run. Sets the used status to false.
   */
   void reset() {
+  
     used = false;
+    
   }  
   
 public:
@@ -91,7 +93,8 @@ public:
   /**
     Returns true if the argument has been used by the parser (seen in the tokens parsed).
   */
-  @property bool used() { return _used; }   
+  @property bool used() { return _used; }
+  bool isUsed() { return _used; }
   
   /**
     Returns a string that identifies the argument in a unique way.
@@ -258,7 +261,7 @@ public:
   */
   override @property string identification() { 
   
-    return _flag ~ ( hasArgumentName() ? _argumentName : "" ); 
+    return _flag ~ ( hasArgumentName() ? " " ~ _argumentName : "" ); 
     
   }
   

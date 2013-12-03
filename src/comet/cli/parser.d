@@ -14,7 +14,7 @@ import comet.cli.exceptions;
 import std.container: Array;
 import std.typecons: Flag;
 import std.range: isForwardRange, ElementType;
-import std.algorithm: max;
+import std.algorithm: max, filter, reduce, map;
 import std.stdio;
 
 
@@ -29,21 +29,35 @@ class Parser {
 
 protected:
 
+  //All arguments known by this parser.
+  Array!Argument _arguments;
+  @property auto arguments() { return _arguments[]; }
+
   //The arguments expected before the flagged ones.
   Array!Indexed _indexedLeft;
+  @property auto indexedLeft() { return _indexedLeft[]; }  
+  
   //The arguments expected after the flagged ones.
   Array!Indexed _indexedRight;
+  @property auto indexedRight() { return _indexedRight[]; }
+  
   //The flagged arguments mapped by their flags.
   Flagged[ string ] _flags;    
+  
   //The arguments expected to be found on the command line.
-  Array!Argument _mandatories;
+  @property auto mandatories() { return this.arguments.filter!( a => a.isMandatory() ); }
+  
+  //The arguments that are optional.
+  @property auto optionals() { return this.arguments.filter!( a => a.isOptional() ); }
+  
   //The arguments that have been found on the command line.
-  Array!Argument _used;
+  @property auto used() { return this.arguments.filter!( a => a.isUsed() ); }
   
   //Help flag. When present, shows the command line menu.
   string _helpFlag = "-h";
   bool _helpNeeded = false;  
   Flagged _help;
+  
   //Program name as presented to the user.
   string _name;  
   //Program description.
@@ -53,20 +67,7 @@ protected:
   //Program output, on which help messages are printed.
   File _out;  
   File _err;
-  
-  /**
-    Adds the argument as mandatory.
-  */  
-  void addMandatory( Argument arg ) in {
-  
-    assert( arg.isMandatory(), "adding an optional argument as mandatory" );
     
-  } body {
-  
-    _mandatories.insertBack( arg );
-    
-  }
-  
   /**
     A template function that calls take for all indexed arguments.
     The template argument string is either "left" or "right" to identify which
@@ -86,7 +87,6 @@ protected:
       assert( tokens !is previousTokens || indexed.isOptional, "indexed " ~ s ~ " argument " ~ indexed.index.to!string ~ " did not take any argument but is mandatory" );
       
       indexed.used = true;
-      _used.insertBack( indexed );
       
     }
     
@@ -99,22 +99,38 @@ protected:
   string[] takeFlagged( string[] tokens ) {
   
     while( tokens.length && tokens[ 0 ] in _flags ) {
+    
       auto f = flagOf( tokens[ 0 ] );
+      
       enforceNotUsedBefore( f );
       enforceNoMutuallyExclusiveUsed( f );
+      
       tokens = argProxy!"take"( f, tokens[ 1 .. $ ] );
+     
       f.used = true;
-      _used.insertBack( f );
+      
     }
     
     //TODO, maybe not in the right place?
     if( _help.used ) {
+    
       printHelp();
       throw new HelpMenuRequested();
-    }          
+      
+    }     
+    
     return tokens;
   }
     
+  /**
+    Calls take for every arguments used on the command line.
+    The parser was designed to enforce the fact that every token
+    is to be used by an argument parser, therefore is function either
+    throws or return an emtpy range.
+    
+    Every argument seen on the command line is stored in a container to
+    facilitate the rest of the parsing.
+  */
   string[] take( string[] tokens ) {
     
     tokens = takeIndexed!"right"( takeFlagged( takeIndexed!"left"( tokens ) ) );
@@ -122,33 +138,46 @@ protected:
     if( tokens.length ) 
       enforceNoUnrecognizedTokens( tokens[ 0 ] );    
     
-    enforceMandatoryUse( _mandatories[] );
+    enforceMandatoryUse( this.mandatories );
       
     return [];
+    
   }
   
-  
+  /**
+    Calls store on every used argument.
+  */
   void store() {
-    foreach( arg; _used ) {
+  
+    foreach( arg; this.used ) {
+    
       argProxy!"store"( arg );      
+      
     }
+    
   }
+  
+  /**
+    Calls assign on every used arguments.
+  */
   void assign() {
-    foreach( arg; _used ) {
+  
+    foreach( arg; this.used ) {
+    
       argProxy!"assign"( arg );      
+      
     }
+    
   }  
-
-
-  
-
-  
+ 
   
   /**
     Returns the flag info associated with the program argument.
   */
   Flagged flagOf( string flag ) {
+  
     return _flags[ flag ];
+    
   }
   
   /**
@@ -157,116 +186,120 @@ protected:
     
     @return true if flag is known by parser, false otherwise.
   */
-  public bool isMember( Flagged flag ) {
+  bool isMember( Flagged flag ) {
+  
     if( flag.flag in _flags ) { return true; }
-    return false;
-  }
-  /**
-    Makes sure the flag name's is known by the parser.
-  */
-  void checkMembership( Flagged[] flags ... ) {
-    foreach( flag; flags ) {
-      assert( isMember( flag ), "unknown flag: " ~ flag.flag );
-    }
-  }  
-   
-  @property public {
-    string name() { return _name; }
-    void name( string name ) in {
-      //checkNonEmpty( "name", name );
-    } body {
-      _name = name;
-    }
-  }
-  
-  @property public {
-    string description() {  return _description; }
-    void description( string d ) in {
-      //checkNonEmpty( "description", d );
-    } body {
-      _description = d;
-    }    
-  }
-      
-  //TODO add the mantadory flags here.
-  @property string usage() {
-  
-    //If the user hasn't provided the usage string.
-    if( !_usage.length ) {
-        
-      _usage = 
-        _name ~ " " ~
-        indexedStringForAllIndexes( _indexedLeft[] ) ~ " " ~ 
-        wrap( "options", Usage.optional ) ~ " " ~
-        indexedStringForAllIndexes( _indexedRight[] );
-      
-    }
     
-    return _usage;
-  }
+    return false;
+    
+  } 
     
   /**
     Prepares all data for a parsing.
   */
   void resetAll() {
   
-    import std.algorithm: chain;
-  
-    foreach( arg; chain( _indexedLeft[], _indexedRight[] ) ) {
+    foreach( arg; this.arguments ) {
     
       arg.reset();
     
-    }
-    
-    foreach( _, Flagged f; _flags ) {
-    
-      f.reset();
-      
-    }    
+    }  
     
   }
   
   void checkIndex( I )( I i ) if( is( I : Indexed ) ) {
+  
     static if( is( I == IndexedLeft ) ) {
+    
       auto container = _indexedLeft;
       auto position = "left";
+      
     } else {
+    
       auto container = _indexedRight;
       auto position = "right";
-    }    
+      
+    } 
+    
     auto errorPrefix = position ~ " indexed argument " ~ i.name ~ " at position " ~ i.index.to!string() ~ ": ";
+
     if( container.length ) {
+    
       auto previous = container[ $ - 1 ];
+      
       assert( 
+      
         previous.index == i.index ||
         previous.index == i.index - 1, 
         errorPrefix ~ 
         "can only index an argument on the previously used index: " ~ previous.index.to!string() ~ 
         " or the one right after"
+        
       );
+      
       if( previous.index == i.index ) {
+      
         assert( 
+        
           previous.isOptional, 
           errorPrefix ~
           "cannot index on the same position as a previously indexed mandatory argument: " ~ previous.name 
         );        
+        
       } else {
+      
         assert( 
+        
           previous.isMandatory, 
           errorPrefix ~
           "cannot index next to a sequence of optional arguments"
         );
-      }      
+        
+      } 
+      
     } else {
+    
       assert( 
+      
         i.index == 0, 
         errorPrefix ~
         "the first indexed argument must be located at position 0" 
+        
       );
+      
     }
+    
   }
   
-public:
+public: 
+
+  @property {
+  
+    string name() { return _name; }    
+    void name( string name ) {  _name = name; }
+    
+    string description() {  return _description; }
+    void description( string d ) {  _description = d; }
+  
+    string usage() {
+  
+      //If the user hasn't provided the usage string.
+      if( !_usage.length ) {
+          
+        _usage = 
+          _name ~ " " ~
+          indexedStringForAllIndexes( this.indexedLeft ) ~ " " ~ 
+          wrap( "options", Usage.optional ) ~ " " ~
+          indexedStringForAllIndexes( this.indexedRight );
+        
+      }
+      
+      return _usage;
+      
+    }
+    void usage( string u ) { _usage = u; }
+  
+  }
 
   /**
     Initializes the parser with the given arguments. They are expected to be passed as received by the program's entry point.
@@ -318,7 +351,7 @@ public:
   } body {
   
     _flags[ f.flag ] = f;
-    if( f.isMandatory ) { addMandatory( f ); }
+    _arguments.insertBack( f );
     
   } 
   ///Ditto.
@@ -338,7 +371,7 @@ public:
       
     }
     
-    if( i.isMandatory() ) { addMandatory( i ); }
+    _arguments.insertBack( i );
     
   }   
   
@@ -427,26 +460,48 @@ public:
   
     if( _description.length ) {
       
-      _out.writeln( "\nDescription: ", _description, "\n" );
+      _out.writeln( "\nDescription: ", _description );
+      _out.writeln();
       
     }
         
-    printUsage();
-    
-    _out.writeln();    
-    _out.writeln( "Flagged arguments:" );    
-    
-    //Get the longest flag to determine the first column size.
-    size_t longest = 0;
-    foreach( string name, _; _flags ) {
-      longest = max( longest, name.length );
-    }
-    
-    foreach( string name, flag; _flags ) {
-      _out.writefln( "%-*s : %s", longest, name, flag.description );
-    }
-    
+    printUsage();    
     _out.writeln();
+    
+    if( !this.mandatories.empty ) {
+    
+      _out.writeln( "Arguments:" );
+      _out.writeln();    
+      
+      auto longest = this.mandatories.map!( a => a.identification.length ).reduce!( max );
+      
+      foreach( arg; this.mandatories ) {
+      
+        _out.writefln( "%-*s : %s", longest, arg.identification, arg.description );
+      
+      }
+      
+      _out.writeln();
+      
+    }
+    
+    
+    if( !this.optionals.empty ) {
+    
+      _out.writeln( "Options:" );    
+      _out.writeln();
+      
+      auto longest = this.optionals.map!( a => a.identification.length ).reduce!( max );
+      
+      foreach( arg; this.optionals ) {
+      
+        _out.writefln( "%-*s : %s", longest, arg.identification, arg.description );
+      
+      }
+      
+      _out.writeln();
+      
+    }
     
   }
   
