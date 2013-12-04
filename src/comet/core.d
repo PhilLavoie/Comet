@@ -41,7 +41,19 @@ struct RunParameters( T, M ) if( isMutationCostFor!( M, T ) ) {
   NoResults         noResults;
 
 }
-auto makeRunParameters( T, M )( T[][] sequencesGroup, Algo algo, T[] states, M mutationCosts, NoThreads noThreads, LengthParameters length, NoResults noResults ) {
+
+/**
+  Factory function to easily create run parameters.
+*/
+auto makeRunParameters( T, M )( 
+  T[][] sequencesGroup, 
+  Algo algo, 
+  T[] states, 
+  M mutationCosts, 
+  NoThreads noThreads, 
+  LengthParameters length, 
+  NoResults noResults 
+) {
   
   static assert( isMutationCostFor!( M, T ) );
   
@@ -59,10 +71,11 @@ struct RunSummary {
   NoThreads noThreadsUsed; //Since the actual number of thread used might vary from the one requested.
 
 }
+
 /**
   Factory function.
 */
-auto runSummary( Args... )( Args args ) {
+auto makeRunSummary( Args... )( Args args ) {
   
   return RunSummary( args );
 
@@ -140,77 +153,168 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
       auto results = Results( noResults );
       processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
       
-      storage.store( runSummary( results, Clock.currTime() - startTime ) );     
+      storage.store( makeRunSummary( results, Clock.currTime() - startTime ) );     
    
     } else if( noThreads > 1 ) {
     
-      import std.parallelism;
-      import std.algorithm: min;
-      import std.traits;
-      import comet.bio.dna: Nucleotide;
+      version( parallelism ) {
     
-      auto maxSegmentsLength = min( sequencesGroup[ 0 ].length / 2, lengthParams.max.value );
-      auto maxNoThreads = ( ( maxSegmentsLength - lengthParams.min.value ) / lengthParams.step.value ) + 1;
-      auto workingThreads = min( maxNoThreads, noThreads.value );
-      auto additionalThreads = workingThreads - 1;
-     
-      auto tasks =
-        Array!( Task!( processSegmentsPairs, ParameterTypeTuple!( processSegmentsPairs!( Nucleotide ) ) ) * )();
+        import std.parallelism;
+        import std.algorithm: min;
+        import std.traits;
+        import comet.bio.dna: Nucleotide;
       
-      auto taskResults = Array!Results();
-      for( int i = 0; i < additionalThreads; ++i ) {
-      
-        taskResults.insertBack( Results( noResults ) );
-        tasks.insertBack( 
-          task!processSegmentsPairs( 
-            sequencesGroup, 
-            algorithmFor( 
-              runParams.algorithm, 
-              sequencesCount( sequencesGroup.length ), 
-              sequenceLength( sequencesGroup[ 0 ].length ), 
-              runParams.states, 
-              runParams.mutationCosts 
-            ),
-            taskResults[ i ], 
-            lengthParameters(
-              minLength( lengthParams.min + ( i + 1 ) * lengthParams.step ),
-              lengthParams.max,
-              lengthStep( lengthParams.step * workingThreads  )
+        auto maxSegmentsLength = min( sequencesGroup[ 0 ].length / 2, lengthParams.max.value );
+        auto maxNoThreads = ( ( maxSegmentsLength - lengthParams.min.value ) / lengthParams.step.value ) + 1;
+        auto workingThreads = min( maxNoThreads, noThreads.value );
+        auto additionalThreads = workingThreads - 1;
+       
+        auto tasks =
+          Array!( Task!( processSegmentsPairs, ParameterTypeTuple!( processSegmentsPairs!( Nucleotide ) ) ) * )();
+        
+        auto taskResults = Array!Results();
+        for( int i = 0; i < additionalThreads; ++i ) {
+        
+          taskResults.insertBack( Results( noResults ) );
+          tasks.insertBack( 
+            task!processSegmentsPairs( 
+              sequencesGroup, 
+              algorithmFor( 
+                runParams.algorithm, 
+                sequencesCount( sequencesGroup.length ), 
+                sequenceLength( sequencesGroup[ 0 ].length ), 
+                runParams.states, 
+                runParams.mutationCosts 
+              ),
+              taskResults[ i ], 
+              lengthParameters(
+                minLength( lengthParams.min + ( i + 1 ) * lengthParams.step ),
+                lengthParams.max,
+                lengthStep( lengthParams.step * workingThreads  )
+              )
             )
-          )
+          );
+          ( tasks[ i ] ).executeInNewThread();
+        
+        }
+        
+        //Do this thread's processing.      
+        auto results = Results( noResults );
+        processSegmentsPairs( 
+          sequencesGroup, 
+          algorithmFor( 
+            runParams.algorithm, 
+            sequencesCount( sequencesGroup.length ), 
+            sequenceLength( sequencesGroup[ 0 ].length ), 
+            runParams.states, 
+            runParams.mutationCosts 
+          ), 
+          results, 
+          lengthParameters( 
+            lengthParams.min,
+            lengthParams.max,
+            lengthStep( lengthParams.step * workingThreads )
+          ) 
         );
-        ( tasks[ i ] ).executeInNewThread();
+        
+        
+        
+        for( int i = 0; i < tasks.length; ++i ) {
+        
+          tasks[ i ].yieldForce();
+          results.add( taskResults[ i ][] );
+        
+        }
+        
+        storage.store( makeRunSummary( results, Clock.currTime() - startTime ) );  
+
+      //Thread version.
+      } else {
       
-      }
+        import core.thread;
+        import std.algorithm: min;
+        import std.traits;
+      
+        auto maxSegmentsLength = min( sequencesGroup[ 0 ].length / 2, lengthParams.max.value );
+        auto maxNoThreads = ( ( maxSegmentsLength - lengthParams.min.value ) / lengthParams.step.value ) + 1;
+        auto workingThreads = min( maxNoThreads, noThreads.value );
+        auto additionalThreads = workingThreads - 1;
+       
+        class MyThread: Thread {
+          Results results;
+        
+          this( int threadNo, Results results ) {
+            this.results = results;
+          
+            super( 
+              () {
               
-      auto results = Results( noResults );
-      processSegmentsPairs( 
-        sequencesGroup, 
-        algorithmFor( 
-          runParams.algorithm, 
-          sequencesCount( sequencesGroup.length ), 
-          sequenceLength( sequencesGroup[ 0 ].length ), 
-          runParams.states, 
-          runParams.mutationCosts 
-        ), 
-        results, 
-        lengthParameters( 
-          lengthParams.min,
-          lengthParams.max,
-          lengthStep( lengthParams.step * workingThreads )
-        ) 
-      );
-      
-      //Do this thread's processing.
-      
-      for( int i = 0; i < tasks.length; ++i ) {
-      
-        tasks[ i ].yieldForce();
-        results.add( taskResults[ i ][] );
+                processSegmentsPairs( 
+                  sequencesGroup, 
+                  algorithmFor( 
+                    runParams.algorithm, 
+                    sequencesCount( sequencesGroup.length ), 
+                    sequenceLength( sequencesGroup[ 0 ].length ), 
+                    runParams.states, 
+                    runParams.mutationCosts 
+                  ),
+                  results, 
+                  lengthParameters(
+                    minLength( lengthParams.min + ( threadNo + 1 ) * lengthParams.step ),
+                    lengthParams.max,
+                    lengthStep( lengthParams.step * workingThreads  )
+                  )
+                );
+                
+              }            
+              
+            );
+          
+          }
+        
+        }
+       
+        auto threadsGroup = Array!( MyThread )();
+        
+        for( int i = 0; i < additionalThreads; ++i ) {
+
+          threadsGroup.insertBack( new MyThread( i, Results( noResults ) ) );          
+          threadsGroup[ i ].start();
+        
+        }
+        
+        assert( threadsGroup.length );
+        
+        //Do this thread's processing.      
+        auto results = Results( noResults );
+        processSegmentsPairs( 
+          sequencesGroup, 
+          algorithmFor( 
+            runParams.algorithm, 
+            sequencesCount( sequencesGroup.length ), 
+            sequenceLength( sequencesGroup[ 0 ].length ), 
+            runParams.states, 
+            runParams.mutationCosts 
+          ), 
+          results, 
+          lengthParameters( 
+            lengthParams.min,
+            lengthParams.max,
+            lengthStep( lengthParams.step * workingThreads )
+          ) 
+        );
+        
+        
+        foreach( thread; threadsGroup ) {
+          
+          thread.join();                  
+          results.add( thread.results[] );
+          
+        }
+        
+        storage.store( makeRunSummary( results, Clock.currTime() - startTime, .noThreads( workingThreads ) ) );      
       
       }
-      
-      storage.store( runSummary( results, Clock.currTime() - startTime ) );     
     
     } else {
     
