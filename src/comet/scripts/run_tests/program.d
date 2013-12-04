@@ -13,57 +13,62 @@ import comet.configs.metaconfig;
 import comet.cli.all: Parser, makeParser, DropFirst;
 
 alias RunTestsConfig = typeof( makeConfig() );
-  
-/**
-  Factory function for creating the configuration for comparing results.
-*/
-private auto makeConfig() {
-  
-  return configFor!(
-    Field.epsilon,
-    Field.verbosity,
-    Field.outFile,
-    Field.minLength,
-    Field.maxLength,
-    Field.lengthStep,
-    Field.noResults,
-    Field.sequencesDir,    
-    Field.referencesDir,
-    Field.compileTime
-  )();
-  
-}
 
-/**
-  Sets the program name to the given one and parses the argument according to the predefined
-  configuration and command line interface. Starts parsing the arguments as they are, does NOT
-  skip the first one.   
-*/
-auto parse( string commandName, string[] args ) {
 
-  auto cfg = makeConfig();  
+private {  
+
+  /**
+    Factory function for creating the configuration for comparing results.
+  */
+  auto makeConfig() {
     
-  auto parser = makeParser();
-  
-  parser.name = commandName;
-  
-  parser.add(
-    argFor!( Field.epsilon )( cfg ),
-    argFor!( Field.verbosity )( cfg ),
-    argFor!( Field.sequencesDir )( cfg ),    
-    argFor!( Field.referencesDir )( cfg ),
-    argFor!( Field.compileTime )( cfg )
-  );
+    return configFor!(
+      Field.epsilon,
+      Field.verbosity,
+      Field.outFile,
+      Field.minLength,
+      Field.maxLength,
+      Field.lengthStep,
+      Field.noResults,
+      Field.sequencesDir,    
+      Field.referencesDir,
+      Field.compileTime
+    )();
     
-  bool printConfig = false;
-  parser.add( printConfigArg( printConfig ) );
-  
-  parser.parse!( DropFirst.no )( args );  
-  
-  if( printConfig ) { cfg.print( std.stdio.stdout ); }    
-  
-  return cfg;
+  }
 
+  /**
+    Sets the program name to the given one and parses the argument according to the predefined
+    configuration and command line interface. Starts parsing the arguments as they are, does NOT
+    skip the first one.   
+  */
+  auto parse( string commandName, string[] args ) {
+
+    auto cfg = makeConfig();  
+      
+    auto parser = makeParser();
+    
+    parser.name = commandName;
+    
+    parser.add(
+      argFor!( Field.epsilon )( cfg ),
+      argFor!( Field.verbosity )( cfg ),
+      argFor!( Field.sequencesDir )( cfg ),    
+      argFor!( Field.referencesDir )( cfg ),
+      argFor!( Field.compileTime )( cfg )
+    );
+      
+    bool printConfig = false;
+    parser.add( printConfigArg( printConfig ) );
+    
+    parser.parse!( DropFirst.no )( args );  
+    
+    if( printConfig ) { cfg.print( std.stdio.stdout ); }    
+    
+    return cfg;
+
+  }
+  
 }
 
 
@@ -73,7 +78,7 @@ Program.
 *************************************************************************************/
 
 
-
+import comet.typedefs;
 import comet.programcons;
 
 mixin mainRunMixin;
@@ -105,21 +110,14 @@ private void run( RunTestsConfig cfg ) {
       noResults( cfg.noResults )      
   );
   
-  auto br = makeBatchRun(
-    runParamsRange,
-    lengthParameters(
-      minLength( cfg.minLength ),
-      maxLength( cfg.maxLength ),
-      lengthStep( cfg.lengthStep )
-    ),
-    noResults( cfg.noResults ),        
-  );
-  
   auto storage = .storage( runParamsRange, logger, cfg.referencesDir, cfg.epsilon );
   
   try {
   
-    br.run( storage ); 
+    calculateSegmentsPairsCosts(
+      runParamsRange,
+      storage
+    );
     
     if( cfg.compileTime[ 0 ] ) {
     

@@ -3,10 +3,6 @@
 */
 module comet.core;
 
-public import comet.typedefs: NoThreads, noThreads;
-public import comet.typedefs: SequencesCount, sequencesCount;
-public import comet.typedefs: NoResults, noResults;
-
 public import comet.results: Result;
 public import comet.sma.segments;
 
@@ -17,6 +13,7 @@ import std.datetime;
 
 import comet.results;
 import comet.typecons;
+import comet.typedefs;
 import comet.sma.algos: algorithmFor;
 import comet.sma.mutation_cost: isMutationCostFor;
 import comet.configs.algos: Algo;
@@ -30,22 +27,25 @@ import std.range: isInputRange, ElementType;
 import comet.sma.algos: AlgoI;
 
 /**
-  Run specific parameters.
+  Run specific parameters. Those parameters are expected to be constant for the processing
+  of segments pairs contractions costs for a sequences group.
 */
 struct RunParameters( T, M ) if( isMutationCostFor!( M, T ) ) {
 
-  T[][]     sequencesGroup;
-  Algo      algorithm;
-  T[]       states;
-  M         mutationCosts;
-  NoThreads noThreads;
+  T[][]             sequencesGroup;
+  Algo              algorithm;
+  T[]               states;
+  M                 mutationCosts;
+  NoThreads         noThreads;
+  LengthParameters  lengthParameters;
+  NoResults         noResults;
 
 }
-auto runParameters( T, M )( T[][] sequencesGroup, Algo algo, T[] states, M mutationCosts, NoThreads noThreads ) {
+auto makeRunParameters( T, M )( T[][] sequencesGroup, Algo algo, T[] states, M mutationCosts, NoThreads noThreads, LengthParameters length, NoResults noResults ) {
   
   static assert( isMutationCostFor!( M, T ) );
   
-  return RunParameters!( T, M )( sequencesGroup, algo, states, mutationCosts, noThreads );
+  return RunParameters!( T, M )( sequencesGroup, algo, states, mutationCosts, noThreads, length, noResults );
   
 }
 
@@ -56,6 +56,7 @@ struct RunSummary {
 
   Results results;
   Duration executionTime;  
+  NoThreads noThreadsUsed; //Since the actual number of thread used might vary from the one requested.
 
 }
 /**
@@ -115,135 +116,111 @@ private template isRunParametersRange( T ) {
 
 }
 
-struct BatchRun( RunParametersRange ) if(
-  
-  isRunParametersRange!RunParametersRange 
-
+void calculateSegmentsPairsCosts( RunParametersRange, S ) (
+  RunParametersRange  runParametersRange,
+  S                   storage  
 ) {
 
-private:
-
-  RunParametersRange    _runParametersRange;
-  LengthParameters      _lengthParams;
-  NoResults             _noResults;  
+  static assert( isRunParametersRange!RunParametersRange );
+  static assert( isStorageFor!( S, RunSummary ) );
+  
+  foreach( runParams; runParametersRange ) {
     
-  this( FieldTypeTuple!( typeof( this ) ) args ) {
-  
-    _runParametersRange   = args[ 0 ];
-    _lengthParams         = args[ 1 ];
-    _noResults            = args[ 2 ];
+    auto sequencesGroup = runParams.sequencesGroup;
+    auto noThreads = runParams.noThreads;
+    auto lengthParams = runParams.lengthParameters;
+    auto noResults = runParams.noResults;
     
-  }  
-  
-public:
-
-  @disable this();
-  
-  void run( S )( S storage ) {
-  
-    //TODO: change this for just isStorage.
-    static assert( isStorageFor!( S, RunSummary ) );
-  
-    foreach( runParams; _runParametersRange ) {
+    SysTime startTime = Clock.currTime();
+    
+    if( noThreads == 1 ) {
+                  
+      auto algo = algorithmFor( runParams.algorithm, sequencesCount( sequencesGroup.length ), sequenceLength( sequencesGroup[ 0 ].length ), runParams.states, runParams.mutationCosts );
       
-      auto sequencesGroup = runParams.sequencesGroup;
-      auto noThreads = runParams.noThreads;
-
-      SysTime startTime = Clock.currTime();
+      auto results = Results( noResults );
+      processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
       
-      if( noThreads == 1 ) {
-                    
-        auto algo = algorithmFor( runParams.algorithm, sequencesCount( sequencesGroup.length ), sequenceLength( sequencesGroup[ 0 ].length ), runParams.states, runParams.mutationCosts );
-        
-        auto results = Results( _noResults );
-        processSegmentsPairs( sequencesGroup, algo, results, _lengthParams );
-        
-        storage.store( runSummary( results, Clock.currTime() - startTime ) );     
+      storage.store( runSummary( results, Clock.currTime() - startTime ) );     
+   
+    } else if( noThreads > 1 ) {
+    
+      import std.parallelism;
+      import std.algorithm: min;
+      import std.traits;
+      import comet.bio.dna: Nucleotide;
+    
+      auto maxSegmentsLength = min( sequencesGroup[ 0 ].length / 2, lengthParams.max.value );
+      auto maxNoThreads = ( ( maxSegmentsLength - lengthParams.min.value ) / lengthParams.step.value ) + 1;
+      auto workingThreads = min( maxNoThreads, noThreads.value );
+      auto additionalThreads = workingThreads - 1;
      
-      } else if( noThreads > 1 ) {
+      auto tasks =
+        Array!( Task!( processSegmentsPairs, ParameterTypeTuple!( processSegmentsPairs!( Nucleotide ) ) ) * )();
       
-        import std.parallelism;
-        import std.algorithm: min;
-        import std.traits;
-        import comet.bio.dna: Nucleotide;
+      auto taskResults = Array!Results();
+      for( int i = 0; i < additionalThreads; ++i ) {
       
-        auto maxSegmentsLength = min( sequencesGroup[ 0 ].length / 2, _lengthParams.max.value );
-        auto maxNoThreads = ( ( maxSegmentsLength - _lengthParams.min.value ) / _lengthParams.step.value ) + 1;
-        auto workingThreads = min( maxNoThreads, noThreads.value );
-        auto additionalThreads = workingThreads - 1;
-       
-        auto tasks =
-          Array!( Task!( processSegmentsPairs, ParameterTypeTuple!( processSegmentsPairs!( Nucleotide ) ) ) * )();
-        
-        auto taskResults = Array!Results();
-        for( int i = 0; i < additionalThreads; ++i ) {
-        
-          taskResults.insertBack( Results( _noResults ) );
-          tasks.insertBack( 
-            task!processSegmentsPairs( 
-              sequencesGroup, 
-              algorithmFor( 
-                runParams.algorithm, 
-                sequencesCount( sequencesGroup.length ), 
-                sequenceLength( sequencesGroup[ 0 ].length ), 
-                runParams.states, 
-                runParams.mutationCosts 
-              ),
-              taskResults[ i ], 
-              lengthParameters(
-                minLength( _lengthParams.min + ( i + 1 ) * _lengthParams.step ),
-                _lengthParams.max,
-                lengthStep( _lengthParams.step * workingThreads  )
-              )
+        taskResults.insertBack( Results( noResults ) );
+        tasks.insertBack( 
+          task!processSegmentsPairs( 
+            sequencesGroup, 
+            algorithmFor( 
+              runParams.algorithm, 
+              sequencesCount( sequencesGroup.length ), 
+              sequenceLength( sequencesGroup[ 0 ].length ), 
+              runParams.states, 
+              runParams.mutationCosts 
+            ),
+            taskResults[ i ], 
+            lengthParameters(
+              minLength( lengthParams.min + ( i + 1 ) * lengthParams.step ),
+              lengthParams.max,
+              lengthStep( lengthParams.step * workingThreads  )
             )
-          );
-          ( tasks[ i ] ).executeInNewThread();
-        
-        }
-                
-        auto results = Results( _noResults );
-        processSegmentsPairs( 
-          sequencesGroup, 
-          algorithmFor( 
-            runParams.algorithm, 
-            sequencesCount( sequencesGroup.length ), 
-            sequenceLength( sequencesGroup[ 0 ].length ), 
-            runParams.states, 
-            runParams.mutationCosts 
-          ), 
-          results, 
-          lengthParameters( 
-            _lengthParams.min,
-            _lengthParams.max,
-            lengthStep( _lengthParams.step * workingThreads )
-          ) 
+          )
         );
-        
-        //Do this thread's processing.
-        
-        for( int i = 0; i < tasks.length; ++i ) {
-        
-          tasks[ i ].yieldForce();
-          results.add( taskResults[ i ][] );
-        
-        }
-        
-        storage.store( runSummary( results, Clock.currTime() - startTime ) );     
+        ( tasks[ i ] ).executeInNewThread();
       
-      } else {
+      }
+              
+      auto results = Results( noResults );
+      processSegmentsPairs( 
+        sequencesGroup, 
+        algorithmFor( 
+          runParams.algorithm, 
+          sequencesCount( sequencesGroup.length ), 
+          sequenceLength( sequencesGroup[ 0 ].length ), 
+          runParams.states, 
+          runParams.mutationCosts 
+        ), 
+        results, 
+        lengthParameters( 
+          lengthParams.min,
+          lengthParams.max,
+          lengthStep( lengthParams.step * workingThreads )
+        ) 
+      );
       
-        assert( false );
+      //Do this thread's processing.
+      
+      for( int i = 0; i < tasks.length; ++i ) {
+      
+        tasks[ i ].yieldForce();
+        results.add( taskResults[ i ][] );
       
       }
       
+      storage.store( runSummary( results, Clock.currTime() - startTime ) );     
+    
+    } else {
+    
+      assert( false );
+    
+    }   
       
-    
-    }
-    
-  } 
-  
-}
+  }
 
+}
 
 
 public void processSegmentsPairs( T )( 
@@ -277,23 +254,4 @@ public void processSegmentsPairs( T )(
   
   }
 
-}
-
-/**
-  Factory function.
-*/  
-auto makeBatchRun( RunParametersRange ) (
-  RunParametersRange  runParametersRange,
-  LengthParameters    lengthParams,
-  NoResults           noResults
-) {
-
-  static assert( isRunParametersRange!RunParametersRange );
-  
-  return BatchRun!( RunParametersRange )(
-    runParametersRange,
-    lengthParams,
-    noResults
-  );
-  
 }

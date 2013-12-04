@@ -13,7 +13,7 @@ import std.container: Array;
 import comet.typedefs: Cost;
 import comet.typedefs: LengthParameters;
 import comet.typecons: getter;
-import comet.core: RunSummary, runParameters;
+import comet.core: RunSummary, makeRunParameters;
 import std.range: isInputRange, ElementType;
 import std.datetime: Duration;
 import std.traits: FieldTypeTuple;
@@ -26,9 +26,7 @@ import std.algorithm: count;
 import std.exception: enforce;
 
 class RunParamsRange {
-
-  
-  
+ 
   private Logger                          _logger;
   
   private Array!File                      _sequencesFiles;
@@ -59,7 +57,7 @@ class RunParamsRange {
     _logger = logger;  
     _lengthParams = length;
     _noResults = noResults;
-  
+    
     foreach( file; fileRange ) {
     
       _sequencesFiles.insertBack( file );        
@@ -130,12 +128,13 @@ class RunParamsRange {
     }
   
   }
+  
   auto front() {
     
     _logger.logln( 1, "Processing file: ", currentFile().fileName() );
     _logger.logln( 2, "Using Configuration: " );
   
-    return runParameters( currentSequencesGroup(), currentAlgo(), _states, _mutationCosts, currentNoThreads() );
+    return makeRunParameters( currentSequencesGroup(), currentAlgo(), _states, _mutationCosts, currentNoThreads(), _lengthParams, _noResults );
   
   }
   
@@ -210,7 +209,7 @@ class Storage  {
       timeEntry(         
         _runParamsRange.currentFile,
         _runParamsRange.currentAlgo,
-        _runParamsRange.currentNoThreads,
+        summary.noThreadsUsed,
         _runParamsRange.noResults,
         _runParamsRange.lengthParams,
         summary.executionTime

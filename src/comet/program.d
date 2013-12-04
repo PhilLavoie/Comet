@@ -94,24 +94,16 @@ import compare_results = comet.scripts.compare_results.program;
 import run_tests = comet.scripts.run_tests.program;
 
 import comet.results_io;
-
 import comet.logger;
-
+import comet.typedefs;
 import comet.core;
 import comet.utils;
-
-import comet.bio.dna;
-import comet.containers.tree;
+import comet.programcons;
 
 import std.stdio;
-import std.algorithm;
-import std.conv;
-import std.exception;
 
 import std.datetime: Duration;
 import std.range: isForwardRange;
-
-import comet.programcons;
 
 mixin mainRunMixin;
 mixin loadConfigMixin;
@@ -193,54 +185,64 @@ private {
       
     }
     
-    auto runParamsRange = new class( nucleotides, cfg.algo, loadStates(), loadMutationCosts() ) {
-    
-      private typeof( nucleotides ) _nucleotides;
-      private Algo _algo;
-      private typeof( loadStates() ) _states;
-      private typeof( loadMutationCosts() ) _mutationCosts;
-      private bool _empty;
-      
-      this( 
-        typeof( _nucleotides ) nucleotides, 
-        typeof( _algo ) algo, 
-        typeof( _states ) states, 
-        typeof( _mutationCosts ) mutationCosts 
+    auto runParamsRange = 
+      new class( 
+        nucleotides, 
+        cfg.algo, 
+        loadStates(), 
+        loadMutationCosts(), 
+        lengthParameters( 
+          minLength( cfg.minLength ), 
+          maxLength( cfg.maxLength ), 
+          lengthStep( cfg.lengthStep ) 
+        ),
+        noResults( cfg.noResults )
       ) {
-      
-        _nucleotides = nucleotides;
-        _algo = algo;
-        _states = states;
-        _mutationCosts = mutationCosts;
-        _empty = false;
-      
-      }
-      
-      bool empty() { return _empty; }
-      void popFront() { _empty = true; }
-      auto front() {
-      
-        return runParameters( 
-          _nucleotides,
-          _algo,
-          _states,
-          _mutationCosts,
-          noThreads( 1 )
-        );      
-        
-      }
     
-    };
-       
-    auto br = makeBatchRun(
-      runParamsRange,
-      lengthParameters(
-        minLength( cfg.minLength ),
-        maxLength( cfg.maxLength ),
-        lengthStep( cfg.lengthStep )
-      ),
-      noResults( cfg.noResults ),          
-    );
+        private typeof( nucleotides ) _nucleotides;
+        private Algo _algo;
+        private typeof( loadStates() ) _states;
+        private typeof( loadMutationCosts() ) _mutationCosts;
+        private bool _empty;
+        private LengthParameters _length;
+        private NoResults _noResults;
+        
+        this( 
+          typeof( _nucleotides ) nucleotides, 
+          typeof( _algo ) algo, 
+          typeof( _states ) states, 
+          typeof( _mutationCosts ) mutationCosts,
+          typeof( _length ) length,
+          typeof( _noResults ) noResults
+        ) {
+        
+          _nucleotides = nucleotides;
+          _algo = algo;
+          _states = states;
+          _mutationCosts = mutationCosts;
+          _empty = false;
+          _length = length;
+          _noResults = noResults;
+        
+        }     
+        
+        bool empty() { return _empty; }
+        void popFront() { _empty = true; }
+        auto front() {
+        
+          return makeRunParameters( 
+            _nucleotides,
+            _algo,
+            _states,
+            _mutationCosts,
+            noThreads( 1 ),
+            _length,
+            _noResults
+          );      
+          
+        }
+      
+      };
     
     auto storage = new class( cfg )  {
   
@@ -276,9 +278,12 @@ private {
       }
     
     };
+       
+   calculateSegmentsPairsCosts(
+      runParamsRange,      
+      storage
+    );
     
-    br.run( storage ); 
-
   } 
   
 }
