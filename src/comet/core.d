@@ -217,8 +217,7 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
           ) 
         );
         
-        
-        
+               
         for( int i = 0; i < tasks.length; ++i ) {
         
           tasks[ i ].yieldForce();
@@ -245,7 +244,12 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
         
           this( int threadNo, Results results ) {
             this.results = results;
-          
+            auto length = lengthParameters(
+              minLength( lengthParams.min + ( threadNo + 1 ) * lengthParams.step ),
+              lengthParams.max,
+              lengthStep( lengthParams.step * workingThreads  )
+            );
+            
             super( 
               () {
               
@@ -258,12 +262,8 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
                     runParams.states, 
                     runParams.mutationCosts 
                   ),
-                  results, 
-                  lengthParameters(
-                    minLength( lengthParams.min + ( threadNo + 1 ) * lengthParams.step ),
-                    lengthParams.max,
-                    lengthStep( lengthParams.step * workingThreads  )
-                  )
+                  this.results, 
+                  length
                 );
                 
               }            
@@ -304,7 +304,7 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
           ) 
         );
         
-        
+               
         foreach( thread; threadsGroup ) {
           
           thread.join();                  

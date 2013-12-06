@@ -1,6 +1,6 @@
 module sequencegen;
 
-import deimos.flags;
+import comet.cli.all;
 
 import std.stdio;
 import std.conv;
@@ -17,15 +17,18 @@ struct Config{
 void main( string[] args ) {
   Config cfg;
   
-  Parser parser;  
-  parser.file( "-o", "Output file where the randomly generated sequences are stored.", cfg.output, "w" );
-  parser.value( "-n", "Number of sequences to generate. Default is " ~ cfg.noSeq.to!string() ~ ".", cfg.noSeq );
-  parser.value( "-l", "Length in characters of the sequences to generate. Default is " ~ cfg.seqLength.to!string() ~ ".", cfg.seqLength );
+  Parser parser = makeParser();  
+  parser.name = commandName( args );
+  
+  parser.add(
+    Arguments.file( cfg.output, "w", "-o", "outputFile", "Output file where the randomly generated sequences are stored.", Usage.optional ),
+    Arguments.value( cfg.noSeq, "-n", "noSequences", "Number of sequences to generate.", Usage.mandatory ),
+    Arguments.value( cfg.seqLength, "-l", "sequencesLength", "Length in characters of the sequences to generate.", Usage.mandatory ),
+  );
+
   
   try {
-    auto programArgs = parser.parse( args );
-  
-    enforce( programArgs is null || programArgs.length == 0, "Unexpected program arguments: " ~ programArgs.to!string() );  
+    parser.parse!( DropFirst.no )( args[ 1 .. $ ] );
     
     if( !cfg.output.isOpen ) {
       cfg.output.open( "random_count" ~ cfg.noSeq.to!string() ~ "_length" ~ cfg.seqLength.to!string() ~ ".fasta", "w" );
@@ -34,8 +37,7 @@ void main( string[] args ) {
     cfg.output.writeSequences( cfg.noSeq, cfg.seqLength );
     
   } catch( Exception e ) {
-    writeln( e.msg );
-    parser.printHelp( args[ 0 ] ~ " -n noSeq -l seqLength" );
+    
   }
 }
 

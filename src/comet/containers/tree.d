@@ -86,7 +86,7 @@ public:
   public:
     @property bool hasChildren() { return _firstChild !is null; }
     @property ref T element() { return _element; }
-    @property void element( T _element ) { _element = element; }
+    @property void element( T el ) { _element = el; }
     @property ChildrenRange children() { return ChildrenRange( &this ); }    
   }
   

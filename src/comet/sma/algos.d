@@ -78,19 +78,26 @@ private mixin template standardColumnCost() {
     
     //Process the state mutation algorithm then extract the preSpeciation cost.
     //TODO: does the tree really need the states and mutation costs every time?
-    _smTree.update( _states, _mutationCosts );
+    _smTree.update( _mutationCosts );
     return preSpeciationCost( _smTree, _mutationCosts );
   }
   
 }
 
 private mixin template patternColumnCost() {
+
   protected Cost[ Pattern ] _patternsCost;
+  
   private Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
+  
     auto pattern = Pattern( column ); 
+   
     if( pattern !in _patternsCost ) {
+    
       _patternsCost[ pattern ] = super.columnCost( column );
+      
     } 
+    
     return _patternsCost[ pattern ];    
   }
 }
@@ -170,6 +177,7 @@ protected:
     _seqLength = length;
     _states = states;
     _mutationCosts = mutationCosts;
+    _smTree = SMTree!T( _states[] );
    
     //Phylogenize the tree according to the sequences, see documentation to see
     //how it is done.  
@@ -299,6 +307,7 @@ private void phylogenize( Tree )( ref Tree tree, SequencesCount seqCount ) in {
     }
   }
   
+  
 }
 
 /**
@@ -331,7 +340,7 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
   auto root = smTree.root;
   auto minCost = root.element.minCost;
   
-  foreach( rootStateTuple; root.element ) {
+  foreach( rootStateTuple; root.element[] ) {
   
     auto rootState = rootStateTuple.state;
     auto rootCost  = rootStateTuple.cost;
@@ -351,7 +360,7 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
         
         auto minMutCost = minMutationCost( rootState, child.element, mutationCosts );
         
-        foreach( childStateTuple; child.element ) {
+        foreach( childStateTuple; child.element[] ) {
           
           auto childState = childStateTuple.state;
           auto childCost = childStateTuple.cost;
@@ -371,13 +380,13 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
         assert( rootCount % equivalentsCount == 0 );
         assert( 0 < multiplier );
       
-        foreach( childStateTuple; child.element ) {
+        foreach( childStateTuple; child.element[] ) {
         
           auto childState = childStateTuple.state;
           auto childCost = childStateTuple.cost;
           auto childCount = childStateTuple.count;
         
-          if( childCost + mutationCosts.costFor( rootState, childState  ) == minMutCost ) {
+          if( childCost + mutationCosts.costFor( rootState, childState ) == minMutCost ) {
           
             costSum += mutationCosts( rootState, childState ) * childCount * multiplier;
             
@@ -402,8 +411,9 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
 unittest {
 
   import comet.bio.dna;
-
-  SMTree!Nucleotide tree;
+  
+  auto validStates = [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];
+  auto tree = SMTree!Nucleotide( validStates[] );
   
   tree.clear();
   auto root = tree.setRoot();
@@ -434,7 +444,7 @@ unittest {
   auto rightRightRight = tree.appendChild( rightRight );
   rightRightRight.element.fixState( Nucleotide.ADENINE );
   
-  auto validStates = [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];
+  
   auto mutationCosts = 
     ( Nucleotide n1, Nucleotide n2 ){ 
       if( n1 == n2 ) {
@@ -444,7 +454,6 @@ unittest {
     };
 
   tree.update(
-    validStates,
     mutationCosts
   );
    

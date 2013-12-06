@@ -747,7 +747,7 @@ private {
 
       return Arguments.value(  
         v,
-        "--nr ",  
+        "--nr",  
         "noResults",
         "Number of results to keep in memory. Default is  " ~ v.to!string() ~  ". ",        
       );
@@ -756,7 +756,7 @@ private {
 
       return Arguments.toggle(
         v,
-        "--no-time ",
+        "--no-time",
         "Removes the execution time from the results. "
       );
       
@@ -764,7 +764,8 @@ private {
 
       return Arguments.value(  
         v,
-        "--min ",  
+        "--min",  
+        "min",
         "Minimum period length. Default is  " ~ v.to!string() ~  ". "
       );
       
@@ -773,6 +774,7 @@ private {
       return Arguments.value( 
         v,
         "--max",
+        "max",
         "Maximum period length. Default is the biggest value held by a word. The mid sequence position is used if it is lower than this value."
       );
       

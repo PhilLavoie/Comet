@@ -8,7 +8,8 @@ import std.conv: to;
 import std.traits: isCallable, ReturnType, ParameterTypeTuple;
 import std.exception: enforce;
 import std.algorithm: startsWith, endsWith;
-import std.stdio: File, stdin, stdout, stderr, dirEntries, SpanMode;
+import std.stdio: File, stdin, stdout, stderr;
+import std.file: dirEntries, SpanMode;
 import std.path: dirSeparator;
 
 /**

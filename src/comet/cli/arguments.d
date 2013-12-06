@@ -12,6 +12,7 @@ import std.exception: enforce;
 import std.container: SList;
 import std.range: isForwardRange;
 import std.traits: isCallable, ParameterTypeTuple;
+import std.string: strip;
 
 
 /**
@@ -216,7 +217,11 @@ protected:
   //Mutually exclusive flagged argument.
   SList!( Flagged ) _mutuallyExclusives;
   
-  this( T... )( T args ) {
+  this( T... )( T args ) in {
+  
+    assert( args[ 0 ].strip == args[ 0 ] );
+  
+  } body {
   
     super( args[ 2 .. $ ] );
     _flag = args[ 0 ];    

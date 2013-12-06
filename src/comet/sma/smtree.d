@@ -10,7 +10,9 @@ public import comet.sma.mutation_cost;
 import comet.containers.tree;
 
 import std.algorithm;
-import std.range: isInputRange, ElementType;
+import std.range: isInputRange, ElementType, hasLength;
+
+import std.conv: to;
 
 
 /**
@@ -32,76 +34,80 @@ struct StatesInfo( T ) {
     be chosen as minimal mutation cost candidates.
     
     The default value holds the minimal number of occurrences and the maximum possible cost.
-  */
+  
   private static struct StateInfo {
 
     size_t count = 0;
     Cost cost = Cost.max;
     
   }
+  */
 
 
-  private StateInfo[ T ] _infos; //Each state is associated with a tuple of data.
+  //private StateInfo[ T ] _infos; //Each state is associated with a tuple of data.
+  private StateTuple[] _infos;
   
   /**
     Creates an entry for every given state provided by the range and initializes
     their cost with the provided value.
   */
-  this( Range )( Range states, Cost initialCost = 0 ) if( isInputRange!Range && is( ElementType!Range == T ) ) {
+  this( Range )( Range states ) if( isInputRange!Range && is( ElementType!Range == T ) && hasLength!Range ) in {
   
-    foreach( s; states ) {
+    assert( states.length );
+  
+  } body {
+  
+    _infos = new StateTuple[ states.length ];
+  
+    for( int i = 0; i < states.length; ++i ) {
     
-      _infos[ s ] = StateInfo( 0, initialCost );
-      
+      _infos[ i ] = StateTuple( states[ i ], 0, Cost.max );
+    
     }
-    
+  
   }
   
 public:
+  
+  alias StateTuple = std.typecons.Tuple!( T, "state", size_t, "count", Cost, "cost" );
   
   /**
     Indicates that the given state is known to be present, therefore
     favoring it when considering every possible states.
     Sets the state's cost to 0 and every other costs to the maximum value.
   */
-  void fixState( T state ) {
-    _infos[ state ] = StateInfo( 1, 0.0 );
+  void fixState( T state ) in {
+  
+    assert( _infos.length );
+  
+  } body {
+     
+    debug{ bool found = false; }
+     
     //Reset other states to the maximum cost
     //and remove their occurrences count.
-    foreach( s, ref info; _infos ) {
-      if( s != state ) {        
-        info = StateInfo.init;
+    foreach( ref t; _infos ) {
+    
+      if( t.state != state ) {        
+      
+        t.count = 0;
+        t.cost = Cost.max;
+        
+      } else {
+      
+        debug { found = true; }
+        t.count = 1;
+        t.cost = 0.;
+      
       }
+      
     }
+    
+    debug{ assert( found ); }
+    
   }
  
-  /**
-    Returns the cost of the given state.
-  */
-  ref Cost costOf( T state ) {
-  
-    if( state !in _infos ) {
-    
-      _infos[ state ] = StateInfo.init;
-      
-    }
-    
-    return _infos[ state ].cost;
-  }
-  
-  /**
-    Returns the count of the given state.
-  */
-  ref size_t countOf( T state ) {
-  
-    if( state !in _infos ) {
-    
-      _infos[ state ] = StateInfo.init;
-      
-    }
-    
-    return _infos[ state ].count;
-  }
+  auto opSlice() { return _infos[]; }
   
   /**
     Finds the lowest cost amongst the ones held.
@@ -110,67 +116,42 @@ public:
     
     auto min = Cost.max;
     
-    foreach( s, info; _infos ) {
+    foreach( tup; _infos[] ) {
     
-      if( info.cost < min ) { min = info.cost; }
+      if( tup.cost < min ) { min = tup.cost; }
       
     }
     
     return min;
-  }
     
-  alias StateTuple = std.typecons.Tuple!( T, "state", size_t, "count", Cost, "cost" );
-    
-  /**
-    Foreach function delegate.
-    See http://dlang.org/statement.html#ForeachStatement 
-  */
-  int opApply( int delegate( ref StateTuple ) dg ) {
-  
-    int result = 0;
-    
-    foreach( s, info; _infos ) {
-      
-      StateTuple st;
-      st.state = s;
-      st.count = info.count;
-      st.cost = info.cost;
-      
-      result = dg( st );
-      
-      if( result ) { break; }
-    
-    }
-    
-    return result;
-  
-  }
+  }   
   
 }
 
 unittest {  
 
   import comet.bio.dna;
-  auto sc = StatesInfo!( Nucleotide )();
+  
   
   import std.traits: EnumMembers;
   
   Nucleotide[] nucleotides = [ EnumMembers!Nucleotide ];
+  auto sc = StatesInfo!( Nucleotide )( nucleotides[] );
   
   auto counter = 0;
-  foreach( n; nucleotides ) {
+  foreach( ref t; sc[] ) {
   
-    sc.costOf( n ) = counter;
-    sc.countOf( n ) = counter * 2;
+    t.cost = counter;
+    t.count = counter * 2;
     ++counter;
     
   }
   
   counter = 0;
-  foreach( n; nucleotides ) {
+  foreach( t; sc[] ) {
   
-    assert( sc.costOf( n ) == counter );
-    assert( sc.countOf( n ) == counter * 2 );
+    assert( t.cost == counter );
+    assert( t.count == counter * 2 );
     ++counter;
     
   } 
@@ -204,9 +185,11 @@ struct SMTree( T ) {
 private:
 
   Tree!( StatesInfo!T ) _tree;
+  T[] _states;
+
   
   //Expects the leaves to be set.
-  private void gatherInfo( N, Range, U )( N node, Range states, U mutationCosts ) {
+  private void gatherInfo( N, Range, U )( N node, Range states, U mutationCosts ) {   
   
     //Do nothing if it is a leaf.
     if( !node.hasChildren() ) { return; }
@@ -217,8 +200,9 @@ private:
       
     }
     
-    foreach( state; states ) {
+    foreach( ref t; node.element[] ) {
     
+      auto state = t.state;
       Cost costSum = 0;
     
       //Reconstruction counts.
@@ -226,20 +210,22 @@ private:
       
       foreach( children; node.children ) {
       
+        //Find the minimal cost of a mutation.
         auto minCost = minMutationCost( state, children.element, mutationCosts );
         
         assert( minCost < Cost.max );
         
         costSum += minCost;
         
+        //Count the number of mutations of minimal cost.
         size_t minCostMutations = 0;        
-        foreach( st; children.element ) {
+        foreach( ct; children.element[] ) {
         
-          auto childState = st.state;
+          auto childState = ct.state;
           
-          if( st.cost + mutationCosts.costFor( state, childState ) == minCost ) {
+          if( ct.cost + mutationCosts.costFor( state, childState ) == minCost ) {
           
-            minCostMutations += st.count;
+            minCostMutations += ct.count;
             
           }
           
@@ -251,37 +237,72 @@ private:
         
       }
       
-      node.element.costOf( state ) = costSum;
-      node.element.countOf( state ) = rCount;
+      t.cost = costSum;
+      t.count = rCount;
       
     }
     
-  }  
+  }
     
 public:
+  
+  auto setRoot() in {
+  
+    assert( _states.length );
+  
+  } body {
+  
+    auto node = _tree.setRoot();
+    node.element = StatesInfo!T( _states[] );
+    return node;
+  
+  } 
+  
+  auto appendChild( typeof( _tree ).Node * node ) in {
+  
+    assert( _states.length );
+  
+  } body {
 
+    return _tree.appendChild( node, StatesInfo!T( _states[] ) );
+  
+  }
+  
   auto opDispatch( string method, T... )( T args ) {
-
+  
     return mixin( "_tree." ~ method )( args );
   
   }
   
+  
+  this( R )( R states ) {
+  
+    _states = new T[ states.length ];
+    
+    for( int i = 0; i < states.length; ++i ) {
+    
+      _states[ i ] = states[ i ];
+    
+    }
+  
+  }
+  
   /**
-    Updates the tree given the used states and the mutation costs
+    Updates the tree given the mutation costs
     provider.
     
     This method is only to be used once the leaves have been set
     to a given state.
   */
-  void update( Range, U )( Range states, U mutationCosts ) if( isInputRange!Range && isMutationCost!U ) in {
+  void update( U )( U mutationCosts ) if( isMutationCost!U ) in {
   
-    assert( !_tree.empty );
+    assert( !_tree.empty );    
   
   } body {
         
-    gatherInfo( _tree.root, states, mutationCosts );
+    gatherInfo( _tree.root, _states[], mutationCosts );
     
-  }
+  }  
   
 }
 
@@ -290,44 +311,42 @@ unittest {
   import comet.bio.dna;
   
   auto validStates = [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];
-  auto initCosts = () { return StatesInfo!( Nucleotide )( validStates ); };
   
-  auto tree = SMTree!( Nucleotide )();
+  auto tree = SMTree!( Nucleotide )( validStates[] );
   tree.clear();
   
   //First level.
-  auto root = tree.setRoot( initCosts() );  
+  auto root = tree.setRoot();  
   
   //Second level.
-  auto left = tree.appendChild( root, initCosts() );
-  auto right = tree.appendChild( root, initCosts() );
+  auto left = tree.appendChild( root );
+  auto right = tree.appendChild( root );
   
   //Third level.
-  auto leftLeft = tree.appendChild( left, initCosts() );
+  auto leftLeft = tree.appendChild( left );
   //Third leaf.
-  auto leftRight = tree.appendChild( left, initCosts() );
+  auto leftRight = tree.appendChild( left );
   leftRight.element.fixState( Nucleotide.CYTOSINE );
-  auto rightLeft = tree.appendChild( right, initCosts() );
+  auto rightLeft = tree.appendChild( right );
   //Sixth leaf.
-  auto rightRight = tree.appendChild( right, initCosts() );
+  auto rightRight = tree.appendChild( right );
   rightRight.element.fixState( Nucleotide.CYTOSINE );
     
   //Fourth level.
   //First leaf.
-  auto leftLeftLeft = tree.appendChild( leftLeft, initCosts() );
+  auto leftLeftLeft = tree.appendChild( leftLeft );
   leftLeftLeft.element.fixState( Nucleotide.ADENINE );
   //Second leaf.
-  auto leftLeftRight = tree.appendChild( leftLeft, initCosts() );
+  auto leftLeftRight = tree.appendChild( leftLeft );
   leftLeftRight.element.fixState( Nucleotide.GUANINE );
   //Fourth leaf.
-  auto rightLeftLeft = tree.appendChild( rightLeft, initCosts() );
+  auto rightLeftLeft = tree.appendChild( rightLeft );
   rightLeftLeft.element.fixState( Nucleotide.THYMINE );
   //Fifth leaf.
-  auto rightLeftRight = tree.appendChild( rightLeft, initCosts() );
+  auto rightLeftRight = tree.appendChild( rightLeft );
   rightLeftRight.element.fixState( Nucleotide.ADENINE );
    
   tree.update( 
-    validStates,
     ( Nucleotide n1, Nucleotide n2 ){ 
       if( n1 == n2 ) {
         return 0;
@@ -383,12 +402,37 @@ unittest {
   assert( root.element.countOf( Nucleotide.THYMINE )  == 8 );
 }
 
+private auto costOf( T )( StatesInfo!T self, T state ) {
+  
+  foreach( tup; self[] ) {
+  
+    if( tup.state == state ) { 
+      return tup.cost; 
+    } 
+    
+  }
+  assert( false );
+
+}
+  
+private auto countOf( T )( StatesInfo!T self, T state ) {
+
+  foreach( tup; self[] ) {
+  
+    if( tup.state == state ) { return tup.count; }
+    
+  }
+  assert( false );
+
+}
+
 //Redo with a known special case.
 //cactga
 unittest {
   import comet.bio.dna;
 
-  SMTree!Nucleotide tree;
+  auto validStates = [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];
+  auto tree = SMTree!Nucleotide( validStates[] );
   
   tree.clear();
   auto root = tree.setRoot();
@@ -419,10 +463,9 @@ unittest {
   auto rightRightRight = tree.appendChild( rightRight );
   rightRightRight.element.fixState( Nucleotide.ADENINE );
   
-  auto validStates = [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];
+  
   
   tree.update(
-    validStates,
     ( Nucleotide n1, Nucleotide n2 ){ 
       if( n1 == n2 ) {
         return 0;
