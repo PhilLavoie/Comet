@@ -102,15 +102,21 @@ private void run( RunTestsConfig cfg ) {
 
   auto logger = comet.logger.logger( cfg.outFile, cfg.verbosity );
 
-  auto runParamsRange = .runParamsRange( logger, cfg.sequencesFiles, [ Algo.standard, Algo.cache, Algo.patterns, Algo.cachePatterns ], [ noThreads( 1 ) ] /*, noThreads( 2 ), noThreads( 4 ), noThreads( 8 ), noThreads( 16 ), noThreads( 24 ), noThreads( 32 ) ] */, lengthParameters(
-      minLength( cfg.minLength ),
-      maxLength( cfg.maxLength ),
-      lengthStep( cfg.lengthStep )
+  auto runParamsRange = 
+    .runParamsRange( 
+      logger, 
+      cfg.sequencesFiles, 
+      [ Algo.standard ], /* [ Algo.standard, Algo.cache, Algo.patterns, Algo.cachePatterns ],*/
+      [ noThreads( 1 ) ] /*, noThreads( 2 ), noThreads( 4 ), noThreads( 8 ), noThreads( 16 ), noThreads( 24 ), noThreads( 32 ) ] */, 
+      lengthParameters(
+        minLength( cfg.minLength ),
+        maxLength( cfg.maxLength ),
+        lengthStep( cfg.lengthStep )
       ),
       noResults( cfg.noResults )      
-  );
+    );
   
-  auto storage = .storage( runParamsRange, logger, cfg.referencesDir, cfg.epsilon );
+  auto storage = .storage( runParamsRange, logger, cfg.referencesDir, cfg.epsilon, false ); //TODO: Don't test for now.
   
   try {
   

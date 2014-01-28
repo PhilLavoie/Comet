@@ -172,37 +172,44 @@ class Storage  {
   private Cost             _epsilon;
   private RunParamsRange   _runParamsRange;
   private Array!TimeEntry  _executionTimes;
+  private bool             _testAgainstReferences;
     
-  private this( typeof( _runParamsRange ) runParamsRange, typeof( _logger ) logger, typeof( _referencesDir ) dir, typeof( _epsilon ) epsilon ) {
+  private this( typeof( _runParamsRange ) runParamsRange, typeof( _logger ) logger, typeof( _referencesDir ) dir, typeof( _epsilon ) epsilon, bool test = true ) {
   
     _logger = logger;
     _referencesDir = dir;
     _epsilon = epsilon;
     _runParamsRange = runParamsRange;
-    
+    _testAgainstReferences = test;
+        
   }   
   
   public void store( RunSummary summary ) {
+            
+    if( _testAgainstReferences ) {
     
-    auto referenceFile = fetch( referenceFileNameFor( _referencesDir, _runParamsRange.currentFile() ) );
-    _logger.logln( 2, "Comparing results with reference file: ", referenceFile.fileName );
+      auto referenceFile = fetch( referenceFileNameFor( _referencesDir, _runParamsRange.currentFile() ) );
+      _logger.logln( 2, "Comparing results with reference file: ", referenceFile.fileName );
     
-    Array!Result empirical;
-    foreach( result; summary.results[] ) {
-      empirical.insertBack( result );
+      Array!Result empirical;
+      foreach( result; summary.results[] ) {
+        empirical.insertBack( result );
+      }
+      Array!Result expected;
+      foreach( result; resultsReader( referenceFile ) ) {
+        expected.insertBack( result );
+      }     
+    
+      enforce( 
+        allEquivalents( [ empirical[], expected[] ], _epsilon ), 
+        "Test ERROR: results for sequences file " ~ _runParamsRange.currentFile.fileName() ~ " are not equivalent to reference results file " ~ referenceFile.fileName() ~
+        " using epsilon: " ~ _epsilon.to!string() 
+      );
+      
+      _logger.logln( 2, "Results are equivalent to reference with epsilon: ", _epsilon );
+      
     }
-    Array!Result expected;
-    foreach( result; resultsReader( referenceFile ) ) {
-      expected.insertBack( result );
-    }     
     
-    enforce( 
-      allEquivalents( [ empirical[], expected[] ], _epsilon ), 
-      "Test ERROR: results for sequences file " ~ _runParamsRange.currentFile.fileName() ~ " are not equivalent to reference results file " ~ referenceFile.fileName() ~
-      " using epsilon: " ~ _epsilon.to!string() 
-    );
-    
-    _logger.logln( 2, "Results are equivalent to reference with epsilon: ", _epsilon );
     _logger.logln( 3, executionTimeString( summary.executionTime ) );
     
     _executionTimes.insertBack( 

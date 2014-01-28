@@ -61,7 +61,7 @@ public:
     
     auto words = _lines.front.splitter( ' ' ).filter!( a => a.length );
     
-    assert( 3 == count( words ), "Unable to parse results from " ~ _lines.front );
+    assert( 3 == count( words ), "Unable to parse results from " ~ _lines.front ~ "\nwords count : " ~ count(words).to!string ~ "\nwords: " ~ words.to!string );
     
     size_t start = words.front.to!size_t;
     words.popFront();

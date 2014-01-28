@@ -14,12 +14,13 @@ enum Mode {
   compareResults,
   runTests,
   compileMeasures,
-  standard
+  hamming,
+  standard,  
 }
 
 //The strings used to identify the modes on the command line. The standard algorithm is the absence of a parameter,
 //Therefore there is no strings associated.
-private immutable string[ 4 ] modeStrings = [ "generate-references", "compare-results", "run-tests", "compile-measures" ];
+private immutable string[ 5 ] modeStrings = [ "generate-references", "compare-results", "run-tests", "compile-measures", "hamming" ];
 
 /**
   Returns the command line string representation of the mode.
@@ -55,7 +56,7 @@ static this() {
 //Asserts that the map is correctly constructed.
 unittest {
 
-  assert( modesByStrings.length == 4 );
+  assert( modesByStrings.length == modeStrings.length );
   
   auto mode = Mode.generateReferences;
   string modeString = modeStrings[ mode ];  

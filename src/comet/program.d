@@ -92,6 +92,7 @@ Program.
 
 import compare_results = comet.scripts.compare_results.program;
 import run_tests = comet.scripts.run_tests.program;
+import hamming = comet.scripts.hamming.program;
 
 import comet.results_io;
 import comet.logger;
@@ -157,6 +158,11 @@ package void run( string command, string[] args ) {
     case Mode.compareResults:
     
       compare_results.run( command ~ " " ~ mode.toString(), args[ 1 .. $ ] );
+      break;
+      
+    case Mode.hamming:
+    
+      hamming.run( command ~ " " ~ mode.toString(), args[ 1 .. $ ] );
       break;
   
   }

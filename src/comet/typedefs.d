@@ -61,6 +61,12 @@ struct LengthParameters {
   MinLength   min;
   MaxLength   max;
   LengthStep  step;
+  
+  invariant() {
+  
+    assert( min <= max );
+  
+  }
 
 }
 /**

@@ -21,29 +21,6 @@ import std.conv: to;
 */
 struct StatesInfo( T ) {
 
-  /**
-    Structure holding the local cost and a the number of occurrences
-    (tree labelings) in which the associated state is chosen in its node.
-    
-    Those fields represent the values for the subtree under the node holding the state. 
-    Therefore, if the node is the root, then the values
-    held are the absolute ones. 
-    
-    For any other node, the absolute numbers has to be recalculated based on
-    its parent node and the equivalent states that can
-    be chosen as minimal mutation cost candidates.
-    
-    The default value holds the minimal number of occurrences and the maximum possible cost.
-  
-  private static struct StateInfo {
-
-    size_t count = 0;
-    Cost cost = Cost.max;
-    
-  }
-  */
-
-
   //private StateInfo[ T ] _infos; //Each state is associated with a tuple of data.
   private StateTuple[] _infos;
   
@@ -82,8 +59,6 @@ public:
   
   } body {
      
-    debug{ bool found = false; }
-     
     //Reset other states to the maximum cost
     //and remove their occurrences count.
     foreach( ref t; _infos ) {
@@ -95,16 +70,13 @@ public:
         
       } else {
       
-        debug { found = true; }
         t.count = 1;
         t.cost = 0.;
       
       }
       
     }
-    
-    debug{ assert( found ); }
-    
+        
   }
  
   auto opSlice() { return _infos[]; }

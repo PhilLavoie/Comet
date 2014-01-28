@@ -1,5 +1,5 @@
 /**
-  Module providing ranges for generalizing the processing of files and sequences.
+  Module providing the core looping of the segments pairs analysis.
 */
 module comet.core;
 
@@ -115,6 +115,10 @@ private template isStorageFor( S, T ) {
 
 }
 
+/**
+  Returns whether or not the given type can provide the information needed to manage
+  the outer loop. The element type of the range must be RunParameters.
+*/
 private template isRunParametersRange( T ) {
 
   static if( isInputRange!T && isInstanceOf!( RunParameters, ElementType!T ) ) {
@@ -327,7 +331,7 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
 }
 
 
-public void processSegmentsPairs( T )( 
+private void processSegmentsPairs( T )( 
   T[][] sequencesGroup, 
   AlgoI!T algorithm,
   Results results, 

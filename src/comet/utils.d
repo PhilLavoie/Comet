@@ -48,7 +48,8 @@ private void enforceSequencesLength( Range )( Range sequences, size_t length ) i
   Extract the sequences from the provided file and makes sure they follow the rules of processing:
     - They must be of fasta format;
     - They must be made of dna nucleotides;
-    - They must have the same name.  
+    - They must have the same length.  
+    - They must be over two.
 */
 auto loadSequences( File file ) {
 
@@ -58,6 +59,21 @@ auto loadSequences( File file ) {
   
   size_t seqLength = sequences[ 0 ].molecules.length;
   enforceSequencesLength( sequences[], seqLength );
+  
+  return sequences;
+  
+}
+
+/**
+  Extract the sequences from the provided file and makes sure they follow the rules of processing:
+    - They must be of fasta format;
+    - They must be made of dna nucleotides;
+*/
+auto loadSequence( File file ) {
+
+  auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
+  size_t seqsCount = sequences.length;
+  enforce( 1 == seqsCount, "expected only one sequence but found " ~ seqsCount.to!string() );
   
   return sequences;
   
