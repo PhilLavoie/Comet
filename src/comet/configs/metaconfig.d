@@ -43,6 +43,7 @@ public {
     lengthStep,
     noThreads,
     algo,
+    phylo,
     epsilon,
     comparedResultsFiles,
     compileTime
@@ -181,6 +182,12 @@ public {
       static if( hasField!( cfg, Field.lengthStep ) ) {
       
         writeln( "Segments length step: ", cfg.get!( Field.lengthStep ) );
+      
+      }
+      
+      static if( hasField!( cfg, Field.phylo ) ) {
+      
+        writeln( "Phylogeny file: ", fileName( cfg.get!( Field.phylo )() ) );
       
       }
       
@@ -413,6 +420,13 @@ private {
   
     private comet.configs.algos.Algo _algo = Algo.standard;  
     mixin getter!_algo;    
+  
+  }
+  
+  mixin template phyloField() {
+  
+    private std.stdio.File _phylo;
+    mixin getter!_phylo;
   
   }
   
@@ -702,6 +716,16 @@ private {
         Usage.mandatory
       );
       
+    } else static if( field == Field.phylo ) {
+
+      return Arguments.file(
+        v,
+        "r",
+        "--phylo",
+        "Phylogeny file. The default phylogeny is generated."      
+      );
+
+
     } else static if( field == Field.sequencesDir ) {
 
       return Arguments.indexedRight( 

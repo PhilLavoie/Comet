@@ -40,6 +40,7 @@ private {
       Field.lengthStep,
       Field.noThreads,
       Field.algo,    
+      Field.phylo,
     )();
     
   }
@@ -66,7 +67,8 @@ private {
       cfg.argFor!( Field.minLength )(),
       cfg.argFor!( Field.maxLength )(),
       cfg.argFor!( Field.lengthStep )(),
-      cfg.argFor!( Field.algo )()
+      cfg.argFor!( Field.algo )(),
+      cfg.argFor!( Field.phylo )(),
     );
     
     bool printConfig = false;
