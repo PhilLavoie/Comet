@@ -171,6 +171,7 @@ protected:
   U _mutationCosts;
   SMTree!T _smTree;
 
+  //TODO: receive the phylogeny or construct the tree elsewhere?
   this( SequencesCount seqCount, SequenceLength length, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
   
     _seqCount = seqCount;
@@ -330,9 +331,9 @@ private void setLeaves( Tree, Range )( ref Tree smTree, Range leaves ) if( range
 
 private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
   
-  //The pre speciation cost is associated with the number of mutations
-  //from the root to its children, accounting for every possible reconstructions.
-  //That value is then averaged by the number of possible reconstructions.
+  /*The pre speciation cost is associated with the number of mutations
+    from the root to its children, accounting for every possible reconstructions.
+    That value is then averaged by the number of possible reconstructions.*/
   size_t noRecons = 0;
   Cost costSum = 0.0;
   
