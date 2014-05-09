@@ -36,7 +36,7 @@ public:
 /**
   Factory function.
 */
-auto sequence( T )( string id, T[] molecules ) {
+auto makeSequence( T )( string id, T[] molecules ) {
   return Sequence!T( id, molecules );
 }
 
@@ -107,7 +107,8 @@ auto parse( alias parser )( File f ) {
     
     //Extract id.
     enforce( line.startsWith( SEQUENCE_START ), "expected fasta sequence start \"" ~ SEQUENCE_START ~ "\" but found: " ~ line );
-        
+    
+    //Extract the first word as the id.
     id = line[ 1 .. line.countUntil!( ascii.isWhite )() ].idup;    
     enforce( 0 < id.strip.length, "expected sequence id to have at least one meaningful character but found: " ~ id );
     
@@ -126,7 +127,7 @@ auto parse( alias parser )( File f ) {
     }
     
     enforce( molecules.data !is null, "empty sequence data for: " ~ id );
-    sequences.put( sequence( id, molecules.data ) );
+    sequences.put( makeSequence( id, molecules.data ) );
     
   }
   

@@ -17,13 +17,12 @@ enum Nucleotide {
   GUANINE = 2,
   THYMINE = 3,
   GAP = 4,
-  ANY = 5
   
 }
 
-private immutable Nucleotide[ 6 ]               nucleotides = [ std.traits.EnumMembers!Nucleotide ];
-private immutable char[ nucleotides.length ]    abbreviations = [ 'a', 'c', 'g', 't', '_', 'n' ];
-private immutable string[ nucleotides.length ]  names = [ "adenine", "cytosine", "guanine", "thymine", "gap", "any" ];
+private immutable Nucleotide[ 5 ]               nucleotides = [ std.traits.EnumMembers!Nucleotide ];
+private immutable char[ nucleotides.length ]    abbreviations = [ 'a', 'c', 'g', 't', '_' ];
+private immutable string[ nucleotides.length ]  names = [ "adenine", "cytosine", "guanine", "thymine", "gap" ];
 
 /**
   Returns the nucleotide whose abbreviation is the one provided.
@@ -32,7 +31,7 @@ private immutable string[ nucleotides.length ]  names = [ "adenine", "cytosine",
 */
 Nucleotide fromAbbreviation( string abbr ) in {
 
-  assert( abbr.length, "Passing null abbreviation to function fromAbbreviation" );
+  assert( abbr.length, "passing null abbreviation to function fromAbbreviation" );
   
 } body {
   
@@ -48,7 +47,7 @@ Nucleotide fromAbbreviation( char abbr ) {
     
   }
   
-  enforce( false, "Uknown abbreviation: " ~ abbr );  
+  enforce( false, "uknown abbreviation: " ~ abbr );  
   assert( false );
   
 }
@@ -101,4 +100,60 @@ unittest {
   assert( Nucleotide.GAP.name() == "gap" );
   assert( Nucleotide.GAP.abbreviation() == '_' );
   
+}
+
+
+import std.typecons;
+
+/**
+  For extended abbreviations supporting nucleotide sets.
+*/
+private immutable ( Tuple!( char, Nucleotide[] ) )[]               nucleotideSets = 
+  [
+    tuple( 'a', [ Nucleotide.ADENINE  ] ),
+    tuple( 'c', [ Nucleotide.CYTOSINE ] ),
+    tuple( 'g', [ Nucleotide.GUANINE  ] ),
+    tuple( 't', [ Nucleotide.THYMINE  ] ),
+    tuple( '-', [ Nucleotide.GAP      ] ),
+    tuple( 'r', [ Nucleotide.ADENINE  , Nucleotide.GUANINE  ] ),
+    tuple( 'w', [ Nucleotide.ADENINE  , Nucleotide.THYMINE  ] ),
+    tuple( 'm', [ Nucleotide.ADENINE  , Nucleotide.CYTOSINE ] ),
+    tuple( 's', [ Nucleotide.GUANINE  , Nucleotide.CYTOSINE ] ),
+    tuple( 'k', [ Nucleotide.GUANINE  , Nucleotide.THYMINE  ] ),
+    tuple( 'y', [ Nucleotide.CYTOSINE , Nucleotide.THYMINE  ] ),
+    tuple( 'b', [ Nucleotide.CYTOSINE , Nucleotide.GUANINE  , Nucleotide.THYMINE  ] ),
+    tuple( 'd', [ Nucleotide.ADENINE  , Nucleotide.GUANINE  , Nucleotide.THYMINE  ] ),
+    tuple( 'h', [ Nucleotide.ADENINE  , Nucleotide.CYTOSINE , Nucleotide.THYMINE  ] ),
+    tuple( 'v', [ Nucleotide.ADENINE  , Nucleotide.CYTOSINE , Nucleotide.GUANINE  ] ),
+    tuple( 'n', [ Nucleotide.ADENINE  , Nucleotide.CYTOSINE , Nucleotide.GUANINE  , Nucleotide.THYMINE ] ),
+  ];
+
+immutable( Nucleotide[] ) fromExtendedAbbreviation( char abbr ) {
+  import std.algorithm: find;
+
+  char lowered = toLower( abbr );
+
+  auto found = nucleotideSets[].find!( pair => pair[ 0 ] == lowered )();
+  enforce( found.length, "uknown abbreviation: " ~ abbr );  
+  return found[ 0 ][ 1 ];
+  
+}
+
+unittest {
+  import std.algorithm: equal;
+
+
+  foreach( nucleotideSet; nucleotideSets ) {
+    
+    auto setFound = fromExtendedAbbreviation( nucleotideSet[ 0 ] );
+    assert( equal( setFound, nucleotideSet[ 1 ] ) );    
+        
+  }
+
+  //Sanity redundant testing.
+  assert( equal( fromExtendedAbbreviation( 'a' ), [ Nucleotide.ADENINE ] ) );
+  assert( equal( fromExtendedAbbreviation( 'T' ), [ Nucleotide.THYMINE ] ) );
+  assert( equal( fromExtendedAbbreviation( 'd' ), [ Nucleotide.ADENINE, Nucleotide.GUANINE, Nucleotide.THYMINE ] ) );
+  assert( !equal( fromExtendedAbbreviation( 'k' ), [ Nucleotide.GUANINE, Nucleotide.CYTOSINE ] ) );
+
 }
