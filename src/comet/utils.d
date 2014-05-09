@@ -16,6 +16,10 @@ import std.range: isForwardRange;
 import std.path: stripExtension, baseName, dirSeparator;
 import std.algorithm: endsWith;
 
+/**
+  Enforces that the minimum segments pair length is not beyond the maximum possible: the mid position
+  of the sequences.
+*/
 void enforceValidMinLength( size_t min, size_t mid ) {
   
   //Make sure the minimum period is within bounds.
@@ -26,24 +30,28 @@ void enforceValidMinLength( size_t min, size_t mid ) {
   );
 
 }
-
+///Ditto.
 void enforceValidMinLength( MinLength min, size_t mid ) {
   
   enforceValidMinLength( min.value, mid );
   
 }
 
-
+/**
+  Makes sure every sequence has the same length.
+*/
 private void enforceSequencesLength( Range )( Range sequences, size_t length ) if( isForwardRange!Range ) {
     
-  foreach( sequence; sequences ) {
-  
-    enforce( sequence.molecules.length == length, "expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.molecules.length.to!string ~ " to be of length: " ~ length.to!string );
-  
+  foreach( sequence; sequences ) {  
+    enforce( sequence.molecules.length == length, "expected sequence: " ~ sequence.id ~ " of length: " ~ sequence.molecules.length.to!string ~ " to be of length: " ~ length.to!string );  
   }
   
 }
 
+
+alias MultipleSequences = std.typecons.Flag!"MultipleSequences";
+alias ExtendedAbbreviations = std.typecons.Flag!"ExtendedAbbreviations";
+//TODO: use the extended abbreviations ones. 
 /**
   Extract the sequences from the provided file and makes sure they follow the rules of processing:
     - They must be of fasta format;
@@ -51,39 +59,37 @@ private void enforceSequencesLength( Range )( Range sequences, size_t length ) i
     - They must have the same length.  
     - They must be over two.
 */
-auto loadSequences( File file ) {
+auto loadSequences( File file, MultipleSequences multi, ExtendedAbbreviations ext ) {
 
   auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
   size_t seqsCount = sequences.length;
-  enforce( 2 <= seqsCount, "Expected at least two sequences but read " ~ seqsCount.to!string() );
   
-  size_t seqLength = sequences[ 0 ].molecules.length;
-  enforceSequencesLength( sequences[], seqLength );
-  
+  if( multi ) {
+    enforce( 2 <= seqsCount, "Expected at least two sequences but read " ~ seqsCount.to!string() );  
+    size_t seqLength = sequences[ 0 ].molecules.length;
+    enforceSequencesLength( sequences[], seqLength );
+  } else {
+    enforce( 1 == seqsCount, "expected only one sequence but found " ~ seqsCount.to!string() );  
+  }
+    
   return sequences;
   
 }
 
 /**
-  Extract the sequences from the provided file and makes sure they follow the rules of processing:
-    - They must be of fasta format;
-    - They must be made of dna nucleotides;
+  Return the states to be used for the state mutation analysis.
+  Up to now, supports only dna nucleotides (and gaps).
 */
-auto loadSequence( File file ) {
-
-  auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
-  size_t seqsCount = sequences.length;
-  enforce( 1 == seqsCount, "expected only one sequence but found " ~ seqsCount.to!string() );
-  
-  return sequences;
-  
-}
-
 auto loadStates() {
   //Up to now, only nucleotides are supported.
-  return [ Nucleotide.ADENINE, Nucleotide.CYTOSINE, Nucleotide.GUANINE, Nucleotide.THYMINE ];  
+  return [ std.traits.EnumMembers!Nucleotide ];  
 }
 
+/**
+  Returns the mutation costs table to be used by the program. 
+  Up to now, only the standard 0-1 matrix is supported (returns 1 if
+  two nucleotides differ, 0 otherwise).
+*/
 auto loadMutationCosts() {
   //Basic 0, 1 cost table. Include gaps?
   return ( Nucleotide initial, Nucleotide mutated ) { 

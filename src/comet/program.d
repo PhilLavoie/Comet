@@ -180,7 +180,7 @@ private {
     logger.logln( 1, "Processing file: " ~ cfg.sequencesFile.name );
     
     //Extract sequences from file.
-    auto sequences = loadSequences( cfg.sequencesFile );
+    auto sequences = loadSequences( cfg.sequencesFile, MultipleSequences.yes, ExtendedAbbreviations.yes  );
     size_t seqLength = sequences[ 0 ].molecules.length;
         
     enforceValidMinLength( cfg.minLength, seqLength / 2 );

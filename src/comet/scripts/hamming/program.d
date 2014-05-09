@@ -112,7 +112,7 @@ import comet.core;
 package void run( HammingConfig cfg ) {
 
   //Extract sequence from file.
-  auto sequence = ( loadSequence( cfg.sequencesFile ) )[ 0 ];
+  auto sequence = ( loadSequences( cfg.sequencesFile, MultipleSequences.no, ExtendedAbbreviations.yes ) )[ 0 ];
   size_t seqLength = sequence.molecules.length;
       
   enforceValidMinLength( cfg.minLength, seqLength / 2 );

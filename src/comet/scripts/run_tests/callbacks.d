@@ -69,7 +69,7 @@ class RunParamsRange {
     foreach( file; _sequencesFiles ) {
     
       //Extract sequences from file.
-      auto sequencesGroup = loadSequences( file );
+      auto sequencesGroup = loadSequences( file, MultipleSequences.yes, ExtendedAbbreviations.yes );
       size_t seqLength = sequencesGroup[ 0 ].molecules.length;
           
       enforceValidMinLength( _lengthParams.min, seqLength / 2 );

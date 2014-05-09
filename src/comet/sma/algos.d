@@ -74,7 +74,7 @@ private mixin template standardColumnCost() {
   private Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
     //Start by extracting the states from the hierarchy: use them to set the
     //the leaves of the smtree.
-    setLeaves( _smTree, column );
+    _smTree.setLeaves( column );
     
     //Process the state mutation algorithm then extract the preSpeciation cost.
     //TODO: does the tree really need the states and mutation costs every time?
@@ -310,24 +310,6 @@ private void phylogenize( Tree )( ref Tree tree, SequencesCount seqCount ) in {
   
   
 }
-
-/**
-  Sets the leaves of the state mutation tree using the provided values. The leaves are set according
-  to the "leaves" range from the tree structure which, as of right now, reads leaves from "left" to "right"
-  (left being the first child in insertion order and right being the last). The "left" half of the tree holds
-  the values (read nucleotides if working with dna) of one homologous sequence, whereas the opposite half is a mirror
-  image containing the values of the other sequence.
-*/
-//TODO: instead of traversing the leaves always, just hold pointers to them and set them directly.
-private void setLeaves( Tree, Range )( ref Tree smTree, Range leaves ) if( range.isInputRange!Range ) {
-  
-  foreach( ref smLeaf; smTree.leaves ) {
-    assert( !leaves.empty );
-    smLeaf.element.fixState( leaves.front() );  
-    leaves.popFront();
-  }    
-}
-
 
 private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
   

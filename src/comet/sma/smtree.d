@@ -49,33 +49,42 @@ public:
   alias StateTuple = std.typecons.Tuple!( T, "state", size_t, "count", Cost, "cost" );
   
   /**
-    Indicates that the given state is known to be present, therefore
+    Indicates that the given states are known to be present, therefore
     favoring it when considering every possible states.
     Sets the state's cost to 0 and every other costs to the maximum value.
-  */
-  void fixState( T state ) in {
+  */  
+  void fixStates( R )( R range ) if( isInputRange!R ) in {
   
     assert( _infos.length );
   
   } body {
-     
+  
     //Reset other states to the maximum cost
     //and remove their occurrences count.
     foreach( ref t; _infos ) {
     
-      if( t.state != state ) {        
-      
-        t.count = 0;
-        t.cost = Cost.max;
-        
-      } else {
+      //O(n^2) algorithm but small values of n are expected.
+      import std.algorithm: canFind;      
+      if( range.canFind( t.state ) ) {
       
         t.count = 1;
         t.cost = 0.;
       
-      }
+      } else {
+      
+        t.count = 0;
+        t.cost = Cost.max;
+      
+      }    
       
     }
+  
+  }
+  ///Overload for single state.
+  void fixState( T state ) {
+
+    immutable T[ 1 ] artificialRange = [ state ];
+    fixStates( artificialRange[] );  
         
   }
  
@@ -151,7 +160,6 @@ Cost minMutationCost( T, U )( T initialState, StatesInfo!T si, U mutationCosts )
 
 } 
 
-//TODO: document.
 struct SMTree( T ) {
 
 private:
@@ -218,6 +226,18 @@ private:
     
 public:
   
+  this( R )( R states ) {
+  
+    _states = new T[ states.length ];
+    
+    for( int i = 0; i < states.length; ++i ) {
+    
+      _states[ i ] = states[ i ];
+    
+    }
+  
+  }
+  
   auto setRoot() in {
   
     assert( _states.length );
@@ -245,18 +265,25 @@ public:
     return mixin( "_tree." ~ method )( args );
   
   }
-  
-  
-  this( R )( R states ) {
-  
-    _states = new T[ states.length ];
     
-    for( int i = 0; i < states.length; ++i ) {
+  /**
+    Sets the leaves of the state mutation tree using the provided values. The leaves are set according
+    to the "leaves" range from the tree structure which, as of right now, reads leaves from "left" to "right"
+    (left being the first child in insertion order and right being the last). 
     
-      _states[ i ] = states[ i ];
+    The "left" half of the tree should hold the values (read nucleotides if working with dna) of one homologous sequence, 
+    whereas the opposite half is a mirror image containing the values of the other sequence.
+  */
+  //TODO for speedups: instead of traversing the leaves everytime, just hold pointers to them and set them directly.
+  //Here, the logic of the nucleotide sets should be included.
+  void setLeaves( Range )( Range leaves ) if( isInputRange!Range ) {
+        
+    foreach( ref smLeaf; this.leaves ) {
+      assert( !leaves.empty );
+      smLeaf.element.fixState( leaves.front() );  
+      leaves.popFront();
+    }    
     
-    }
-  
   }
   
   /**

@@ -106,7 +106,8 @@ unittest {
 import std.typecons;
 
 /**
-  For extended abbreviations supporting nucleotide sets.
+  Extended abbreviations supporting nucleotide sets.
+  Standard here: http://www.bioinformatics.org/sms/iupac.html
 */
 private immutable ( Tuple!( char, Nucleotide[] ) )[]               nucleotideSets = 
   [
@@ -128,6 +129,10 @@ private immutable ( Tuple!( char, Nucleotide[] ) )[]               nucleotideSet
     tuple( 'n', [ Nucleotide.ADENINE  , Nucleotide.CYTOSINE , Nucleotide.GUANINE  , Nucleotide.THYMINE ] ),
   ];
 
+/**
+  Converts a character into its associated nucleotide sets according to the given
+  standard: http://www.bioinformatics.org/sms/iupac.html
+*/
 immutable( Nucleotide[] ) fromExtendedAbbreviation( char abbr ) {
   import std.algorithm: find;
 
@@ -142,14 +147,12 @@ immutable( Nucleotide[] ) fromExtendedAbbreviation( char abbr ) {
 unittest {
   import std.algorithm: equal;
 
-
   foreach( nucleotideSet; nucleotideSets ) {
     
     auto setFound = fromExtendedAbbreviation( nucleotideSet[ 0 ] );
     assert( equal( setFound, nucleotideSet[ 1 ] ) );    
         
   }
-
   //Sanity redundant testing.
   assert( equal( fromExtendedAbbreviation( 'a' ), [ Nucleotide.ADENINE ] ) );
   assert( equal( fromExtendedAbbreviation( 'T' ), [ Nucleotide.THYMINE ] ) );
