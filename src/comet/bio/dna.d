@@ -109,7 +109,7 @@ import std.typecons;
   Extended abbreviations supporting nucleotide sets.
   Standard here: http://www.bioinformatics.org/sms/iupac.html
 */
-private immutable ( Tuple!( char, Nucleotide[] ) )[]               nucleotideSets = 
+private immutable Tuple!( char, Nucleotide[] )[]               nucleotideSets = 
   [
     tuple( 'a', [ Nucleotide.ADENINE  ] ),
     tuple( 'c', [ Nucleotide.CYTOSINE ] ),

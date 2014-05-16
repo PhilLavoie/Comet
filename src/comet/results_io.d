@@ -48,7 +48,8 @@ private:
     
     assert( !_lines.empty, "no results in empty file " ~ input.name );
     
-    //Get rid of the header
+    //Get rid of the header.
+    //TODO: it is dangerous to leave that in the constructor.
     _lines.popFront();
     
   }
@@ -59,8 +60,9 @@ public:
 
   auto front() {
     
-    auto words = _lines.front.splitter( ' ' ).filter!( a => a.length );
+    auto words = _lines.front.splitter( ' ' ).filter!( a => a.length > 0 );
     
+    //TODO: this will often fail if the encoding is not unicode.
     assert( 3 == count( words ), "Unable to parse results from " ~ _lines.front ~ "\nwords count : " ~ count(words).to!string ~ "\nwords: " ~ words.to!string );
     
     size_t start = words.front.to!size_t;

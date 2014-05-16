@@ -27,11 +27,13 @@ import std.exception: enforce;
 
 class RunParamsRange {
  
+  private alias Data = typeof( ( loadSequences!( MultipleSequences.yes, ExtendedAbbreviations.yes )( File.init ) )[0].molecules );    
+ 
   private Logger                          _logger;
   
   private Array!File                      _sequencesFiles;
   private int                             _currentFileIndex;
-  private Nucleotide[][][]                _sequencesGroups;  
+  private Data[][]                        _sequencesGroups;  
   
   private typeof( loadStates() )          _states;
   private typeof( loadMutationCosts() )   _mutationCosts;
@@ -62,20 +64,20 @@ class RunParamsRange {
     
       _sequencesFiles.insertBack( file );        
     
-    }
+    }   
     
-    _sequencesGroups = new Nucleotide[][][ count( _sequencesFiles[] ) ];
+    _sequencesGroups = new Data[][ count( _sequencesFiles[] ) ];
     int fileIndex = 0;
     foreach( file; _sequencesFiles ) {
     
       //Extract sequences from file.
-      auto sequencesGroup = loadSequences( file, MultipleSequences.yes, ExtendedAbbreviations.yes );
+      auto sequencesGroup = loadSequences!( MultipleSequences.yes, ExtendedAbbreviations.yes )( file );
       size_t seqLength = sequencesGroup[ 0 ].molecules.length;
           
       enforceValidMinLength( _lengthParams.min, seqLength / 2 );
       
-      //Transfer the sequences into a nucleotides matrix.  
-      auto nucleotides = new Nucleotide[][ sequencesGroup.length ];
+      //Transfer the sequences into a matrix for uniform access.      
+      auto nucleotides = new Data[ sequencesGroup.length ];
       for( int i = 0; i < nucleotides.length; ++i ) {
       
         nucleotides[ i ] = sequencesGroup[ i ].molecules;

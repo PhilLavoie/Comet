@@ -28,13 +28,18 @@ import comet.sma.algos: AlgoI;
 
 /**
   Run specific parameters. Those parameters are expected to be constant for the processing
-  of segments pairs contractions costs for a sequences group.
+  of segments pairs contractions costs for a sequences group. 
+  
+  T is the type held by the sequences, S is the states held by the Sankoff tree and M is
+  the type of the mutation costs provider (callable object, function or delegate).
+  
+  T is expected to be a range over S: it could be a set of nucleotides for example.
 */
-struct RunParameters( T, M ) if( isMutationCostFor!( M, T ) ) {
+struct RunParameters( T, S, M ) if( isMutationCostFor!( M, S ) ) {
 
-  T[][]             sequencesGroup;
+  T[][]             sequencesGroup;   //Rows represent a sequence.
   Algo              algorithm;
-  T[]               states;
+  S[]               states;
   M                 mutationCosts;
   NoThreads         noThreads;
   LengthParameters  lengthParameters;
@@ -45,19 +50,19 @@ struct RunParameters( T, M ) if( isMutationCostFor!( M, T ) ) {
 /**
   Factory function to easily create run parameters.
 */
-auto makeRunParameters( T, M )( 
+auto makeRunParameters( T, S, M )( 
   T[][] sequencesGroup, 
   Algo algo, 
-  T[] states, 
+  S[] states, 
   M mutationCosts, 
   NoThreads noThreads, 
   LengthParameters length, 
   NoResults noResults 
 ) {
   
-  static assert( isMutationCostFor!( M, T ) );
+  static assert( isMutationCostFor!( M, S ) );
   
-  return RunParameters!( T, M )( sequencesGroup, algo, states, mutationCosts, noThreads, length, noResults );
+  return RunParameters!( T, S, M )( sequencesGroup, algo, states, mutationCosts, noThreads, length, noResults );
   
 }
 
@@ -133,6 +138,13 @@ private template isRunParametersRange( T ) {
 
 }
 
+/**
+  Main function of the module.
+  Expects a range of run parameters. Each value held by the range corresponds to a "run": a complete analysis of segments pairs contractions 
+  using the specified configuration.
+  Once a run is finished, the storage object is used to store the results. If the range held more than one value, then this function will
+  start over with the new parameters until the range is depleted.
+*/
 void calculateSegmentsPairsCosts( RunParametersRange, S ) (
   RunParametersRange  runParametersRange,
   S                   storage  
@@ -141,18 +153,23 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
   static assert( isRunParametersRange!RunParametersRange );
   static assert( isStorageFor!( S, RunSummary ) );
   
+  alias SequencesElement = typeof( ( runParametersRange.front().sequencesGroup )[ 0 ][ 0 ] );
+  
   foreach( runParams; runParametersRange ) {
     
     auto sequencesGroup = runParams.sequencesGroup;
-    auto noThreads = runParams.noThreads;
-    auto lengthParams = runParams.lengthParameters;
-    auto noResults = runParams.noResults;
+    auto noThreads      = runParams.noThreads;
+    auto lengthParams   = runParams.lengthParameters;
+    auto noResults      = runParams.noResults;
     
     SysTime startTime = Clock.currTime();
     
+    //TODO: here you will find support for multiple threads of execution.
+    //However, empirical results reveal that no acceleration is obtained, therefore this code, or the libraries used,
+    //might not be correct/adequate.
     if( noThreads == 1 ) {
                   
-      auto algo = algorithmFor( runParams.algorithm, sequencesCount( sequencesGroup.length ), sequenceLength( sequencesGroup[ 0 ].length ), runParams.states, runParams.mutationCosts );
+      auto algo = algorithmFor!(SequencesElement)( runParams.algorithm, sequencesCount( sequencesGroup.length ), sequenceLength( sequencesGroup[ 0 ].length ), runParams.states, runParams.mutationCosts );
       
       auto results = Results( noResults );
       processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
@@ -183,7 +200,7 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
           tasks.insertBack( 
             task!processSegmentsPairs( 
               sequencesGroup, 
-              algorithmFor( 
+              algorithmFor!(SequencesElement)( 
                 runParams.algorithm, 
                 sequencesCount( sequencesGroup.length ), 
                 sequenceLength( sequencesGroup[ 0 ].length ), 
@@ -206,7 +223,7 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
         auto results = Results( noResults );
         processSegmentsPairs( 
           sequencesGroup, 
-          algorithmFor( 
+          algorithmFor!(SequencesElement)( 
             runParams.algorithm, 
             sequencesCount( sequencesGroup.length ), 
             sequenceLength( sequencesGroup[ 0 ].length ), 
@@ -259,7 +276,7 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
               
                 processSegmentsPairs( 
                   sequencesGroup, 
-                  algorithmFor( 
+                  algorithmFor!(SequencesElement)( 
                     runParams.algorithm, 
                     sequencesCount( sequencesGroup.length ), 
                     sequenceLength( sequencesGroup[ 0 ].length ), 
@@ -293,7 +310,7 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
         auto results = Results( noResults );
         processSegmentsPairs( 
           sequencesGroup, 
-          algorithmFor( 
+          algorithmFor!(SequencesElement)( 
             runParams.algorithm, 
             sequencesCount( sequencesGroup.length ), 
             sequenceLength( sequencesGroup[ 0 ].length ), 

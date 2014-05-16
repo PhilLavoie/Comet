@@ -79,9 +79,12 @@ public:
       
     }
   
-  }
-  ///Overload for single state.
-  void fixState( T state ) {
+  }  
+  /**
+    Overload for single state, was used before the support of the more general solution, which is to support
+    sets of initial states. It's mostly useful now to support the unit tests, which are still very relevant.
+  **/  
+  void fixStates( T state ) {
 
     immutable T[ 1 ] artificialRange = [ state ];
     fixStates( artificialRange[] );  
@@ -228,8 +231,8 @@ public:
   
   this( R )( R states ) {
   
-    _states = new T[ states.length ];
-    
+    //Make an internal copy of the available states.
+    _states = new T[ states.length ];    
     for( int i = 0; i < states.length; ++i ) {
     
       _states[ i ] = states[ i ];
@@ -275,14 +278,13 @@ public:
     whereas the opposite half is a mirror image containing the values of the other sequence.
   */
   //TODO for speedups: instead of traversing the leaves everytime, just hold pointers to them and set them directly.
-  //Here, the logic of the nucleotide sets should be included.
   void setLeaves( Range )( Range leaves ) if( isInputRange!Range ) {
-        
+    
     foreach( ref smLeaf; this.leaves ) {
       assert( !leaves.empty );
-      smLeaf.element.fixState( leaves.front() );  
+      smLeaf.element.fixStates( leaves.front() );  
       leaves.popFront();
-    }    
+    }       
     
   }
   
@@ -325,25 +327,25 @@ unittest {
   auto leftLeft = tree.appendChild( left );
   //Third leaf.
   auto leftRight = tree.appendChild( left );
-  leftRight.element.fixState( Nucleotide.CYTOSINE );
+  leftRight.element.fixStates( Nucleotide.CYTOSINE );
   auto rightLeft = tree.appendChild( right );
   //Sixth leaf.
   auto rightRight = tree.appendChild( right );
-  rightRight.element.fixState( Nucleotide.CYTOSINE );
+  rightRight.element.fixStates( Nucleotide.CYTOSINE );
     
   //Fourth level.
   //First leaf.
   auto leftLeftLeft = tree.appendChild( leftLeft );
-  leftLeftLeft.element.fixState( Nucleotide.ADENINE );
+  leftLeftLeft.element.fixStates( Nucleotide.ADENINE );
   //Second leaf.
   auto leftLeftRight = tree.appendChild( leftLeft );
-  leftLeftRight.element.fixState( Nucleotide.GUANINE );
+  leftLeftRight.element.fixStates( Nucleotide.GUANINE );
   //Fourth leaf.
   auto rightLeftLeft = tree.appendChild( rightLeft );
-  rightLeftLeft.element.fixState( Nucleotide.THYMINE );
+  rightLeftLeft.element.fixStates( Nucleotide.THYMINE );
   //Fifth leaf.
   auto rightLeftRight = tree.appendChild( rightLeft );
-  rightLeftRight.element.fixState( Nucleotide.ADENINE );
+  rightLeftRight.element.fixStates( Nucleotide.ADENINE );
    
   tree.update( 
     ( Nucleotide n1, Nucleotide n2 ){ 
@@ -440,27 +442,27 @@ unittest {
   auto left = tree.appendChild( root );  
   //First leaf.
   auto leftLeft = tree.appendChild( left );
-  leftLeft.element.fixState( Nucleotide.CYTOSINE );
+  leftLeft.element.fixStates( Nucleotide.CYTOSINE );
   auto leftRight = tree.appendChild( left );
   //Second leaf.
   auto leftRightLeft = tree.appendChild( leftRight );
-  leftRightLeft.element.fixState( Nucleotide.ADENINE );
+  leftRightLeft.element.fixStates( Nucleotide.ADENINE );
   //Third leaf.
   auto leftRightRight = tree.appendChild( leftRight );
-  leftRightRight.element.fixState( Nucleotide.CYTOSINE );
+  leftRightRight.element.fixStates( Nucleotide.CYTOSINE );
   
   //Right subtree.
   auto right = tree.appendChild( root );
   //Fourth leaf.
   auto rightLeft = tree.appendChild( right );
-  rightLeft.element.fixState( Nucleotide.THYMINE );
+  rightLeft.element.fixStates( Nucleotide.THYMINE );
   auto rightRight = tree.appendChild( right );
   //Fifth leaf.
   auto rightRightLeft = tree.appendChild( rightRight );
-  rightRightLeft.element.fixState( Nucleotide.GUANINE );
+  rightRightLeft.element.fixStates( Nucleotide.GUANINE );
   //Sixth leaf.
   auto rightRightRight = tree.appendChild( rightRight );
-  rightRightRight.element.fixState( Nucleotide.ADENINE );
+  rightRightRight.element.fixStates( Nucleotide.ADENINE );
   
   
   

@@ -51,7 +51,7 @@ private void enforceSequencesLength( Range )( Range sequences, size_t length ) i
 
 alias MultipleSequences = std.typecons.Flag!"MultipleSequences";
 alias ExtendedAbbreviations = std.typecons.Flag!"ExtendedAbbreviations";
-//TODO: use the extended abbreviations ones. 
+
 /**
   Extract the sequences from the provided file and makes sure they follow the rules of processing:
     - They must be of fasta format;
@@ -59,12 +59,16 @@ alias ExtendedAbbreviations = std.typecons.Flag!"ExtendedAbbreviations";
     - They must have the same length.  
     - They must be over two.
 */
-auto loadSequences( File file, MultipleSequences multi, ExtendedAbbreviations ext ) {
+auto loadSequences( MultipleSequences multi, ExtendedAbbreviations ext )( File file ) {
 
-  auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
+  static if( ext ) {
+    auto sequences = fasta.parse!( comet.bio.dna.fromExtendedAbbreviation )( file );
+  } else {
+    auto sequences = fasta.parse!( ( char a ) => comet.bio.dna.fromAbbreviation( a ) )( file );
+  }
   size_t seqsCount = sequences.length;
   
-  if( multi ) {
+  static if( multi ) {
     enforce( 2 <= seqsCount, "Expected at least two sequences but read " ~ seqsCount.to!string() );  
     size_t seqLength = sequences[ 0 ].molecules.length;
     enforceSequencesLength( sequences[], seqLength );

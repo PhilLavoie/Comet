@@ -22,29 +22,42 @@ import range = std.range;
 
 /**
   This function constructs and returns an algorithm object based on the given parameters. 
+  The algorithm object is provided in order to encapsulate the possible optimization used underneath.
+  
+  The formal definition interface can be found in this module. Those objects provide functions to calculate the
+  cost of a segments pairs. Segments are expected to hold a compound type of the one held by the Sankoff tree, namely STATES. For example, if
+  the tree STATES are DNA nucleotides, then a sequence could hold nucleotide sets as its element. Those sets (possibly singletons) are
+  used to initialize the leaves of the sankoff tree.
+  
+  The mutation costs function must provide costs for pairs of STATES.
+  
+  Given those requirements, the algorithm objects will provide methods to calculate the cost of segments pairs, i.e. subsequences.
+  Every call to this function returns a NEW object, and so internal states are not shared between algorithm objects.
+  
 */
-AlgoI!Molecule algorithmFor( Molecule, MutationCosts )( Algo algo, SequencesCount seqsCount, SequenceLength length, Molecule[] states, MutationCosts mutationCosts ) {
+//TODO: add "is mutation costs for" type constraint  here.
+AlgoI!SequenceElement algorithmFor( SequenceElement, State, MutationCosts )( Algo algo, SequencesCount seqsCount, SequenceLength length, State[] states, MutationCosts mutationCosts ) {
 
   final switch( algo ) {
   
     case Algo.standard:
     
-      return standard( seqsCount, length, states, mutationCosts );
+      return standard!(SequenceElement)( seqsCount, length, states, mutationCosts );
       break;
       
     case Algo.cache:
     
-      return cache( seqsCount, length, states, mutationCosts );
+      return cache!(SequenceElement)( seqsCount, length, states, mutationCosts );
       break;
       
     case Algo.patterns:
     
-      return patterns( seqsCount, length, states, mutationCosts );
+      return patterns!(SequenceElement)( seqsCount, length, states, mutationCosts );
       break;
       
     case Algo.cachePatterns:  
     
-      return cachePatterns( seqsCount, length, states, mutationCosts );
+      return cachePatterns!(SequenceElement)( seqsCount, length, states, mutationCosts );
       break;
       
   }
@@ -161,24 +174,24 @@ private mixin template cacheCostFor( T ) {
   
 }
 
-class Standard( T, U ): AlgoI!T {
+class Standard( SE, State, M ): AlgoI!SE {
 
 protected:
 
   SequencesCount _seqCount;
   SequenceLength _seqLength;
-  T[] _states;
-  U _mutationCosts;
-  SMTree!T _smTree;
+  State[] _states;
+  M _mutationCosts;
+  SMTree!State _smTree;
 
   //TODO: receive the phylogeny or construct the tree elsewhere?
   this( SequencesCount seqCount, SequenceLength length, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
   
-    _seqCount = seqCount;
-    _seqLength = length;
+    _seqCount = seqCount;             //TODO: Unused after creation, can be removed safely.
+    _seqLength = length;              //TODO: only used by cache algorithms... might be transferred over there.
     _states = states;
     _mutationCosts = mutationCosts;
-    _smTree = SMTree!T( _states[] );
+    _smTree = SMTree!State( _states[] );
    
     //Phylogenize the tree according to the sequences, see documentation to see
     //how it is done.  
@@ -190,17 +203,19 @@ protected:
     
 public:  
   
-  mixin standardCostFor!T;  
+  mixin standardCostFor!SE;  
   
 }
+/**
+  Factory function.
+*/
+private auto standard( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
 
-private auto standard( T, U )( SequencesCount seqCount, SequenceLength length, T[] states, U mutationCosts ) {
-
-  return new Standard!( T, U )( seqCount, length, states, mutationCosts );
+  return new Standard!( SE, State, M )( seqCount, length, states, mutationCosts );
 
 }
 
-class Cache( T, U ): Standard!( T, U ) {
+class Cache( SE, State, M ): Standard!( SE, State, M ) {
 protected:
   
   this( Args... )( Args args ) {
@@ -212,16 +227,19 @@ protected:
   
 public:    
   
-  mixin cacheCostFor!T;
+  mixin cacheCostFor!SE;
     
 }
-auto cache( T, U )( SequencesCount seqCount, SequenceLength length, T[] states, U mutationCosts ) {
+/**
+  Factory function.
+*/
+auto cache( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
 
-  return new Cache!( T, U )( seqCount, length, states, mutationCosts );
+  return new Cache!( SE, State, M )( seqCount, length, states, mutationCosts );
 
 }
 
-class Patterns( T, U ): Standard!( T, U ) {
+class Patterns( SE, State, M ): Standard!( SE, State, M ) {
 protected:    
   
   this( Args... )( Args args ) {
@@ -229,16 +247,21 @@ protected:
   }
   
   mixin patternColumnCost;
-  mixin standardCostFor!T; 
+  
+public:
+  mixin standardCostFor!SE; 
   
 }
-auto patterns( T, U )( SequencesCount seqCount, SequenceLength length, T[] states, U mutationCosts ) {
+/**
+  Factory function.
+*/
+auto patterns( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
 
-  return new Patterns!( T, U )( seqCount, length, states, mutationCosts );
+  return new Patterns!( SE, State, M )( seqCount, length, states, mutationCosts );
 
 }
 
-class CachePatterns( T, U ): Standard!( T, U ) {
+class CachePatterns( SE, State, M ): Standard!( SE, State, M ) {
 protected:
   
   this( Args... )( Args args ) {
@@ -247,14 +270,30 @@ protected:
   }
 
   mixin patternColumnCost;
-  mixin cacheCostFor!T;
+  
+public:
+  mixin cacheCostFor!SE;
   
 }
-auto cachePatterns( T, U )( SequencesCount seqCount, SequenceLength length, T[] states, U mutationCosts ) {
+/**
+  Factory function.
+*/
+auto cachePatterns( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
 
-  return new CachePatterns!( T, U )( seqCount, length, states, mutationCosts );
+  return new CachePatterns!( SE, State, M )( seqCount, length, states, mutationCosts );
 
 }
+
+
+
+
+
+
+
+
+
+
+
 
 /**
   The first sequences read are "older" (higher, in terms of levels, in the phylogeny).
@@ -405,27 +444,27 @@ unittest {
   auto left = tree.appendChild( root );  
   //First leaf.
   auto leftLeft = tree.appendChild( left );
-  leftLeft.element.fixState( Nucleotide.CYTOSINE );
+  leftLeft.element.fixStates( Nucleotide.CYTOSINE );
   auto leftRight = tree.appendChild( left );
   //Second leaf.
   auto leftRightLeft = tree.appendChild( leftRight );
-  leftRightLeft.element.fixState( Nucleotide.ADENINE );
+  leftRightLeft.element.fixStates( Nucleotide.ADENINE );
   //Third leaf.
   auto leftRightRight = tree.appendChild( leftRight );
-  leftRightRight.element.fixState( Nucleotide.CYTOSINE );
+  leftRightRight.element.fixStates( Nucleotide.CYTOSINE );
   
   //Right subtree.
   auto right = tree.appendChild( root );
   //Fourth leaf.
   auto rightLeft = tree.appendChild( right );
-  rightLeft.element.fixState( Nucleotide.THYMINE );
+  rightLeft.element.fixStates( Nucleotide.THYMINE );
   auto rightRight = tree.appendChild( right );
   //Fifth leaf.
   auto rightRightLeft = tree.appendChild( rightRight );
-  rightRightLeft.element.fixState( Nucleotide.GUANINE );
+  rightRightLeft.element.fixStates( Nucleotide.GUANINE );
   //Sixth leaf.
   auto rightRightRight = tree.appendChild( rightRight );
-  rightRightRight.element.fixState( Nucleotide.ADENINE );
+  rightRightRight.element.fixStates( Nucleotide.ADENINE );
   
   
   auto mutationCosts = 

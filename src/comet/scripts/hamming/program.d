@@ -112,13 +112,13 @@ import comet.core;
 package void run( HammingConfig cfg ) {
 
   //Extract sequence from file.
-  auto sequence = ( loadSequences( cfg.sequencesFile, MultipleSequences.no, ExtendedAbbreviations.yes ) )[ 0 ];
+  auto sequence = ( loadSequences!(MultipleSequences.no, ExtendedAbbreviations.yes)( cfg.sequencesFile ) )[ 0 ];
   size_t seqLength = sequence.molecules.length;
       
   enforceValidMinLength( cfg.minLength, seqLength / 2 );
   
   //Transfer the sequences into a nucleotides matrix.  
-  Nucleotide[] nucleotides = sequence.molecules.dup;
+  auto nucleotides = sequence.molecules;
   
   auto length = lengthParameters( minLength( cfg.minLength ), maxLength( cfg.maxLength ), lengthStep( cfg.lengthStep ) );
   auto results = Results( noResults( cfg.noResults ) );

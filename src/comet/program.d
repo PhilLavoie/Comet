@@ -175,24 +175,29 @@ private {
 
   void run( StandardConfig cfg ) {
     
+    //Initiate the program logger with required verbosity.
     Logger logger = .logger( cfg.outFile, cfg.verbosity );
     
     logger.logln( 1, "Processing file: " ~ cfg.sequencesFile.name );
     
     //Extract sequences from file.
-    auto sequences = loadSequences( cfg.sequencesFile, MultipleSequences.yes, ExtendedAbbreviations.yes  );
+    auto sequences = loadSequences!( MultipleSequences.yes, ExtendedAbbreviations.yes )( cfg.sequencesFile );
     size_t seqLength = sequences[ 0 ].molecules.length;
-        
+    
+    //Make sure the minimum length is not above the maximum allowed.
     enforceValidMinLength( cfg.minLength, seqLength / 2 );
     
-    //Transfer the sequences into a nucleotides matrix.  
-    auto nucleotides = new Nucleotide[][ sequences.length ];
+    //Transfer the sequences into a matrix for uniform access.
+    alias Data = typeof( ( sequences[ 0 ] ).molecules );    
+    auto nucleotides = new Data[ sequences.length ];
+    
     for( int i = 0; i < nucleotides.length; ++i ) {
     
       nucleotides[ i ] = sequences[ i ].molecules;
       
     }
     
+    //A parameters range that just work on one file.
     auto runParamsRange = 
       new class( 
         nucleotides, 
@@ -252,6 +257,7 @@ private {
       
       };
     
+    //Basic storage that prints results and execution time to the request of the user.
     auto storage = new class( cfg )  {
   
       private StandardConfig _cfg;
@@ -286,7 +292,8 @@ private {
       }
     
     };
-       
+   
+   //Start the algorithm with the given configuration.
    calculateSegmentsPairsCosts(
       runParamsRange,      
       storage
