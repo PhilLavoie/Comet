@@ -116,13 +116,13 @@ package void run( CompareResultsConfig cfg ) {
 
 template isResultsRange( R ) {
 
-  enum isResultsRange = isInputRange!R && is( ElementType!R == Result );
+  enum isResultsRange = isInputRange!R && isResult!(ElementType!R);
 
 }
 
 bool allEquivalents( R )( R results, Cost epsilon ) if( isResultsRange!R ) {
 
-  Result reference = results.front;
+  auto reference = results.front;
 
   return results.find!( a => !a.isEquivalentTo( reference, epsilon ) ).empty;
 

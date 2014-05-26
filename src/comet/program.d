@@ -96,7 +96,9 @@ import compare_results = comet.scripts.compare_results.program;
 import run_tests = comet.scripts.run_tests.program;
 import hamming = comet.scripts.hamming.program;
 
+import comet.results;
 import comet.results_io;
+
 import comet.logger;
 import comet.typedefs;
 import comet.core;
@@ -257,6 +259,8 @@ private {
       
       };
     
+    alias Rez = ResultTypeOf!(Nucleotide, VerboseResults.no );
+    
     //Basic storage that prints results and execution time to the request of the user.
     auto storage = new class( cfg )  {
   
@@ -276,7 +280,7 @@ private {
       
       }
       
-      private void printResults( R )( R results ) if( isInputRange!R && is( ElementType!R == Result ) ) {
+      private void printResults( R )( R results ) if( isInputRange!R && isResult!(ElementType!R) ) {
       
         if( !_cfg.printResults ) { return; }
         
@@ -284,7 +288,7 @@ private {
       
       }
       
-      public void store( RunSummary summary ) {
+      public void store( RunSummary!Rez summary ) {
       
         printResults( summary.results[] );
         printExecutionTime( summary.executionTime );

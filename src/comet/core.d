@@ -14,7 +14,7 @@ import std.datetime;
 import comet.results;
 import comet.typecons;
 import comet.typedefs;
-import comet.sma.algos: algorithmFor;
+import comet.sma.algos;
 import comet.sma.mutation_cost: isMutationCostFor;
 import comet.configs.algos: Algo;
 
@@ -24,7 +24,16 @@ import std.traits;
 
 import std.range: isInputRange, ElementType;
 
-import comet.sma.algos: AlgoI;
+import std.typecons: Flag;
+alias VerboseResults = Flag!"VerboseResults";
+
+template ResultTypeOf( State, VerboseResults v ) {
+  static if( v ) {
+    alias ResultTypeOf = Result!( StatesInfo!(T) [] );
+  } else {
+    alias ResultTypeOf = Result!void;
+  }
+}
 
 /**
   Run specific parameters. Those parameters are expected to be constant for the processing
@@ -69,9 +78,9 @@ auto makeRunParameters( T, S, M )(
 /**
   Result of the run.
 */
-struct RunSummary {
+struct RunSummary(R) {
 
-  Results results;
+  Results!R results;
   Duration executionTime;  
   NoThreads noThreadsUsed; //Since the actual number of thread used might vary from the one requested.
 
@@ -80,18 +89,18 @@ struct RunSummary {
 /**
   Factory function.
 */
-auto makeRunSummary( Args... )( Args args ) {
+auto makeRunSummary( R, Args... )( Args args ) {
   
-  return RunSummary( args );
+  return RunSummary!R( args );
 
 }
 
 /**
   Formal storage definition.  
 */
-interface Storage {
+interface Storage(R) {
 
-  void store( RunSummary summary );
+  void store( RunSummary!R summary );
 
 }
 
@@ -141,42 +150,79 @@ private template isRunParametersRange( T ) {
 /**
   Main function of the module.
   Expects a range of run parameters. Each value held by the range corresponds to a "run": a complete analysis of segments pairs contractions 
-  using the specified configuration.
+  over a sequences group using the specified configuration.
   Once a run is finished, the storage object is used to store the results. If the range held more than one value, then this function will
   start over with the new parameters until the range is depleted.
+  A range possibly iterates more than once over a given sequences groups, but it is expected that at least one of the run parameters change (algorithm used, number of threads, etc...).
 */
 void calculateSegmentsPairsCosts( RunParametersRange, S ) (
   RunParametersRange  runParametersRange,
   S                   storage  
 ) {
 
-  static assert( isRunParametersRange!RunParametersRange );
-  static assert( isStorageFor!( S, RunSummary ) );
+  alias RunParamsType = ElementType!RunParametersRange;
+  alias SequencesType = typeof(RunParamsType.sequencesGroup);
+  alias SequenceType = ElementType!SequencesType;
+  alias SequencesElement = ElementType!SequenceType;
+  alias State = ElementType!(typeof(ElementType!(RunParametersRange).states));
+  alias ResultType = ResultTypeOf!(State, VerboseResults.no);
   
-  alias SequencesElement = typeof( ( runParametersRange.front().sequencesGroup )[ 0 ][ 0 ] );
+  static assert( isRunParametersRange!RunParametersRange );
+  static assert( isStorageFor!( S, RunSummary!ResultType ) );
+  
   
   foreach( runParams; runParametersRange ) {
     
     auto sequencesGroup = runParams.sequencesGroup;
+    auto seqsCount      = sequencesCount(sequencesGroup.length);
+    auto length         = sequenceLength(sequencesGroup[0].length);
+    auto states         = runParams.states;
+    auto mutationCosts  = runParams.mutationCosts;
+  
     auto noThreads      = runParams.noThreads;
     auto lengthParams   = runParams.lengthParameters;
     auto noResults      = runParams.noResults;
+    
+    auto results = Results!ResultType( noResults );
     
     SysTime startTime = Clock.currTime();
     
     //TODO: here you will find support for multiple threads of execution.
     //However, empirical results reveal that no acceleration is obtained, therefore this code, or the libraries used,
     //might not be correct/adequate.
-    if( noThreads == 1 ) {
-                  
-      auto algo = algorithmFor!(SequencesElement)( runParams.algorithm, sequencesCount( sequencesGroup.length ), sequenceLength( sequencesGroup[ 0 ].length ), runParams.states, runParams.mutationCosts );
+    /* if( noThreads == 1 ) { */      
       
-      auto results = Results( noResults );
-      processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
+    final switch( runParams.algorithm ) {
+
+      case Algo.standard:
       
-      storage.store( makeRunSummary( results, Clock.currTime() - startTime ) );     
+        auto algo = standard!(SequencesElement)( seqsCount, length, states, mutationCosts );
+        processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
+        break;
+        
+      case Algo.cache:
+      
+        auto algo = cache!(SequencesElement)( seqsCount, length, states, mutationCosts );
+        processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
+        break;
+        
+      case Algo.patterns:
+      
+        auto algo = patterns!(SequencesElement)( seqsCount, length, states, mutationCosts );
+        processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
+        break;
+        
+      case Algo.cachePatterns:  
+      
+        auto algo = cachePatterns!(SequencesElement)( seqsCount, length, states, mutationCosts );
+        processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
+        break;
+        
+    }     
+    
+    storage.store( makeRunSummary!ResultType( results, Clock.currTime() - startTime ) );     
    
-    } else if( noThreads > 1 ) {
+    /* } else if( noThreads > 1 ) {
     
       version( parallelism ) {
     
@@ -341,17 +387,17 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
     
       assert( false );
     
-    }   
+    }    */
       
   }
 
 }
 
 
-private void processSegmentsPairs( T )( 
+private void processSegmentsPairs( T, Alg, TheResults )( 
   T[][] sequencesGroup, 
-  AlgoI!T algorithm,
-  Results results, 
+  Alg algorithm,
+  TheResults results, 
   LengthParameters length 
 ) {
   
@@ -380,3 +426,72 @@ private void processSegmentsPairs( T )(
   }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+  This function constructs and returns an algorithm object based on the given parameters. 
+  The algorithm object is provided in order to encapsulate the possible optimization used underneath.
+  
+  The formal definition interface can be found in this module. Those objects provide functions to calculate the
+  cost of a segments pairs. Segments are expected to hold a compound type of the one held by the Sankoff tree, namely STATES. For example, if
+  the tree STATES are DNA nucleotides, then a sequence could hold nucleotide sets as its element. Those sets (possibly singletons) are
+  used to initialize the leaves of the sankoff tree.
+  
+  The mutation costs function must provide costs for pairs of STATES.
+  
+  Given those requirements, the algorithm objects will provide methods to calculate the cost of segments pairs, i.e. subsequences.
+  Every call to this function returns a NEW object, and so internal states are not shared between algorithm objects.
+  
+*/
+//TODO: add "is mutation costs for" type constraint  here.
+/* AlgoI!SequenceElement algorithmFor( SequenceElement, State, MutationCosts )( Algo algo, SequencesCount seqsCount, SequenceLength length, State[] states, MutationCosts mutationCosts ) {
+
+  final switch( algo ) {
+  
+    case Algo.standard:
+    
+      return standard!(SequenceElement)( seqsCount, length, states, mutationCosts );
+      break;
+      
+    case Algo.cache:
+    
+      return cache!(SequenceElement)( seqsCount, length, states, mutationCosts );
+      break;
+      
+    case Algo.patterns:
+    
+      return patterns!(SequenceElement)( seqsCount, length, states, mutationCosts );
+      break;
+      
+    case Algo.cachePatterns:  
+    
+      return cachePatterns!(SequenceElement)( seqsCount, length, states, mutationCosts );
+      break;
+      
+  }
+  
+  assert( false );  
+  
+}
+
+
+ */

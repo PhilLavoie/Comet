@@ -116,7 +116,7 @@ private void run( RunTestsConfig cfg ) {
       noResults( cfg.noResults )      
     );
   
-  auto storage = .storage( runParamsRange, logger, cfg.referencesDir, cfg.epsilon, false ); //TODO: Don't test for now.
+  auto storage = makeStorage!(ResultTypeOf!(Nucleotide, VerboseResults.no))( runParamsRange, logger, cfg.referencesDir, cfg.epsilon, false ); //TODO: Don't test for now.
   
   try {
   

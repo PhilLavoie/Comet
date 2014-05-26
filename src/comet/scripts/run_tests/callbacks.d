@@ -134,7 +134,7 @@ class RunParamsRange {
   auto front() {
     
     _logger.logln( 1, "Processing file: ", currentFile().fileName() );
-    _logger.logln( 2, "Using Configuration: " );
+    _logger.logln( 2, "Using Configuration: " );  //TODO: add configuration printing.
   
     return makeRunParameters( currentSequencesGroup(), currentAlgo(), _states, _mutationCosts, currentNoThreads(), _lengthParams, _noResults );
   
@@ -167,7 +167,7 @@ auto timeEntry( FieldTypeTuple!TimeEntry args ) {
 
 }
 
-class Storage  {
+class Storage(R)  {
 
   private Logger           _logger;
   private string           _referencesDir;
@@ -186,18 +186,18 @@ class Storage  {
         
   }   
   
-  public void store( RunSummary summary ) {
+  public void store( RunSummary!R summary ) {
             
     if( _testAgainstReferences ) {
     
       auto referenceFile = fetch( referenceFileNameFor( _referencesDir, _runParamsRange.currentFile() ) );
       _logger.logln( 2, "Comparing results with reference file: ", referenceFile.fileName );
     
-      Array!Result empirical;
+      Array!R empirical;
       foreach( result; summary.results[] ) {
         empirical.insertBack( result );
       }
-      Array!Result expected;
+      Array!R expected;
       foreach( result; resultsReader( referenceFile ) ) {
         expected.insertBack( result );
       }     
@@ -230,8 +230,8 @@ class Storage  {
   @property public auto timeEntries() { return _executionTimes[]; }
 
 };
-auto storage( T... )( T args ) {
+auto makeStorage( R, T... )( T args ) {
 
-  return new Storage( args );
+  return new Storage!R( args );
 
 }

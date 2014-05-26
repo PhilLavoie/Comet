@@ -110,6 +110,12 @@ public:
     
   }   
   
+  typeof(this) clone() {
+    auto copy = StatesInfo!T();
+    copy._infos = this._infos.dup;  
+    return copy;
+  }
+  
 }
 
 unittest {  

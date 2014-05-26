@@ -12,6 +12,7 @@ public import comet.sma.mutation_cost;
 public import comet.typedefs: SequencesCount, sequencesCount;
 public import comet.typedefs: SequenceLength, sequenceLength;
 public import comet.configs.algos: Algo;
+public import comet.sma.smtree: StatesInfo;
 
 import comet.sma.pattern;
 import comet.sma.segments;
@@ -21,59 +22,10 @@ import std.algorithm;
 import range = std.range;
 
 /**
-  This function constructs and returns an algorithm object based on the given parameters. 
-  The algorithm object is provided in order to encapsulate the possible optimization used underneath.
-  
-  The formal definition interface can be found in this module. Those objects provide functions to calculate the
-  cost of a segments pairs. Segments are expected to hold a compound type of the one held by the Sankoff tree, namely STATES. For example, if
-  the tree STATES are DNA nucleotides, then a sequence could hold nucleotide sets as its element. Those sets (possibly singletons) are
-  used to initialize the leaves of the sankoff tree.
-  
-  The mutation costs function must provide costs for pairs of STATES.
-  
-  Given those requirements, the algorithm objects will provide methods to calculate the cost of segments pairs, i.e. subsequences.
-  Every call to this function returns a NEW object, and so internal states are not shared between algorithm objects.
-  
+  Returns if the given type refers to an algorithm provided by this module.
 */
-//TODO: add "is mutation costs for" type constraint  here.
-AlgoI!SequenceElement algorithmFor( SequenceElement, State, MutationCosts )( Algo algo, SequencesCount seqsCount, SequenceLength length, State[] states, MutationCosts mutationCosts ) {
-
-  final switch( algo ) {
-  
-    case Algo.standard:
-    
-      return standard!(SequenceElement)( seqsCount, length, states, mutationCosts );
-      break;
-      
-    case Algo.cache:
-    
-      return cache!(SequenceElement)( seqsCount, length, states, mutationCosts );
-      break;
-      
-    case Algo.patterns:
-    
-      return patterns!(SequenceElement)( seqsCount, length, states, mutationCosts );
-      break;
-      
-    case Algo.cachePatterns:  
-    
-      return cachePatterns!(SequenceElement)( seqsCount, length, states, mutationCosts );
-      break;
-      
-  }
-  
-  assert( false );  
-  
-}
-
-/**
-  Formal definition of the algorithms interface.
-  An algorithm must be able to provide a cost for a given segments pairs.
-*/
-interface AlgoI( T ) {
-
-  Cost costFor( SegmentPairs!( T ) pairs );
-  
+template isAlgorithm(A) {
+  enum isAlgorithm = std.traits.isInstanceOf!(Standard, A);
 }
 
 /**
@@ -139,7 +91,7 @@ private mixin template cacheCostFor( T ) {
   protected real _costSum;
   
   //Relies on the fact that the outer loop is on period length.
-  //Relies on the face that the first duplication for a given length starts at position 0.
+  //Relies on the fact that the first duplication for a given length starts at position 0.
   public override Cost costFor( SegmentPairs!( T ) pairs ) {
   
     //If those are the first segment pairs of a given length.
@@ -173,6 +125,17 @@ private mixin template cacheCostFor( T ) {
   }
   
 }
+
+/**
+  Formal definition of the algorithms interface.
+  An algorithm must be able to provide a cost for a given segments pairs.
+*/
+interface AlgoI( SE ) {
+
+  Cost costFor( SegmentPairs!( SE ) pairs );
+  
+}
+
 
 class Standard( SE, State, M ): AlgoI!SE {
 
@@ -209,7 +172,7 @@ public:
 /**
   Factory function.
 */
-private auto standard( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
+auto standard( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
 
   return new Standard!( SE, State, M )( seqCount, length, states, mutationCosts );
 

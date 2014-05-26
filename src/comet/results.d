@@ -10,18 +10,43 @@ public import comet.typedefs: Cost;
 
 import std.container;
 import std.range: isInputRange, ElementType;
+import std.traits: isInstanceOf, hasMember;
 
 /**
-  A structure built to represent a result. It holds the left segment
+  Returns if the given type is an instance of the Result template.
+*/
+template isResult( R ) {
+  enum isResult = isInstanceOf!( Result, R );
+}
+
+/**
+  Returns if the result holds per position values, which are held in a container.
+*/
+template hasContainer( R ) if( isResult!R ) {
+  enum hasContainer = hasMember!(R, "_perPosition");
+}
+
+/**
+  A structure built to represent a result of a segments pairs distance (cost) calculation. It holds the left segment
   start index position, the segments length, and the cost of the calculation.  
 */
-struct Result {
+struct Result( C = void ) {
+
+  static if( !is( C == void ) ) {
+  
+    private C _perPosition;
+    
+    @property public auto perPosition() { return _perPosition[]; }
+  
+  }
 
 private:
 
   size_t _start;    //The left segment start index of the segments pairs.
   size_t _length;   //The length of each segment.
   Cost _cost;       //The total cost of the segments pairs associated with the previous fields.
+  
+  
   
   this( size_t start, size_t length, Cost cost ) {
   
@@ -37,9 +62,9 @@ private:
   
 public:
 
-  @property auto start() { return _start; }
+  @property auto start()  { return _start; }
   @property auto length() { return _length; }
-  @property auto cost() { return _cost; }
+  @property auto cost()   { return _cost; }
   
   /**
     A cost based comparison ordering. When the cost is equals, the
@@ -93,12 +118,16 @@ public:
   Factory function to create results.
 */
 auto result( size_t start, SegmentsLength length, Cost cost ) {
-  return Result( start, length.value, cost );
+  return Result!(void)( start, length.value, cost );
 }
 
 unittest {
-
-  Result r1, r2;
+  
+  Result!void r1, r2;
+  static assert( isResult!(typeof(r1)) );
+  static assert( isResult!(typeof(r2)) );
+  static assert( !hasContainer!(typeof(r1)) );
+  static assert( !hasContainer!(typeof(r2)) );
   r1.start = 0;
   r1.length = 100;
   r1.cost = 20.0;
@@ -135,18 +164,15 @@ unittest {
   
 }
 
-
-
-
 /**
   A wrapper around a fast, ordered index (as of right now, the structure used is a red black tree).
   It keeps track of how many results were inserted so that it does not go beyond a maximum limit.
   When the limit is reached, if the new result to be inserted is better than the worse one held,
   then the latter is popped from the tree and the former is inserted, satisfying the limit.
 */
-struct Results {
+struct Results( R ) if( isResult!R ) {
 
-  private RedBlackTree!( Result ) _results;
+  private RedBlackTree!( R ) _results;
   private size_t _max;
 
   //@disable this();
@@ -174,7 +200,7 @@ struct Results {
         inserted. In that case, the worst result is exchanged
         with the provided one.
   */
-  void add( R )( R result ) if( is( R == Result ) ) {
+  void add( Rez )( Rez result ) if( is( Rez == R ) ) {
   
     if( !_max ) { return; }
     
@@ -195,23 +221,20 @@ struct Results {
     
   }
   ///DITTO.
-  void add( R )( R range ) if( isInputRange!R && is( ElementType!R == Result ) ) {
-  
-    foreach( Result res; range ) {
-    
-      add( res );
-    
-    }
-  
+  void add( Rez )( Rez range ) if( isInputRange!Rez && is( ElementType!Rez == R ) ) 
+  {  
+    foreach( R res; range ) 
+    {    
+      add( res );    
+    }  
   }
 
   /**
     Returns a range of results in ascending order (the "lowest" result is the actual best).
   */
-  auto opSlice() {
-  
-    return _results[];
-    
+  auto opSlice() 
+  {  
+    return _results[];    
   } 
   
   /**

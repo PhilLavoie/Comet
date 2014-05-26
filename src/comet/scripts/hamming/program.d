@@ -121,7 +121,7 @@ package void run( HammingConfig cfg ) {
   auto nucleotides = sequence.molecules;
   
   auto length = lengthParameters( minLength( cfg.minLength ), maxLength( cfg.maxLength ), lengthStep( cfg.lengthStep ) );
-  auto results = Results( noResults( cfg.noResults ) );
+  auto results = Results!(ResultTypeOf!(Nucleotide, VerboseResults.no))( noResults( cfg.noResults ) );
   
   //Launch processing.
   processSegmentPairs( nucleotides, length, results );
@@ -133,10 +133,7 @@ package void run( HammingConfig cfg ) {
 
 }
 
-
-
-
-package void processSegmentPairs( T )( T[] sequence, LengthParameters length, Results results ) {
+package void processSegmentPairs( T, R )( T[] sequence, LengthParameters length, R results ) {
 
   auto seqLength = sequenceLength( sequence.length );
 
@@ -190,7 +187,7 @@ package void processSegmentPairs( T )( T[] sequence, LengthParameters length, Re
 unittest {
 
   auto seq = "acgtacctacggacct";
-  auto res = Results( noResults( 100 ) );
+  auto res = Results!(ResultTypeOf!(Nucleotide, VerboseResults.no))( noResults( 100 ) );
   auto length = lengthParameters( minLength( 1 ), maxLength( 1000000 ), lengthStep( 1 ) );
   
   processSegmentPairs( seq, length, res );

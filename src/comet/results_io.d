@@ -9,6 +9,7 @@ import std.stdio;
 import std.range: isForwardRange;
 import std.algorithm: splitter, filter, count;
 import std.conv: to;
+import std.traits: isInstanceOf;
   
 private string RESULTS_HEADER_FORMAT = "%12s%12s%12s\n";
 private string RESULT_WRITE_FORMAT = "%12d%12d%12.8f\n";
@@ -26,7 +27,7 @@ public void printResults( Range )( File output, Range results ) if( isForwardRan
   }
 }
 
-private void printResult( File output, Result result ) {
+private void printResult( R )( File output, R result ) if( isInstanceOf!( Result, R ) ) {
   output.writef( RESULT_WRITE_FORMAT, result.start, result.length, result.cost );
 }
 
@@ -82,4 +83,30 @@ public:
   
   bool empty() { return _lines.empty; }  
   
+}
+
+private string VERBOSE_RESULTS_HEADER_FORMAT = "%12s%12s%12s%12s\n";
+private string VERBOSE_RESULT_WRITE_FORMAT = "%12d%12d%12d";
+private string SANKOFF_ROOT_STATE_FORMAT = "%s %f %d ";
+
+/**
+  Prints verbose results. Verbose results are similar to standard results apart from the fact that they also
+  list information for every position analyzed that lead to a given result.
+*/
+public void printVerboseResults( Range )( File output, Range results ) if( isForwardRange!Range ) {
+  output.writef( VERBOSE_RESULTS_HEADER_FORMAT, "start", "length", "relPos", "sankoffRoot" );
+  
+  foreach( result, i ; results ) {
+  
+    output.printVerboseResult( result, i );
+    
+  }
+}
+
+private void printVerboseResult( R )( File output, R result, int counter ) if( isResult!R && hasContainer!R ) {
+  output.writef( VERBOSE_RESULT_WRITE_FORMAT, result.start, result.length, counter );
+  foreach( stateData; result.perPosition() ) {
+    output.writef( SANKOFF_ROOT_STATE_FORMAT, stateData.state, stateData.cost, stateData.count );
+  }
+  output.writeln();
 }
