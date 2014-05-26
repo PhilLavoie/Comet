@@ -196,25 +196,25 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
 
       case Algo.standard:
       
-        auto algo = standard!(SequencesElement)( seqsCount, length, states, mutationCosts );
+        auto algo = makeAlgorithm!(Optimization.none, TrackRootNodes.no)(seqsCount, length, states, mutationCosts);
         processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
         break;
         
       case Algo.cache:
       
-        auto algo = cache!(SequencesElement)( seqsCount, length, states, mutationCosts );
+        auto algo = makeAlgorithm!(Optimization.windowing, TrackRootNodes.no)(seqsCount, length, states, mutationCosts);
         processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
         break;
         
       case Algo.patterns:
       
-        auto algo = patterns!(SequencesElement)( seqsCount, length, states, mutationCosts );
+        auto algo = makeAlgorithm!(Optimization.patterns, TrackRootNodes.no)(seqsCount, length, states, mutationCosts);
         processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
         break;
         
       case Algo.cachePatterns:  
       
-        auto algo = cachePatterns!(SequencesElement)( seqsCount, length, states, mutationCosts );
+        auto algo = makeAlgorithm!(Optimization.windowingPatterns, TrackRootNodes.no)(seqsCount, length, states, mutationCosts);
         processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
         break;
         

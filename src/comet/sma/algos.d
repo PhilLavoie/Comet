@@ -22,12 +22,193 @@ import std.algorithm;
 import range = std.range;
 
 /**
-  Returns if the given type refers to an algorithm provided by this module.
+  The user can request the algorithm to record intermediate data allowing
+  for the calculation of a segments pairs cost. This data is the sankoff root nodes calculated for
+  every position inside the segments pairs. Since keeping record of this data can affect performance
+  noticeably, the user has the power to decide whether or not it should be used.
 */
-template isAlgorithm(A) {
-  enum isAlgorithm = std.traits.isInstanceOf!(Standard, A);
+alias TrackRootNodes = std.typecons.Flag!"TrackRootNodes";
+
+/**
+  Algorithm optimizations. The user can chose from no optimizations, the usage on a windowing system
+  or a pattern matching algorithm for previously calculated values.
+*/
+enum Optimization {
+  none,
+  windowing,
+  patterns,
+  windowingPatterns
 }
 
+struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,) 
+{
+  //Those are the fields shared by all algorithms.
+  private M _mutationCosts;           //The callable used to evaluate the cost of mutatin a state to a given one.
+  private SMTree!State _smTree;       //The state mutations analysis tree.
+
+  private enum usingPatterns  = opt == Optimization.patterns  || opt == Optimization.windowingPatterns;
+  private enum usingWindow    = opt == Optimization.windowing || opt == Optimization.windowingPatterns;
+  
+  static if(usingPatterns) 
+  {
+    //When the patterns optimization is used, a map is internally used to store a pattern's previously calculated cost.
+    private Cost[ Pattern ] _patternsCost;
+  }
+  
+  static if(usingWindow)
+  {
+    //The window used. Guaranteed to never be bigger than half of the sequences length. It is reused consistently.
+    private Cost[] _window;
+    //The cost of the previously calculated segments pairs.
+    private real _costSum;
+  }
+  
+  
+  
+  private this(States)( SequencesCount seqCount, SequenceLength length, States states, typeof( _mutationCosts ) mutationCosts ) 
+  if(is(ElementType!States == State))
+  {  
+    _mutationCosts  = mutationCosts;
+    _smTree         = SMTree!State(states[]);
+   
+    static if(usingWindow) 
+    {
+      _window   = new Cost[length.value];
+      _costSum  = 0;
+    }
+   
+    //Phylogenize the tree according to the sequences, see documentation to see
+    //how it is done.  
+    phylogenize( _smTree, seqCount );       
+  }
+  
+  /**
+    Calculates the cost of a single position inside the segments pairs.
+    A specialization exist when using patterns.
+  */
+  //Patterns version.
+  private Cost columnCost( bool useP, Range )( Range column ) if( range.isInputRange!Range && useP ) 
+  {        
+    //Calculate the pattern of the leaves.
+    //TODO: how does this work with nucleotide sequences?????
+    auto pattern = Pattern( column ); 
+   
+    //If a similar set of leaves have already been calculated, then use the previously stored cost.
+    if( pattern !in _patternsCost ) 
+    {      
+      _patternsCost[ pattern ] = columnCost!(false)( column );        
+    } 
+    
+    return _patternsCost[ pattern ];    
+  }
+  ///Ditto.
+  //No patterns version.
+  private Cost columnCost( bool useP, Range )( Range column ) if( range.isInputRange!Range && !useP) 
+  {    
+    //Start by extracting the states from the hierarchy: use them to set the leaves of the smtree.
+    _smTree.setLeaves( column );
+    
+    //Process the state mutation algorithm then extract the preSpeciation cost.
+    _smTree.update( _mutationCosts );
+    return preSpeciationCost( _smTree, _mutationCosts );
+  } 
+  
+  static if(usingWindow)
+  {
+    /**
+      Calculates the average pre speciations cost of the given segments pairs.
+      The segments can hold the same type as the state type or a range over this type, i.e. a slice of state for example.
+      
+      Relies on the fact that the outer loop is on period length.
+      Relies on the fact that the first duplication for a given length starts at position 0.
+    */    
+    public Cost costFor( T )( SegmentPairs!( T ) pairs ) 
+    {    
+      //If those are the first segment pairs of a given length.
+      size_t segmentsStart = pairs.leftSegmentStart;
+      if( segmentsStart == 0 ) 
+      {
+        _costSum = 0;
+        foreach( column; pairs.byColumns ) 
+        {              
+          auto posCost = columnCost!usingPatterns( column );          
+          _window[ column.index ] = posCost;
+          _costSum += posCost;          
+        }
+        
+        return _costSum / pairs.segmentsLength;        
+      } 
+      
+      //Remove the first column cost of the previously processed segment pairs.
+      _costSum -= _window[ segmentsStart - 1 ];
+      //Calculate the cost of this segment pairs last column.
+      auto posCost = columnCost!usingPatterns( pairs.byColumns[ $ - 1 ]  );
+      //Store it.    
+      _window[ segmentsStart + pairs.segmentsLength - 1 ] = posCost;
+      //Add it to the current cost.
+      _costSum += posCost;
+      
+      return _costSum / pairs.segmentsLength;      
+    }  
+  }
+  else
+  {
+    /**
+      Calculates the average pre speciations cost of the given segments pairs.
+      The segments can hold the same type as the state type or a range over this type, i.e. a slice of state for example.
+    */
+    public Cost costFor( T )( SegmentPairs!( T ) pairs ) 
+    {
+      real sum = 0;
+      foreach( column; pairs.byColumns ) 
+      {      
+        sum += columnCost!usingPatterns( column );        
+      }
+      
+      //Normalized sum.
+      return sum / pairs.segmentsLength;      
+    }
+  
+  }  
+}
+
+/**
+  Returns if the given type refers to an algorithm provided by this module.
+*/
+template isAlgorithm(A) 
+{
+  enum isAlgorithm = std.traits.isInstanceOf!(Algorithm, A);
+}
+
+auto makeAlgorithm(Optimization opt, TrackRootNodes trn, State, M)(SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts) 
+{
+  return Algorithm!(opt, trn, State, M)(seqCount, length, states, mutationCosts);
+}
+
+unittest 
+{
+  //Instantiate all combinations to see if it compiles.
+  enum noTrn = TrackRootNodes.no;
+  enum trn   = TrackRootNodes.yes;
+  
+  alias Func = Cost function(int, int);
+  
+  auto algo1 = Algorithm!(Optimization.none, noTrn, int, Func).init;
+  auto algo2 = Algorithm!(Optimization.none, trn, int, Func).init;
+  
+  auto algo3 = Algorithm!(Optimization.windowing, noTrn, int, Func).init;
+  auto algo4 = Algorithm!(Optimization.windowing, trn, int, Func).init;
+  
+  auto algo5 = Algorithm!(Optimization.patterns, noTrn, int, Func).init;
+  auto algo6 = Algorithm!(Optimization.patterns, trn, int, Func).init;
+  
+  auto algo7 = Algorithm!(Optimization.windowingPatterns, noTrn, int, Func).init;
+  auto algo8 = Algorithm!(Optimization.windowingPatterns, trn, int, Func).init; 
+  
+  auto algo9 = makeAlgorithm!(Optimization.windowingPatterns, TrackRootNodes.yes)(sequencesCount(4), sequenceLength(10), [ 1, 2, 3, 4], (int x, int y) => 0.0);
+}
+
+/+
 /**
   This mixin declares the column cost function for the standard algorithm.
 */
@@ -246,7 +427,7 @@ auto cachePatterns( SE, State, M )( SequencesCount seqCount, SequenceLength leng
   return new CachePatterns!( SE, State, M )( seqCount, length, states, mutationCosts );
 
 }
-
++/
 
 
 
