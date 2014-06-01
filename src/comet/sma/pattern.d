@@ -4,13 +4,11 @@ import std.traits;
 import std.range;
 import std.algorithm;
 
-//TODO: try to avoid heap usage.
-
 /**
   Patterns identify if two sequences shall produce the
   same duplication cost.
   Creating a pattern for two sequences and comparing them
-  will tell wether or not one can use the same cost for
+  will tell whether or not one can use the same cost for
   both.
 */
 struct Pattern {
@@ -37,15 +35,10 @@ struct Pattern {
     Returns the value held in the given index.
   */
   const size_t opIndex( size_t index ) { return _data[ index ]; }
-  
-  
+    
   //The important parts.
   private void data( Range )( Range newData ) {
-    static if( isArray!( Range ) ) {
-      size_t[ typeof( newData[0] ) ] atomIndexes;
-    } else {
-      size_t[ typeof( newData.front() ) ] atomIndexes;
-    }    
+    size_t[ ElementType!Range ] atomIndexes;
     size_t currentIndex = 0;
     size_t dataIndex = 0;
     foreach( atom; newData ) {

@@ -40,6 +40,19 @@ enum Optimization {
   windowingPatterns
 }
 
+/**
+  This algorithm structure encapsulate the logic behind the calculation of the pre speciation costs of a given segments pairs.
+  The user specifies which optimization should be used, if any.
+  
+  It is also possible to track the intermediate results used to calculate such a cost, using the TrackRootNodes template parameter.
+  
+  This structure offers one main function, namely "costFor". This function takes a SegmentsPairs and return its calculated cost.
+  
+  Note: The patterns algorithm only makes sense if using the 0, 1 mutation costs function (0 cost if equals 1 otherwise).
+  Note: When using the windowing pattern, the user must make use a scheme such that every positions for a given segments pairs length are
+  calculated first before changing the length. Also, this calculation should start at index 0.
+  Note: This structure was not intended to be used with the default constructor, use the factory function(s) provided.
+*/
 struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,) 
 {
   //Those are the fields shared by all algorithms.
@@ -61,9 +74,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,)
     private Cost[] _window;
     //The cost of the previously calculated segments pairs.
     private real _costSum;
-  }
-  
-  
+  }  
   
   private this(States)( SequencesCount seqCount, SequenceLength length, States states, typeof( _mutationCosts ) mutationCosts ) 
   if(is(ElementType!States == State))
@@ -171,6 +182,13 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,)
   
   }  
 }
+/**
+  Factory function for easy type inference of the construction parameters.
+*/
+auto makeAlgorithm(Optimization opt, TrackRootNodes trn, State, M)(SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts) 
+{
+  return Algorithm!(opt, trn, State, M)(seqCount, length, states, mutationCosts);
+}
 
 /**
   Returns if the given type refers to an algorithm provided by this module.
@@ -178,11 +196,6 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,)
 template isAlgorithm(A) 
 {
   enum isAlgorithm = std.traits.isInstanceOf!(Algorithm, A);
-}
-
-auto makeAlgorithm(Optimization opt, TrackRootNodes trn, State, M)(SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts) 
-{
-  return Algorithm!(opt, trn, State, M)(seqCount, length, states, mutationCosts);
 }
 
 unittest 
@@ -206,238 +219,10 @@ unittest
   auto algo8 = Algorithm!(Optimization.windowingPatterns, trn, int, Func).init; 
   
   auto algo9 = makeAlgorithm!(Optimization.windowingPatterns, TrackRootNodes.yes)(sequencesCount(4), sequenceLength(10), [ 1, 2, 3, 4], (int x, int y) => 0.0);
+  
+  static assert(isAlgorithm!(typeof(algo1)));
+  static assert(isAlgorithm!(typeof(algo9)));
 }
-
-/+
-/**
-  This mixin declares the column cost function for the standard algorithm.
-*/
-private mixin template standardColumnCost() {
-
-  /**
-    
-  */
-  private Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
-    //Start by extracting the states from the hierarchy: use them to set the
-    //the leaves of the smtree.
-    _smTree.setLeaves( column );
-    
-    //Process the state mutation algorithm then extract the preSpeciation cost.
-    //TODO: does the tree really need the states and mutation costs every time?
-    _smTree.update( _mutationCosts );
-    return preSpeciationCost( _smTree, _mutationCosts );
-  }
-  
-}
-
-private mixin template patternColumnCost() {
-
-  protected Cost[ Pattern ] _patternsCost;
-  
-  private Cost columnCost( Range )( Range column ) if( range.isInputRange!Range ) {
-  
-    auto pattern = Pattern( column ); 
-   
-    if( pattern !in _patternsCost ) {
-    
-      _patternsCost[ pattern ] = super.columnCost( column );
-      
-    } 
-    
-    return _patternsCost[ pattern ];    
-  }
-}
-
-private mixin template standardCostFor( T ) {
-
-  public override Cost costFor( SegmentPairs!( T ) pairs ) {
-  
-    real sum = 0;
-    foreach( column; pairs.byColumns ) {
-    
-      sum += columnCost( column );
-      
-    }
-    
-    //Normalized sum.
-    return sum / pairs.segmentsLength;
-    
-  }
-  
-}
-
-private mixin template cacheCostFor( T ) {
-  
-  protected Cost[] _cache;
-  protected real _costSum;
-  
-  //Relies on the fact that the outer loop is on period length.
-  //Relies on the fact that the first duplication for a given length starts at position 0.
-  public override Cost costFor( SegmentPairs!( T ) pairs ) {
-  
-    //If those are the first segment pairs of a given length.
-    size_t segmentsStart = pairs.leftSegmentStart;
-    if( segmentsStart == 0 ) {
-    
-      _costSum = 0;
-      foreach( column; pairs.byColumns ) {      
-      
-        auto posCost = columnCost( column );          
-        _cache[ column.index ] = posCost;
-        _costSum += posCost;
-        
-      }
-      
-      return _costSum / pairs.segmentsLength;
-      
-    } 
-    
-    //Remove the first column cost of the previously processed segment pairs.
-    _costSum -= _cache[ segmentsStart - 1 ];
-    //Calculate the cost of this segment pairs last column.
-    auto posCost = columnCost( pairs.byColumns[ $ - 1 ]  );
-    //Store it.    
-    _cache[ segmentsStart + pairs.segmentsLength - 1 ] = posCost;
-    //Add it to the current cost.
-    _costSum += posCost;
-    
-    return _costSum / pairs.segmentsLength;
-    
-  }
-  
-}
-
-/**
-  Formal definition of the algorithms interface.
-  An algorithm must be able to provide a cost for a given segments pairs.
-*/
-interface AlgoI( SE ) {
-
-  Cost costFor( SegmentPairs!( SE ) pairs );
-  
-}
-
-
-class Standard( SE, State, M ): AlgoI!SE {
-
-protected:
-
-  SequencesCount _seqCount;
-  SequenceLength _seqLength;
-  State[] _states;
-  M _mutationCosts;
-  SMTree!State _smTree;
-
-  //TODO: receive the phylogeny or construct the tree elsewhere?
-  this( SequencesCount seqCount, SequenceLength length, typeof( _states ) states, typeof( _mutationCosts ) mutationCosts ) {
-  
-    _seqCount = seqCount;             //TODO: Unused after creation, can be removed safely.
-    _seqLength = length;              //TODO: only used by cache algorithms... might be transferred over there.
-    _states = states;
-    _mutationCosts = mutationCosts;
-    _smTree = SMTree!State( _states[] );
-   
-    //Phylogenize the tree according to the sequences, see documentation to see
-    //how it is done.  
-    phylogenize( _smTree, _seqCount );   
-    
-  }
-  
-  mixin standardColumnCost;
-    
-public:  
-  
-  mixin standardCostFor!SE;  
-  
-}
-/**
-  Factory function.
-*/
-auto standard( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
-
-  return new Standard!( SE, State, M )( seqCount, length, states, mutationCosts );
-
-}
-
-class Cache( SE, State, M ): Standard!( SE, State, M ) {
-protected:
-  
-  this( Args... )( Args args ) {
-    super( args );
-    _cache = new Cost[ _seqLength.value ];
-  }
-
-  mixin standardColumnCost;
-  
-public:    
-  
-  mixin cacheCostFor!SE;
-    
-}
-/**
-  Factory function.
-*/
-auto cache( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
-
-  return new Cache!( SE, State, M )( seqCount, length, states, mutationCosts );
-
-}
-
-class Patterns( SE, State, M ): Standard!( SE, State, M ) {
-protected:    
-  
-  this( Args... )( Args args ) {
-    super( args );
-  }
-  
-  mixin patternColumnCost;
-  
-public:
-  mixin standardCostFor!SE; 
-  
-}
-/**
-  Factory function.
-*/
-auto patterns( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
-
-  return new Patterns!( SE, State, M )( seqCount, length, states, mutationCosts );
-
-}
-
-class CachePatterns( SE, State, M ): Standard!( SE, State, M ) {
-protected:
-  
-  this( Args... )( Args args ) {
-    super( args );
-    _cache = new Cost[ _seqLength.value ];
-  }
-
-  mixin patternColumnCost;
-  
-public:
-  mixin cacheCostFor!SE;
-  
-}
-/**
-  Factory function.
-*/
-auto cachePatterns( SE, State, M )( SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts ) {
-
-  return new CachePatterns!( SE, State, M )( seqCount, length, states, mutationCosts );
-
-}
-+/
-
-
-
-
-
-
-
-
-
-
 
 /**
   The first sequences read are "older" (higher, in terms of levels, in the phylogeny).
