@@ -4,6 +4,8 @@ import std.traits;
 import std.range;
 import std.algorithm;
 
+//TODO: redesign because using patterns on nucleotide SETS for example will is incorrect: [A, C] - [C, T] and [A, C] - [G, T] produce the same pattern.
+
 /**
   Patterns identify if two sequences shall produce the
   same duplication cost.
@@ -31,6 +33,7 @@ struct Pattern {
     Returns the length of the pattern.
   */
   @property const size_t length() { return _data.length; }
+  
   /**
     Returns the value held in the given index.
   */
@@ -76,8 +79,9 @@ struct Pattern {
     Returns 0 if both patterns are equal. Otherwise, it returns the difference
     between this object's value and the right hand side's value for the first index
     where they differ. If both patterns aren't of the same length, then this object's
-    length minus the compared pattern's length is returned. Note that this case
-    should not even occur. This might be moved to be an assert...
+    length minus the compared pattern's length is returned. 
+    
+    Note: that this case should not even occur. 
   */
   const int opCmp( ref const Pattern rhs ) {
     if( this.length != rhs.length ) { return this.length - rhs.length; }
@@ -95,7 +99,7 @@ unittest {
   import std.conv;
 
   auto zeData = "toto";
-  auto zeData2 = "caca";
+  auto zeData2 = "tata";
   auto pattern = Pattern( zeData );
   auto pattern2 = Pattern( zeData2 );
   assert( pattern == pattern2, "Comparison returns: " ~ to!string( pattern.opCmp( pattern2 ) ) );  

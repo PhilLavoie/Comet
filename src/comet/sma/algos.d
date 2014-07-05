@@ -70,7 +70,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,)
   
   static if(usingWindow)
   {
-    //The window used. Guaranteed to never be bigger than half of the sequences length. It is reused consistently.
+    //The window used. Guaranteed to never be bigger than half of the sequences length. It is reused consistently for each calculation.
     private Cost[] _window;
     //The cost of the previously calculated segments pairs.
     private real _costSum;
@@ -182,6 +182,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,)
   
   }  
 }
+
 /**
   Factory function for easy type inference of the construction parameters.
 */
