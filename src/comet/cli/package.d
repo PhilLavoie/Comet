@@ -1,7 +1,7 @@
 /**
   Convenience module for importing the cli package.
 */
-module comet.cli.all;
+module comet.cli;
 
 public import comet.cli.parser;
 public import comet.cli.arguments;

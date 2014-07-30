@@ -1,13 +1,14 @@
 /**
-  This module provide the formal definition for a parser. A parser is an object that is used
-  to retrieve tokens from the command line and convert them into a proper program type.
+  This module provides facilities to construct command line argument parsers: functions whose role is to convert strings into
+  types used by the program.
 */
 module comet.cli.parsers;
+
+import std.traits: Unqual, ParameterTypeTuple;
 
 import comet.cli.exceptions;
 import comet.cli.converters;
 
-import std.traits: Unqual, ParameterTypeTuple;
 
 /**
   This interface is for objects designed to parse arguments from the command line.

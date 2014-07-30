@@ -12,7 +12,7 @@ public import comet.typecons;
 public import std.stdio: File;
 public import std.typecons: Tuple, tuple;
 
-import comet.cli.all;
+import comet.cli;
 import comet.utils: fileName;
 
 import std.conv;

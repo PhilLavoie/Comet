@@ -10,7 +10,7 @@ Configuration.
 
 import comet.configs.metaconfig;
 
-import comet.cli.all: Parser, makeParser, DropFirst;
+import comet.cli: Parser, makeParser, DropFirst;
 
 alias RunTestsConfig = typeof( makeConfig() );
 

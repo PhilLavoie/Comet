@@ -17,7 +17,7 @@ private {
   import comet.configs.metaconfig;
   import comet.configs.probing;   
 
-  import comet.cli.all: Parser, makeParser, DropFirst;
+  import comet.cli: Parser, makeParser, DropFirst;
 
 
   alias StandardConfig = typeof( makeConfig() );
