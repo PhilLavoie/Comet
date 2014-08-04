@@ -11,6 +11,8 @@ import std.typecons: Nullable, Tuple;
 import std.conv: to;
 import std.exception: enforce;
 
+//TODO: add an exception type that works on position data.
+
 /**
   A node label is a pair containing the species identifier and the node's
   distance to parent.
@@ -23,7 +25,7 @@ alias Label = Tuple!(Nullable!string, "species", Nullable!double, "distance");
   An N-ary rooted tree extracted from a Newick file.
   The Newick format is described here: http://evolution.genetics.washington.edu/phylip/newicktree.html.  
   Every node in this tree has a species identifier and a distance to parent, both of which are optional.
-  A special case of distance to parent exist in the root node: when present, the distance is expected to be 0.    
+  A special case of distance to parent exist in the label node: when present, the distance is expected to be 0.    
   
   Notes:
     This structure was not meant to be constructed outside this module.
@@ -48,53 +50,17 @@ struct NewickTree
     ///Node Children.
     private Array!(Node*) _children;
     
-    @disable this();
-    
     private this(Label label)
     {
       _label = label;
     }
 
     public Label label() {return _label;}
+    public auto  children() {return _children;}
   }
   
-  ///The tree only keeps a reference to the root node.
-  private Node* _root = null;
- 
-  /**
-    Creates the root node with the given label.
-    Params:
-      label = The root label.
-    Returns:
-      The newly created root.
-  */
-  private Node* makeRoot(Label label)
-  in {
-    assert(_root is null);
-    assert(label.distance.isNull() || label.distance == 0, "expected the root distance to parent to be 0, but received " ~ to!string(label.distance));
-  } body {
-    _root = new Node(label);
-    return _root;
-  }
-  
-  /**
-    Creates a node with the given label and appends it to the one passed.
-    Params:
-      node = The node inheriting a new child.
-      label = The label used to create the new child.
-    Returns:
-      The newly created child.
-  */
-  private Node* appendChild(
-    Node* node,
-    Label label
-  ) in {
-    assert(node !is null);
-  } body {
-    auto child = new Node(label);
-    node._children.insertBack(child);
-    return child;
-  }
+  ///The tree only keeps a reference to the label node.
+  private Node* _root = null; 
   
   /**
     Returns:
@@ -238,8 +204,7 @@ private struct NewickRange(Input)
     /*
       Choices:
         - The tree is empty: ";"
-        - The tree has only a labeled root: "id:dist;"
-        - The root has children: "(...)id:dist;"
+        - The tree has a label
     */
     auto pos = _input.front();
     auto firstChar = pos.character;
@@ -250,18 +215,14 @@ private struct NewickRange(Input)
       assert(nt.empty);      
       _nt = nt;
     }
-    //Root node has children.
-    else if(firstChar == '(')
-    {
-     assert(false, "coucou");
-    }
-    //Tree just has a root.
+    //Tree has a root.
     else
     {
-      auto label = parseNodeLabel();
-      //TODO: Enforce root label distance here?
       auto nt = NewickTree();
-      nt.makeRoot(label);
+      nt._root = parseNode();
+      enforce(!_input.empty() && _input.front().character == ';', "missing tree terminator");
+      //Move to the next character.
+      _input.popFront();
       _nt = nt;
     }
     
@@ -271,39 +232,94 @@ private struct NewickRange(Input)
   import std.container: Array;
   private Array!Char _buffer;
   
-  private auto parseNode()
-  in
-  {
-    assert(!_input.empty);
-    assert(_input.front().character == '(');
-  }
-  body
-  {
-    auto start = _input.front();
+  /**
+    Consumes the input to parse the current node.
+    It will parse its children and its label (both are optional).
     
-    _input.popFront();
-    enforce(!_input.empty, "unclosed parenthesis at column: " ~ to!string(start.column) ~ " line: " ~ to!string(start.line));
-    
-    auto c = _input.front().character;
-    assert(false);    
+    Returns:
+      The parsed node. Always return a newly created node.
+  */
+  private NewickTree.Node* parseNode()
+  {
+    auto children = parseChildren();
+    auto label    = parseLabel();
+    auto node     = new NewickTree.Node();
+    node._children  = children;
+    node._label     = label;    
+    return node;
   }
   
-  private Label parseNodeLabel()
+  /**
+    Parses the children of the current node.
+    This function is mutually recursive with ($D parseNode).
+    The children list is enclosed in parentheses. 
+    Both the opening and the closing parentheses are consumed by this function.
+    
+    Returns:
+      The parsed children if any. Returns an empty collection otherwise.
+  */
+  private auto parseChildren()
+  {
+    typeof(NewickTree.Node._children) children;   //Will compile for any collection supporting insertBack.
+    if(_input.empty()) {return children;}
+    
+    auto c = _input.front().character;
+    //If the node as no children.
+    if(c != '(') {return children;}
+    
+    do 
+    {
+      //The input is either on '(' or ',' at this point.
+      _input.popFront();
+      //We don't expect the input to stop until we reach the closing parenthesis.
+      enforce(!_input.empty());
+      
+      auto child = parseNode();
+      enforce(!_input.empty());
+      children.insertBack(child);
+      
+      c = _input.front().character;      
+      if(c == ')') {break;}
+      
+      //This is not an error, we don't expect anything else but a ',' here. If that is not the case, then the parsing functions should be reviewed.
+      assert(c == ',', "expected ',' but found " ~ to!string(c)); 
+    } while(true);
+    
+    assert(c == ')', "expected ')' but found " ~ to!string(c));
+    //Consume the last parenthesis.
+    _input.popFront();  
+    
+    return children;
+  }
+  
+  private Label parseLabel()
   in 
   {
-    assert(!_input.empty);
+    //TODO: maybe remove this assertion and make it fault tolerant. It would be up to the caller
+    //to verify that the end character is one of those expected. Maybe create an array of special characters
+    //that will cause interuption of parsing.
     assert(_input.front().character != '(');
   }
   body 
   {
-    //Restart the buffer.
-    _buffer.length = 0;
+    auto parsedSpecies  = parseSpecies();
+    auto parsedDist     = parseDistance();        
+    return Label(parsedSpecies, parsedDist);
+  }
+  
+  private auto parseSpecies()
+  {    
     Nullable!string parsedSpecies;
     
+    if(_input.empty()) {return parsedSpecies;}
+    
+    //Restart the buffer.
+    _buffer.length = 0;
     //Get every character until ':', ',', '(', ')' or ';'.
     auto c = _input.front().character;
-    while(c != ':' && c != ';' && c != ',' && c != ')' && c != '(')
+    while(c != ':' && c != ';' && c != ',' && c != ')')
     {
+      enforce(c != '(', "encountered an opening parenthesis while parsing label");
       _buffer.insertBack(c);
       
       _input.popFront();
@@ -320,33 +336,41 @@ private struct NewickRange(Input)
       //TODO: review this solution when using ubyte arrays instead of strings.
       parsedSpecies = to!string(_buffer[]);
     }
-    
+    return parsedSpecies;  
+  }
+  
+  auto parseDistance()
+  body
+  {
     Nullable!double parsedDist;
-    //If the distance prefix is provided, than a distance MUST be provided.
-    if(c == ':')
+    
+    if(_input.empty()) {return parsedDist;}
+    
+    auto c = _input.front().character;
+    if(c != ':') {return parsedDist;}
+    
+    //If the distance prefix is provided, than a distance MUST be provided, so we expect at least one character.
+    _input.popFront();
+    enforce(!_input.empty, "unspecified distance to parents");
+    
+    c = _input.front().character;
+    
+    //Restart the buffer.
+    _buffer.length = 0;
+    while(c != ',' && c != ';' && c != ')')
     {
+      _buffer.insertBack(c);
+      
       _input.popFront();
-      enforce(!_input.empty, "unspecified distance to parents");
-      
-      c = _input.front().character;
-      
-      _buffer.length = 0;
-      while(c != ',' && c != ';' && c != ')')
+      if(_input.empty) 
       {
-        _buffer.insertBack(c);
-        
-        _input.popFront();
-        if(_input.empty) 
-        {
-          break;
-        }      
-        c = _input.front().character;
-      }
-      //TODO: same as above.
-      parsedDist = to!double(to!string(_buffer[]));
+        break;
+      }      
+      c = _input.front().character;
     }
-        
-    return Label(parsedSpecies, parsedDist);
+    //TODO: find another way around this?
+    parsedDist = to!double(to!string(_buffer[]));
+    return parsedDist;    
   }
 }
 
@@ -391,24 +415,98 @@ unittest
   //Empty tree.
   auto text   = ";";
   auto parser = parse(text);
+  assert(!parser.empty());
   auto tree   = parser.front();
   assert(tree.empty());
   
-  //Tree with one root and no distance.
+  //Tree with one label and no distance.
   auto text2  = "A;";
   parser      = parse(text2);
+  assert(!parser.empty());
   tree        = parser.front();
   assert(!tree.empty());
-  auto rootLabel  = tree._root.label();
-  assert(rootLabel.species == "A");
-  assert(rootLabel.distance.isNull);
+  auto label  = tree._root.label();
+  assert(label.species == "A");
+  assert(label.distance.isNull);
   
-  //Tree with one root and just the distance; 
+  //Tree with one label and just the distance; 
   auto text3  = ":0.0;";
   parser      = parse(text3);
+  assert(!parser.empty());
   tree        = parser.front();
   assert(!tree.empty());
-  rootLabel   = tree._root.label();
-  assert(rootLabel.species.isNull());
-  assert(rootLabel.distance == 0);
+  label       = tree._root.label();
+  assert(label.species.isNull());
+  assert(label.distance == 0);
+  
+  //Interesting correct trees.
+  auto text4  = "(,()A:0.1 ,B, :04)D;  (,    ,)\r\n;  ( A,B:0.4,:01,C,()):0.7;";
+  parser      = parse(text4);
+  
+  //First tree: (,()A:0.1,B,:04)D;
+  assert(!parser.empty());
+  tree        = parser.front();
+  assert(!tree.empty());
+  auto node   = tree._root;
+  label       = node._label;
+  assert(label.species == "D");
+  assert(label.distance.isNull());
+  //The root has 4 children.
+  auto children = node._children[];
+  import std.algorithm: count;
+  assert(count(children) == 4);  
+  //1st: empty child
+  label = children.front()._label;
+  assert(label.species.isNull());
+  assert(label.distance.isNull());
+  //2nd: ()A:0.1  
+  children.popFront();
+  node = children.front();
+  label = node._label;
+  assert(label.species == "A");
+  assert(label.distance == 0.1);
+  //()
+  auto nodeChildren = node._children[];
+  assert(count(nodeChildren) == 1);
+  label = nodeChildren.front()._label;
+  assert(label.species.isNull());
+  assert(label.distance.isNull());
+  //3rd: B
+  children.popFront();
+  node = children.front();
+  assert(count(node._children[]) == 0);
+  label = node._label;
+  assert(label.species == "B");
+  assert(label.distance.isNull());
+  //4th: :04
+  children.popFront();
+  node = children.front();
+  assert(count(node._children[]) == 0);
+  label = node._label;
+  assert(label.species.isNull());
+  assert(label.distance == 4);
+
+  //Second tree: (,,)
+  parser.popFront();
+  assert(!parser.empty());
+  tree        = parser.front();
+  assert(!tree.empty());
+  node        = tree._root;
+  children    = node._children[];
+  label       = node._label;
+  assert(count(children) == 3);
+  assert(label.species.isNull());
+  assert(label.distance.isNull());
+  import std.algorithm: map;
+  //Make sure all children have nullified fields.
+  foreach(child; children)
+  {
+    label = child._label;
+    assert(label.species.isNull());
+    assert(label.distance.isNull());
+  }
+  
+  //Third tree: (A,B:0.4,:01,C,()):0.7;
+  
+  //Cases that should fail.
 }
