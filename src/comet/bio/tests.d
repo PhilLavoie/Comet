@@ -1,5 +1,40 @@
 module comet.bio.tests;
 
+
+
+unittest
+{
+  import std.stdio: writeln;
+    
+  string s;
+  writeln("string index type ", typeof(s[0]).stringof);
+  
+  import std.range: ElementType;
+
+  writeln( 
+    "string: ", (ElementType!string).stringof, 
+    " wstring: ", (ElementType!wstring).stringof,
+    " dstring: ", (ElementType!dstring).stringof,
+  );
+  
+  import std.traits: isNarrowString;
+  writeln( 
+    "narrow string string? ", isNarrowString!string,
+    " narrow string wstring? ", isNarrowString!wstring,
+    " narrow string dstring? ", isNarrowString!dstring,
+  );
+}
+
+/+
+unittest
+{
+  import std.container: Array;
+  Array!(immutable(dchar)) array; //Does not compile
+}
++/
+
+
+/+
 unittest
 {
   ubyte x = 'c';
@@ -9,6 +44,7 @@ unittest
   writeln(typeof('t').stringof);
   
 }
++/
 
 /*
 unittest

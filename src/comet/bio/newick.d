@@ -229,8 +229,7 @@ private struct NewickRange(Input)
     return _nt;
   }
   
-  import std.container: Array;
-  private Array!Char _buffer;
+  private auto parseTree() {assert(false);}
   
   /**
     Consumes the input to parse the current node.
@@ -291,6 +290,9 @@ private struct NewickRange(Input)
     
     return children;
   }
+  
+  import std.container: Array;
+  private Array!Char _buffer;
   
   private Label parseLabel()
   in 
@@ -440,7 +442,7 @@ unittest
   assert(label.distance == 0);
   
   //Interesting correct trees.
-  auto text4  = "(,()A:0.1 ,B, :04)D;  (,    ,)\r\n;  ( A,B:0.4,:01,C,()):0.7;";
+  string text4  = "(,()A:0.1 ,B, :04)D;  (,    ,)\r\n;  ( A,(B1,:40.4,B3:0.5)B:0.4,:01,C,(,D1,(,,)D2:0.4,0:3)):0.7;";
   parser      = parse(text4);
   
   //First tree: (,()A:0.1,B,:04)D;
@@ -506,7 +508,123 @@ unittest
     assert(label.distance.isNull());
   }
   
-  //Third tree: (A,B:0.4,:01,C,()):0.7;
-  
-  //Cases that should fail.
+  //Third tree: ( A,(B1,:40.4,B3:0.5)B:0.4,:01,C,(,D1,(,,)D2:0.4,0:3)):0.7;
+  parser.popFront();
+  //TODO: fix this assert(parser.empty()); //We don't expect any more trees.
+  tree = parser.front();
+  assert(!tree.empty());
+  //( A,(B1,:40.4,B3:0.5)B:0.4,:01,C,(,D1,(,,)D2:0.4,0:3)):0.7
+  node      = tree._root;
+  children  = node._children[];
+  label     = node._label;
+  assert(count(children) == 5);
+  assert(label.species.isNull());
+  assert(label.distance == 0.7);
+  //A
+  node          = children.front();
+  nodeChildren  = node._children[];
+  label         = node._label;
+  assert(count(nodeChildren) == 0);
+  assert(label.species == "A");
+  assert(label.distance.isNull());  
+  //(B1,:40.4,B3:0.5)B:0.4
+  children.popFront();
+  node          = children.front();
+  nodeChildren  = node._children[];
+  label         = node._label;
+  assert(count(nodeChildren) == 3);
+  assert(label.species == "B");
+  assert(label.distance == 0.4);  
+    //B1
+    auto child               = nodeChildren.front();
+    auto childChildren  = child._children[];
+    label               = child._label;
+    assert(count(childChildren) == 0);
+    assert(label.species == "B1");
+    assert(label.distance.isNull());    
+    //:40.4
+    nodeChildren.popFront();
+    child          = nodeChildren.front();
+    childChildren  = child._children[];
+    label          = child._label;
+    assert(count(childChildren) == 0);
+    assert(label.species.isNull());
+    assert(label.distance == 40.4);        
+    //B3:0.5
+    nodeChildren.popFront();
+    child          = nodeChildren.front();
+    childChildren  = child._children[];
+    label          = child._label;
+    assert(count(childChildren) == 0);
+    assert(label.species == "B3");
+    assert(label.distance == 0.5);        
+  //:01
+  children.popFront();
+  node          = children.front();
+  nodeChildren  = node._children[];
+  label         = node._label;
+  assert(count(nodeChildren) == 0);
+  assert(label.species.isNull());
+  assert(label.distance == 1);
+  //C
+  children.popFront();
+  node          = children.front();
+  nodeChildren  = node._children[];
+  label         = node._label;
+  assert(count(nodeChildren) == 0);
+  assert(label.species == "C");
+  assert(label.distance.isNull());
+  //(,D1,(,,)D2:0.4,0:3)
+  children.popFront();
+  node          = children.front();
+  nodeChildren  = node._children[];
+  label         = node._label;
+  assert(count(nodeChildren) == 4);
+  assert(label.species.isNull());
+  assert(label.distance.isNull());
+    //empty
+    child          = nodeChildren.front();
+    childChildren  = child._children[];
+    label          = child._label;
+    assert(count(childChildren) == 0);
+    assert(label.species.isNull());
+    assert(label.distance.isNull());    
+    //D1
+    nodeChildren.popFront();
+    child          = nodeChildren.front();
+    childChildren  = child._children[];
+    label          = child._label;
+    assert(count(childChildren) == 0);
+    assert(label.species == "D1");
+    assert(label.distance.isNull());    
+    //(,,)D2:0.4
+    nodeChildren.popFront();
+    child          = nodeChildren.front();
+    childChildren  = child._children[];
+    label          = child._label;
+    assert(count(childChildren) == 3);
+    assert(label.species == "D2");
+    assert(label.distance == 0.4);    
+      foreach(childChild; childChildren)
+      {
+        label = childChild._label;
+        assert(label.species.isNull());
+        assert(label.distance.isNull());
+      }
+    //0:3
+    nodeChildren.popFront();
+    child          = nodeChildren.front();
+    childChildren  = child._children[];
+    label          = child._label;
+    assert(count(childChildren) == 0);
+    assert(label.species == "0");
+    assert(label.distance == 3);      
+}
+
+//Test the reading of a file.
+
+//Cases that should fail.
+unittest 
+{
+
 }
