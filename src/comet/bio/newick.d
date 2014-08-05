@@ -11,7 +11,149 @@ import std.typecons: Nullable, Tuple;
 import std.conv: to;
 import std.exception: enforce;
 
-//TODO: add an exception type that works on position data.
+/**
+  Small utiliy function constructing a standard string to report
+  the position of a character or input location.
+  
+  Examples:
+    ---
+    "found this weird character " ~ atPos(position) ~ "..."; //Notice the space before the call and the absence of preposition.
+    ---
+    
+  Returns:
+    Uniformly constructed position string.
+*/
+private string atPos(Char)(PositionData!Char pd)
+{
+  return "at line: " ~ to!string(pd.line) ~ " and column: " ~ to!string(pd.column);
+}
+
+/**
+  Thrown when an error occurs during parsing.
+*/
+class NewickException: Exception {
+  private this(string msg)
+  {
+    super(msg);
+  }
+}
+
+/**
+  Thrown when expecting a ';' at the end of a tree specification.
+*/
+class MissingTreeTerminator: NewickException
+{
+  ///Call this when the end of input is reached before ';'.
+  private this(Char)(PositionData!Char treeStart)
+  {
+    super(
+      "reached the end of input before finding tree terminator ';' for tree starting " ~ atPos(treeStart)      
+    );  
+  }
+  
+  ///Call this when some other invalid character is found instead of ';'.
+  private this(Char)(PositionData!Char treeStart, PositionData!Char wrongChar)
+  in
+  {
+    assert(wrongChar.character != ';');
+  }
+  body
+  {
+    super(
+      "found '" ~ to!string(wrongChar.character) ~ "' " ~ atPos(wrongChar)
+      ~ " when expecting tree terminator ';' for tree starting " ~ atPos(treeStart)
+    );  
+  }
+}
+
+/**
+  This is thrown when the end of input is reached before finding a matching closing
+  parenthesis.
+*/
+class MissingClosingParen: NewickException
+{
+  ///Call this with the position of the opening parenthesis that could not be matched.
+  private this(Char)(PositionData!Char openParen)
+  in
+  {
+    assert(openParen.character == '(');
+  }
+  body
+  {
+    super( 
+      "reached end of input before finding the closing parenthesis"
+      ~ " for '" ~ to!string(openParen.character) ~ "' " ~ atPos(openParen)
+    );
+  }
+}
+
+/**
+  This is a more general exception that is thrown when expecting a specific
+  character bug finding another.
+*/ 
+class UnexpectedCharacter: NewickException
+{
+  private this(Char1, Char2)(Char1 expected, PositionData!Char2 found)
+  in
+  {
+    assert(expected != found.character);
+  }
+  body
+  {
+    super(
+      "expecting a '" ~ to!string(expected) 
+      ~ "' but found '" ~ to!string(found.character) 
+      ~ ", " ~ atPos(found)
+    );
+  }
+}
+
+/**
+  When the distance prefix ':' is found, than the user must absolutely provide the distance.
+  If he fails to do so, this exception is thrown.
+*/
+class MissingDistance: NewickException
+{
+  private this(Char)(PositionData!Char colonPos)
+  in
+  {
+    assert(colonPos.character == ':');
+  }
+  body
+  {
+    super(
+      "found distance prefix ';' " ~ atPos(colonPos)
+      ~ " but reached end of input before distance was specified"
+    );
+  }
+}
+
+/**
+  The distance is a floating number. If the provided distance cannot be converted,
+  than this is thrown.
+*/
+class DistanceParseError: NewickException
+{
+  private this(Char)(PositionData!Char distanceStart, string distance)
+  {
+    super(
+      "unable to parse distance: " ~ distance ~ " " ~ atPos(distanceStart)
+    );
+  }
+
+}
+
+///For error messaging purposes: we keep track of line and column for every character.
+private struct PositionData(Char)
+{
+  Char character;
+  int line;
+  int column;
+  string toString()
+  {
+    return "{'" ~ to!string(this.character) ~ "'," ~ to!string(this.line) ~ "," ~ to!string(this.column) ~ "}";
+  }
+}
 
 /**
   A node label is a pair containing the species identifier and the node's
@@ -69,17 +211,7 @@ struct NewickTree
   public bool empty() {return _root is null;}
 }
 
-///For error messaging purposes: we keep track of line and column for every character.
-private struct PositionData(Char)
-{
-  Char character;
-  int line;
-  int column;
-  string toString()
-  {
-    return "{'" ~ to!string(this.character) ~ "'," ~ to!string(this.line) ~ "," ~ to!string(this.column) ~ "}";
-  }
-}
+
 
 /**
   Augments the user input to keep track of character positions, in order
@@ -265,7 +397,8 @@ private struct NewickRange(Input)
         - The tree is empty: ";"
         - The tree has a root.
     */
-    auto firstChar = _input.front().character;    
+    auto treeStart = _input.front();
+    auto firstChar = treeStart.character;    
     //Empty
     if(firstChar == ';')
     {
@@ -276,7 +409,9 @@ private struct NewickRange(Input)
     {
       nt._root = parseNode();
       //Makes sure the character read is the tree terminator.
-      enforce(!_input.empty() && _input.front().character == ';', "missing tree terminator");
+      enforce(!_input.empty(), new MissingTreeTerminator(treeStart));
+      auto currentPos = _input.front();
+      enforce(currentPos.character == ';', new MissingTreeTerminator(treeStart, currentPos));
       //Move to the next character.
       _input.popFront();
     }
@@ -318,26 +453,29 @@ private struct NewickRange(Input)
     typeof(NewickTree.Node._children) children;   //Will compile for any collection supporting insertBack.
     if(_input.empty()) {return children;}
     
-    auto c = _input.front().character;
+    auto current = _input.front();
+    auto c = current.character;
     //If the node as no children.
     if(c != '(') {return children;}
+    
+    auto openParen = current;
     
     do 
     {
       //The input is either on '(' or ',' at this point.
       _input.popFront();
       //We don't expect the input to stop until we reach the closing parenthesis.
-      enforce(!_input.empty());
+      enforce(!_input.empty(), new MissingClosingParen(openParen));
       
       auto child = parseNode();
-      enforce(!_input.empty());
+      enforce(!_input.empty(), new MissingClosingParen(openParen));
       children.insertBack(child);
       
-      c = _input.front().character;      
+      current = _input.front();
+      c = current.character;      
       if(c == ')') {break;}
       
-      //This is not an error, we don't expect anything else but a ',' here. If that is not the case, then the parsing functions should be reviewed.
-      assert(c == ',', "expected ',' but found " ~ to!string(c)); 
+      enforce(c == ',', new UnexpectedCharacter(',', current)); 
     } while(true);
     
     assert(c == ')', "expected ')' but found " ~ to!string(c));
@@ -347,16 +485,26 @@ private struct NewickRange(Input)
     return children;
   }
   
+  /**
+    Both parseSpecies and parseDistance use a buffer to store the read characters.
+    In order to reuse previously allocated space, both functions use this buffer.
+    It has to be reset before every use (length = 0).
+  */
   import std.container: Array;
   private Array!Char _buffer;
   
+  /**
+    Parses the node label, which is comprised of a species and distance to parent,
+    formatted as such: [species][:dist]. Both fields are optional.
+    Returns:
+      The parsed label. The fields that are found are accordingly parsed and set,
+      the ones that aren't are left uninitialized.
+  */
+  //It expects parseChildren() to be called before.
   private Label parseLabel()
   in 
   {
-    //TODO: maybe remove this assertion and make it fault tolerant. It would be up to the caller
-    //to verify that the end character is one of those expected. Maybe create an array of special characters
-    //that will cause interuption of parsing.
-    assert(_input.front().character != '(');
+    assert(_input.front().character != '(');  //This case should have been fully taken care by parseChildren().
   }
   body 
   {
@@ -365,6 +513,10 @@ private struct NewickRange(Input)
     return Label(parsedSpecies, parsedDist);
   }
   
+  /**
+    Parse the species identifier.
+  */
+  //Expects to be called from parseLabel().
   private auto parseSpecies()
   {    
     Nullable!string parsedSpecies;
@@ -375,9 +527,8 @@ private struct NewickRange(Input)
     _buffer.length = 0;
     //Get every character until ':', ',', '(', ')' or ';'.
     auto c = _input.front().character;
-    while(c != ':' && c != ';' && c != ',' && c != ')')
+    while(c != ':' && c != ';' && c != ',' && c != '(' && c != ')' )
     {
-      enforce(c != '(', "encountered an opening parenthesis while parsing label");
       _buffer.insertBack(c);
       
       _input.popFront();
@@ -391,12 +542,22 @@ private struct NewickRange(Input)
     //If we have at least a character in the buffer, then it is the identifier.
     if(_buffer.length)
     {
-      //TODO: review this solution when using ubyte arrays instead of strings.
       parsedSpecies = to!string(_buffer[]);
     }
     return parsedSpecies;  
   }
   
+  /**
+    This function parses the distance to parent.
+    It expects that distance to start with ':'. If this character is not at the 
+    start of the input at the moment of the call, than this function parse nothing.
+    Otherwise, it will try and parse the distance until it reaches a
+    special character.
+    
+    Returns:
+      The parsed distance, possibly uninitialized.
+  */
+  //expects to be called right after parseSpecies()
   auto parseDistance()
   body
   {
@@ -404,18 +565,21 @@ private struct NewickRange(Input)
     
     if(_input.empty()) {return parsedDist;}
     
-    auto c = _input.front().character;
+    auto current = _input.front();
+    auto c = current.character;
     if(c != ':') {return parsedDist;}
     
+    auto colonPos = current;
     //If the distance prefix is provided, than a distance MUST be provided, so we expect at least one character.
     _input.popFront();
-    enforce(!_input.empty, "unspecified distance to parents");
+    enforce(!_input.empty, new MissingDistance(colonPos));
     
-    c = _input.front().character;
+    auto distanceStart = _input.front();
+    c = distanceStart.character;
     
     //Restart the buffer.
     _buffer.length = 0;
-    while(c != ',' && c != ';' && c != ')')
+    while(c != ':' && c != ';' && c != ',' && c != '(' && c != ')' )
     {
       _buffer.insertBack(c);
       
@@ -426,15 +590,26 @@ private struct NewickRange(Input)
       }      
       c = _input.front().character;
     }
-    //TODO: find another way around this?
-    parsedDist = to!double(to!string(_buffer[]));
+    
+    //Reinforce that we read at least one character.
+    enforce(_buffer.length, new MissingDistance(colonPos));
+    //Could use "parse" instead of "to" to save some heap.
+    auto bufferStr = to!string(_buffer[]);
+    try 
+    {      
+      parsedDist = to!double(bufferStr);
+    } 
+    catch(Exception e)
+    {
+      throw new DistanceParseError(distanceStart, bufferStr);
+    }
     return parsedDist;    
   }
 }
 
 /**
   Checks that the type is at least an input range and that its elements are comparable
-  against characters.
+  against characters (char).
 */
 private template isCharRange(T)
 {
@@ -458,10 +633,14 @@ private template isCharRange(T)
 }
 
 /**
-  This function returns a range extracting the parsed trees sequentially using the Newick
-  format.
+  This function returns a range extracting the parsed trees sequentially assuming the input is in the Newick
+  format. This is the core function of this module.
+  
   Params:
     input = The input range concerning the text to parse (must be a character input range).
+    
+  Returns:
+    A range that lazily parses Newick trees.
 */
 auto parse(Input)(Input input) if(isCharRange!Input)
 {
@@ -681,8 +860,6 @@ unittest
 }
 
 //Test the reading of a file.
-
-//Cases that should fail.
 unittest 
 {
 
