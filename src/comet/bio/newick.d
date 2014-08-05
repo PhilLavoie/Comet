@@ -176,14 +176,22 @@ unittest
   This range lazily parses an input and converts it to Newick trees.
   If an error occurs during parsing the user should stop using this range and restart with a new one.
   
-  The input is expected to be in ascii standard.
+  The input is expected to follow ascii or utf-8 standard.
 */
 private struct NewickRange(Input)
 {
   private alias Char = ElementType!Input;
-
+  
+  ///The input from which the trees are extracted.
+  //It is assumed that the input will not have white spaces.
   private typeof(augment(Input.init)) _input;
+  /**
+    A boolean indicating if the last operation was a pop, as opposed to a front peek.
+    It is used to enforce consistency between calls to front() and popFront(), since we only intend
+    to read the input once.
+  */
   private bool _popped = true;
+  ///A cached newick tree, since we only want to read the input once.
   private NewickTree _nt;
   
   this(Input input)
@@ -192,48 +200,96 @@ private struct NewickRange(Input)
     _input = augment(input);
   }
 
-  bool empty() {return _input.empty;}
-  void popFront() {_popped = true;}        
+  /*
+    Will never return true if the last operation was not popFront().
+  */
+  bool empty() {
+    if(_popped) 
+    {
+      return _input.empty;
+    }
+    else
+    {
+      return false;
+    }
+  }
   
-  auto front() {
+  /*
+    If popFront() is called before front(), or if popFront() is called in sequence, then popFront() will
+    skip trees. Otherwise, if it's called once after front(), then it does nothing but set the popped boolean to true.
+  */
+  void popFront() 
+  {
+    if(_popped)
+    {
+      //Skip a tree.
+      parseTree();
+    } 
+    else
+    {
+      _popped = true;
+    }
+  }        
+  
+  /*
+    If the last operation was a pop, then we parse a tree where the input is currently located a cache it.
+    If the last operation was a front, then we simply return the cached tree.
+    Sets the popped boolean to false.
+  */
+  NewickTree front() {
     //If the user recalls front without popFront, then simply return the cached result.
     if(!_popped) {return _nt;}
-    //Ensures proper behavior if user does not call popFront.
+    //Resets the popping flag.
     scope(exit) {_popped = false;}
+    
+    _nt = parseTree();
+    return _nt;    
+  }
+  
+  /**
+    Parses a tree following the Newick format.
+    Consumes every character of the tree up to, and including, the final ';'.
+    
+    This function will throw on input error.
+    
+    Returns:
+      The parsed Newick tree.
+  */
+  private NewickTree parseTree() 
+  {
+    //The returned tree.
+    NewickTree nt = NewickTree();
     
     /*
       Choices:
         - The tree is empty: ";"
-        - The tree has a label
+        - The tree has a root.
     */
-    auto pos = _input.front();
-    auto firstChar = pos.character;
+    auto firstChar = _input.front().character;    
     //Empty
     if(firstChar == ';')
     {
-      auto nt = NewickTree();
       assert(nt.empty);      
-      _nt = nt;
     }
     //Tree has a root.
     else
     {
-      auto nt = NewickTree();
       nt._root = parseNode();
+      //Makes sure the character read is the tree terminator.
       enforce(!_input.empty() && _input.front().character == ';', "missing tree terminator");
       //Move to the next character.
       _input.popFront();
-      _nt = nt;
     }
     
-    return _nt;
+    return nt;
   }
-  
-  private auto parseTree() {assert(false);}
   
   /**
     Consumes the input to parse the current node.
     It will parse its children and its label (both are optional).
+    
+    This function consumes all the input concerning the node
+    inclusively.
     
     Returns:
       The parsed node. Always return a newly created node.
@@ -510,7 +566,7 @@ unittest
   
   //Third tree: ( A,(B1,:40.4,B3:0.5)B:0.4,:01,C,(,D1,(,,)D2:0.4,0:3)):0.7;
   parser.popFront();
-  //TODO: fix this assert(parser.empty()); //We don't expect any more trees.
+  assert(!parser.empty()); 
   tree = parser.front();
   assert(!tree.empty());
   //( A,(B1,:40.4,B3:0.5)B:0.4,:01,C,(,D1,(,,)D2:0.4,0:3)):0.7
@@ -619,6 +675,9 @@ unittest
     assert(count(childChildren) == 0);
     assert(label.species == "0");
     assert(label.distance == 3);      
+    
+    parser.popFront();
+    assert(parser.empty());
 }
 
 //Test the reading of a file.
