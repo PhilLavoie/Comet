@@ -2,6 +2,10 @@
   Module offering facilities for parsing a newick file format.
   The Newick format is used to define phylogeny trees, see
   http://evolution.genetics.washington.edu/phylip/newicktree.html.  
+  
+  In addition, this module adds the following:
+    - white spaces are completely ignored, where ever they may be;
+    - the distance to parent specifier can be of any format supported by std.conv: to,parse.
 */
 module comet.bio.newick;
 
@@ -10,6 +14,7 @@ import std.array: empty, front, popFront;
 import std.typecons: Nullable, Tuple;
 import std.conv: to;
 import std.exception: enforce;
+import std.stdio: File;
 
 /**
   Small utiliy function constructing a standard string to report
@@ -197,8 +202,10 @@ struct NewickTree
       _label = label;
     }
 
-    public Label label() {return _label;}
-    public auto  children() {return _children;}
+    public auto species() {return _label.species;}
+    public auto distanceToParent() {return _label.distance;}
+    public alias distance = distanceToParent;
+    public auto children() {return _children[];}
   }
   
   ///The tree only keeps a reference to the label node.
@@ -209,9 +216,21 @@ struct NewickTree
       Whether or not the tree is empty.
   */
   public bool empty() {return _root is null;}
+  
+  /**
+    Returns:
+      The root node. Should not be called on empty tree.
+  */
+  public auto root() 
+  in
+  {
+    assert(!this.empty());
+  }
+  body
+  {
+    return _root;
+  }
 }
-
-
 
 /**
   Augments the user input to keep track of character positions, in order
@@ -516,7 +535,7 @@ private struct NewickRange(Input)
   /**
     Parse the species identifier.
   */
-  //Expects to be called from parseLabel().
+  //Expects to be called from parseLabel.
   private auto parseSpecies()
   {    
     Nullable!string parsedSpecies;
@@ -594,6 +613,8 @@ private struct NewickRange(Input)
     //Reinforce that we read at least one character.
     enforce(_buffer.length, new MissingDistance(colonPos));
     //Could use "parse" instead of "to" to save some heap.
+    //TODO: this is a bug when Char is ubyte because it does not 
+    //convert to a string per say, rather a string representation of a ubyte array.
     auto bufferStr = to!string(_buffer[]);
     try 
     {      
@@ -646,6 +667,48 @@ auto parse(Input)(Input input) if(isCharRange!Input)
 {
   return NewickRange!Input(input);
 }
+///Utility overload.
+auto parse(F)(F file) if(is(F == File))
+{
+  enum chunkSize = 4096; //4kb
+  /**
+    ByChar range wrapper around files.
+    Used to conveniently convert a file into a char range.
+  */
+  static struct ByChar {
+    typeof(File.byChunk(chunkSize)) _chunks;
+    typeof(_chunks.front())         _current;
+    
+    this(File file) 
+    {
+      _chunks = file.byChunk(chunkSize);
+      if(!_chunks.empty())
+      {
+        _current = _chunks.front();
+      }
+    }
+    
+    char front() 
+    {
+      return _current.front();
+    }
+    
+    void popFront() {
+      _current.popFront();
+      if(_current.empty())
+      {
+        _chunks.popFront();
+        if(!_chunks.empty())
+        {
+          _current = _chunks.front();
+        } 
+      }
+    }
+    bool empty() {return _current.empty();}  
+  }
+  
+  return parse(ByChar(file));
+}
 
 unittest 
 {
@@ -662,7 +725,7 @@ unittest
   assert(!parser.empty());
   tree        = parser.front();
   assert(!tree.empty());
-  auto label  = tree._root.label();
+  auto label  = tree._root._label;
   assert(label.species == "A");
   assert(label.distance.isNull);
   
@@ -672,7 +735,7 @@ unittest
   assert(!parser.empty());
   tree        = parser.front();
   assert(!tree.empty());
-  label       = tree._root.label();
+  label       = tree._root._label;
   assert(label.species.isNull());
   assert(label.distance == 0);
   
@@ -859,8 +922,142 @@ unittest
     assert(parser.empty());
 }
 
+/+
+void test(NewickTree.Node* node, Nullable!string expectedS, Nullable!double expectedD, size_t expectedCC, size_t line = __LINE__)
+{
+  scope(failure)
+  {
+    import std.conv: to;
+    import std.stdio: writeln;
+    writeln("test node called at line: " ~ to!string(line));
+  }
+  
+  if(expectedS.isNull())
+  {
+    assert(node.species.isNull());
+  }
+  else
+  {
+    assert(node.species == expectedS);
+  }
+  
+  if(expectedD.isNull())
+  {
+    assert(node.distance.isNull());
+  }
+  else
+  {
+    assert(node.distance == expectedD);
+  }
+  
+  import std.algorithm: count;
+  assert(count(node.children()) == expectedCC);    
+}
++/
+
+version(unittest)
+{
+  void test(S,D)(NewickTree.Node* node, in S expectedS, in D expectedD, in size_t expectedCC, in size_t line = __LINE__)
+  {
+    import std.conv: to;
+    import std.stdio: writeln;
+    scope(failure)
+    {
+      writeln("test node called at line: " ~ to!string(line));
+    }
+    static if(is(S == Nullable!string))
+    {
+      if(expectedS.isNull())
+      {
+        assert(node.species.isNull());
+      }
+      else
+      {
+        assert(node.species == expectedS);
+      }
+    }
+    else
+    {
+      static assert(is(S == string));
+      assert(node.species == expectedS);
+    }
+    
+    static if(is(D == Nullable!double))
+    {
+      if(expectedD.isNull())
+      {
+        assert(node.distance.isNull());
+      }
+      else
+      {
+        assert(node.distance == expectedD);
+      }
+    }
+    else
+    {
+      static assert(is(D == double));
+      assert(node.distance == expectedD);
+    }
+    
+    import std.algorithm: count;
+    assert(count(node.children()) == expectedCC);    
+  }
+}
+
 //Test the reading of a file.
 unittest 
 {
-
+  string someTree = "(1:0.1,(2,3):0.5,4:0.2)5;";
+    
+  import std.stdio: File;
+  
+  auto tempFile = File.tmpfile();
+  scope(exit)
+  {
+    tempFile.close();  
+  }
+  
+  tempFile.write(someTree);
+  tempFile.rewind();
+   
+  auto parser = parse(tempFile);
+  
+  //(1:0.1,(2,3):0.5,4:0.2)5;
+  import std.algorithm: count;
+  
+  Nullable!string nullSpecies; //Don't modify.
+  Nullable!double nullDistance;
+  
+  assert(!parser.empty());
+  auto tree     = parser.front();
+  auto node     = tree.root();
+  auto children = node.children();
+  assert(node.species == "5");
+  assert(node.distance.isNull());
+  assert(count(children) == 3);
+    //1:0.1
+    auto child         = children.front();
+    auto childChildren = child.children();
+    assert(child.species == "1");
+    assert(child.distance == 0.1);
+    assert(count(childChildren) == 0);
+    //(2,3):0.5
+    children.popFront();
+    child         = children.front();
+    childChildren = child.children();
+    assert(child.species.isNull());
+    assert(child.distance == 0.5);
+    assert(count(childChildren) == 2);
+      //2
+      childChildren.front().test("2", nullDistance, 0);
+      //3
+      childChildren.popFront();
+      childChildren.front().test("3", nullDistance, 0);
+    //4:0.2
+    children.popFront();
+    children.front().test("4", 0.2, 0);
+    
+  //Make sure there is no more trees.
+  parser.popFront();
+  assert(parser.empty());   
 }
