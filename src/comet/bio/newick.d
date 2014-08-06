@@ -348,7 +348,7 @@ private immutable char[] specialCharacters = ['(', ')', ',', ':', ';'];
   - parseLabel (which is divided into parseSpecies and parseDistance)
   
   Parsing functions usually check for special characters, which are: 
-    - Children list boundaries: '(' and ')'
+    - Children list delimiter: '(' and ')'
     - Children list separator: ','
     - Distance prefix: ':'
     - The tree terminator: ';'
@@ -458,34 +458,39 @@ private struct NewickRange(Input)
       The parsed Newick tree.
   */
   private NewickTree parseTree() 
+  in
+  {
+    assert(!_input.empty());
+  }
+  body
   {
     //The returned tree.
     NewickTree nt = NewickTree();
     
-    /*
-      Choices:
-        - The tree is empty: ";"
-        - The tree has a root.
-    */
     auto treeStart = _input.front();
     auto firstChar = treeStart.character;    
-    //Empty
+    
+    //Empty tree.
     if(firstChar == ';')
     {
-      assert(nt.empty);      
-    }
-    //Tree has a root.
-    else
-    {
-      nt._root = parseNode();
-      //Makes sure the character read is the tree terminator.
-      enforce(!_input.empty(), new TreeTerminatorException(treeStart));
-      auto currentPos = _input.front();
-      enforce(currentPos.character == ';', new TreeTerminatorException(treeStart, currentPos));
-      //Move to the next character.
-      _input.popFront();
+      assert(nt.empty());
+
+      //Consumes the tree terminator.
+      _input.popFront();    
+      return nt;
     }
     
+    //Tree is not empty.    
+    nt._root = parseNode();      
+    
+    //Makes sure the character read is the tree terminator.
+    enforce(!_input.empty(), new TreeTerminatorException(treeStart));
+    auto currentPos = _input.front();
+    enforce(currentPos.character == ';', new TreeTerminatorException(treeStart, currentPos));      
+    
+    //Move to the next character.
+    assert(!nt.empty());
+    _input.popFront();    
     return nt;
   }
   
@@ -1103,13 +1108,32 @@ unittest
   assert(parser.empty());   
 }
 
+//Range testing.
+unittest
+{
+  auto newick = "(,,,,); ;;;; (a,b,c)d:0.0;";
+  import std.algorithm: count;
+  assert(count(parse(newick)) == 6);
+  
+  auto range = parse(newick);
+  range.popFront();
+  range.front(); 
+  range.front(); 
+  range.front(); 
+  range.front();
+  range.popFront(); 
+  range.popFront();
+  //3 should remain.
+  assert(count(range) == 3);
+}
+
 //Testing failures.
 unittest
 {
   import std.exception: assertThrown;
   
-  auto malformed1 = "(a,b,c)\n(,)"; //Missing last semicolons
-  auto parser = parse(malformed1);
+  auto malformed = "(a,b,c)\n(,)"; //Missing semicolons
+  auto parser = parse(malformed);
   
   import std.container: Array;
   Array!NewickTree trees;
@@ -1117,8 +1141,32 @@ unittest
   assertThrown!(TreeTerminatorException)(trees.insertBack(parser));
   trees.clear();  //Clear the array every time, to make sure no garbage is in.
 
-  auto malformed2 = "(toto); (tata,();"; //Missing a matching parenthesis.
-  parser = parse(malformed2);
-  assertThrown!(ChildrenParsingException)(trees.insertBack(parser));
+  malformed = "(a,(),c)toto(:0.3;"; //Special character found in species.
+  assertThrown!(TreeTerminatorException)(trees.insertBack(parser));
+  trees.clear();
   
+  malformed = "(toto); (tata,()"; //Missing a matching parenthesis (end of input)
+  parser = parse(malformed);
+  assertThrown!(ChildrenParsingException)(trees.insertBack(parser));
+  trees.clear();
+  
+  malformed = ";;;;(a,b()())"; //Found a children list delimiter before separator or end of current children list.
+  parser = parse(malformed);
+  assertThrown!(ChildrenParsingException)(trees.insertBack(parser));
+  trees.clear();  
+  
+  malformed = "a:01234toto;"; //Invalid distance.
+  parser = parse(malformed);
+  assertThrown!(DistanceParsingException)(trees.insertBack(parser));
+  trees.clear();  
+  
+  malformed = "(a,b,c,:          );"; //Missing distance.
+  parser = parse(malformed);
+  assertThrown!(DistanceParsingException)(trees.insertBack(parser));
+  trees.clear();  
+  
+  malformed = ";;toto:"; //Missing distance.
+  parser = parse(malformed);
+  assertThrown!(DistanceParsingException)(trees.insertBack(parser));
+  trees.clear();  
 }
