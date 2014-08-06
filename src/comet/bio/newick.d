@@ -17,156 +17,13 @@ import std.exception: enforce;
 import std.stdio: File;
 
 /**
-  Small utiliy function constructing a standard string to report
-  the position of a character or input location.
-  
-  Examples:
-    ---
-    "found this weird character " ~ atPos(position) ~ "..."; //Notice the space before the call and the absence of preposition.
-    ---
-    
-  Returns:
-    Uniformly constructed position string.
-*/
-private string atPos(Char)(PositionData!Char pd)
-{
-  return "at line: " ~ to!string(pd.line) ~ " and column: " ~ to!string(pd.column);
-}
-
-/**
-  Thrown when an error occurs during parsing.
-*/
-class NewickException: Exception {
-  private this(string msg)
-  {
-    super(msg);
-  }
-}
-
-/**
-  Thrown when expecting a ';' at the end of a tree specification.
-*/
-class MissingTreeTerminator: NewickException
-{
-  ///Call this when the end of input is reached before ';'.
-  private this(Char)(PositionData!Char treeStart)
-  {
-    super(
-      "reached the end of input before finding tree terminator ';' for tree starting " ~ atPos(treeStart)      
-    );  
-  }
-  
-  ///Call this when some other invalid character is found instead of ';'.
-  private this(Char)(PositionData!Char treeStart, PositionData!Char wrongChar)
-  in
-  {
-    assert(wrongChar.character != ';');
-  }
-  body
-  {
-    super(
-      "found '" ~ to!string(wrongChar.character) ~ "' " ~ atPos(wrongChar)
-      ~ " when expecting tree terminator ';' for tree starting " ~ atPos(treeStart)
-    );  
-  }
-}
-
-/**
-  This is thrown when the end of input is reached before finding a matching closing
-  parenthesis.
-*/
-class MissingClosingParen: NewickException
-{
-  ///Call this with the position of the opening parenthesis that could not be matched.
-  private this(Char)(PositionData!Char openParen)
-  in
-  {
-    assert(openParen.character == '(');
-  }
-  body
-  {
-    super( 
-      "reached end of input before finding the closing parenthesis"
-      ~ " for '" ~ to!string(openParen.character) ~ "' " ~ atPos(openParen)
-    );
-  }
-}
-
-/**
-  This is a more general exception that is thrown when expecting a specific
-  character bug finding another.
-*/ 
-class UnexpectedCharacter: NewickException
-{
-  private this(Char1, Char2)(Char1 expected, PositionData!Char2 found)
-  in
-  {
-    assert(expected != found.character);
-  }
-  body
-  {
-    super(
-      "expecting a '" ~ to!string(expected) 
-      ~ "' but found '" ~ to!string(found.character) 
-      ~ ", " ~ atPos(found)
-    );
-  }
-}
-
-/**
-  When the distance prefix ':' is found, than the user must absolutely provide the distance.
-  If he fails to do so, this exception is thrown.
-*/
-class MissingDistance: NewickException
-{
-  private this(Char)(PositionData!Char colonPos)
-  in
-  {
-    assert(colonPos.character == ':');
-  }
-  body
-  {
-    super(
-      "found distance prefix ';' " ~ atPos(colonPos)
-      ~ " but reached end of input before distance was specified"
-    );
-  }
-}
-
-/**
-  The distance is a floating number. If the provided distance cannot be converted,
-  than this is thrown.
-*/
-class DistanceParseError: NewickException
-{
-  private this(Char)(PositionData!Char distanceStart, string distance)
-  {
-    super(
-      "unable to parse distance: " ~ distance ~ " " ~ atPos(distanceStart)
-    );
-  }
-
-}
-
-///For error messaging purposes: we keep track of line and column for every character.
-private struct PositionData(Char)
-{
-  Char character;
-  int line;
-  int column;
-  string toString()
-  {
-    return "{'" ~ to!string(this.character) ~ "'," ~ to!string(this.line) ~ "," ~ to!string(this.column) ~ "}";
-  }
-}
-
-/**
   A node label is a pair containing the species identifier and the node's
   distance to parent.
   In the Newick format, it is written as such: "[species][:distance]".
   Both are optional.
 */
-alias Label = Tuple!(Nullable!string, "species", Nullable!double, "distance");
+private alias Label = Tuple!(Nullable!string, "species", Nullable!double, "distance");
+
 
 /**
   An N-ary rooted tree extracted from a Newick file.
@@ -222,6 +79,7 @@ struct NewickTree
     Returns:
       The root node. Should not be called on empty tree.
   */
+  //TODO: consider making the pointer const too. Will require a rewrite of the unit tests.
   public const(Node)* root() const
   in
   {
@@ -235,12 +93,154 @@ struct NewickTree
   /**
     It's ok to reassign a const tree to another.
   */
+  //TODO: it's not necessary, just convenient. Removing this will require either
+  //a rewrite of the unit tests.
   void opAssign(in NewickTree rhs) const
   {
     auto noConstRoot = cast(Node**)(&(this._root));
     *noConstRoot = cast(Node*)rhs._root;
   }
 }
+
+
+
+/**
+  Small utiliy function constructing a standard string to report
+  the position of a character or input location.
+  
+  Examples:
+    ---
+    "found this weird character " ~ atPos(position) ~ "..."; //Notice the space before the call and the absence of preposition.
+    ---
+    
+  Returns:
+    Uniformly constructed position string.
+*/
+private string atPos(Char)(PositionData!Char pd)
+{
+  return "at line: " ~ to!string(pd.line) ~ " and column: " ~ to!string(pd.column);
+}
+
+/**
+  Thrown when an error occurs during parsing.
+  This is the root of the parsing exceptions hierarchy.
+*/
+class NewickException: Exception {
+  private this(string msg)
+  {
+    super(msg);
+  }
+}
+
+/**
+  Thrown when expecting a ';' at the end of a tree specification.
+*/
+class TreeTerminatorException: NewickException
+{
+  ///Call this when the end of input is reached before ';'.
+  private this(Char)(PositionData!Char treeStart)
+  {
+    super(
+      "reached the end of input before finding tree terminator ';' for tree starting " ~ atPos(treeStart)      
+    );  
+  }
+  
+  ///Call this when some other invalid character is found instead of ';'.
+  private this(Char)(PositionData!Char treeStart, PositionData!Char wrongChar)
+  in
+  {
+    assert(wrongChar.character != ';');
+  }
+  body
+  {
+    super(
+      "found '" ~ to!string(wrongChar.character) ~ "' " ~ atPos(wrongChar)
+      ~ " when expecting tree terminator ';' for tree starting " ~ atPos(treeStart)
+    );  
+  }
+}
+
+/**
+  This is thrown when a matching closing parenthesis could not be found or
+  when an unexpected special character is found during the parsing of the children.
+*/
+class ChildrenParsingException: NewickException
+{
+  ///Call this with the position of the opening parenthesis that could not be matched.
+  private this(Char)(PositionData!Char openParen)
+  in
+  {
+    assert(openParen.character == '(');
+  }
+  body
+  {
+    super( 
+      "reached end of input before finding the closing parenthesis"
+      ~ " for '" ~ to!string(openParen.character) ~ "' " ~ atPos(openParen)
+    );
+  }
+  
+  ///Call this when an unexpected character is found.
+  private this(Char)(PositionData!Char openParen, PositionData!Char unexpectedChar)
+  in
+  {
+    assert(openParen.character == '(');
+    assert(unexpectedChar.character != ')' && unexpectedChar.character != ',');
+  }
+  body
+  {
+    super(
+      "expected either ',' or ')' but found '" ~ to!string(unexpectedChar.character) ~ "' " ~ atPos(unexpectedChar)
+      ~ " while parsing children beginning " ~ atPos(openParen)
+    );
+  }
+}
+
+/**
+  When the distance prefix ':' is found, than the user must absolutely provide the distance.
+  If either no meaningful distance was provided or if there was an error trying to
+  convert it to a number, this is thrown.
+*/
+class DistanceParsingException: NewickException
+{
+  ///Call this when no meaningful character could be read at all.
+  private this(Char)(PositionData!Char colonPos)
+  in
+  {
+    assert(colonPos.character == ':');
+  }
+  body
+  {
+    super(
+      "found distance prefix ';' " ~ atPos(colonPos)
+      ~ " but no meaningful distance was provided"
+    );
+  }
+  ///Call this when characters could be read, but they couldn't be converted into
+  ///a number.
+  private this(Char)(PositionData!Char distanceStart, string distance)
+  {
+    super(
+      "unable to parse distance: " ~ distance ~ " " ~ atPos(distanceStart)
+    );
+  }
+}
+
+
+///For error messaging purposes: we keep track of line and column for every character.
+private struct PositionData(Char)
+{
+  Char character;
+  int line;
+  int column;
+  string toString()
+  {
+    return "{'" ~ to!string(this.character) ~ "'," ~ to!string(this.line) ~ "," ~ to!string(this.column) ~ "}";
+  }
+}
+
+
+
 
 /**
   Augments the user input to keep track of character positions, in order
@@ -332,12 +332,51 @@ unittest
   }
 }
   
+private immutable char[] specialCharacters = ['(', ')', ',', ':', ';'];
 
 /**
-  This range lazily parses an input and converts it to Newick trees.
-  If an error occurs during parsing the user should stop using this range and restart with a new one.
+  Lazily parses an input in Newick format and converts it to trees.
   
-  The input is expected to follow ascii or utf-8 standard.
+  If an error occurs during parsing the user should stop using this range and restart with a new one.
+  This range throws on parsing error.
+*/
+/*
+  Parsing functions here are divided into 4 (6):
+  - parseTree
+  - parseNode
+  - parseChildren
+  - parseLabel (which is divided into parseSpecies and parseDistance)
+  
+  Parsing functions usually check for special characters, which are: 
+    - Children list boundaries: '(' and ')'
+    - Children list separator: ','
+    - Distance prefix: ':'
+    - The tree terminator: ';'
+  
+  parseTree calls parseNode for the root and consumes and enforces that the last character is
+  the tree terminator ';'
+  
+  parseNode calls parseChildren and parseLabel and construct the resulting node.
+  
+  parseChildren effectively do anything only if the children list start '(' is the first character
+  read. It will then consume every character until the closing matching parenthesis.
+  It calls parseNode for every child encountered, which are separated by a ','.
+  If the first character after those consume by parseNode is neither '(' or ',', then an exception is thrown.
+  
+  parseLabel is divided in two: parseSpecies and parseDistance. parseSpecies will consume the
+  input and stop on any special character. It will then return the parsed species string, possibly null.
+  
+  parseDistance consumes input iff the first character is the distance prefix ':'. Otherwise it immediately
+  returns a null distance. In the case ':' is found, it will consume the
+  input until it reaches a special character. It will then attempt to convert the
+  read input into a real number. An exception is thrown if it fails or if no character could be read
+  after the ':'.
+  
+  Hence, there are three places where an error can occur:
+    - At the end of a tree parsing, where a ';' is expected;
+    - During the parsing of children, where the only special characters expected are ',' and ')' and when a
+      closing parenthesis is mandatory;
+    - When attempting to convert the distance read or when the prefix is provided but no distance.
 */
 private struct NewickRange(Input)
 {
@@ -397,7 +436,9 @@ private struct NewickRange(Input)
     If the last operation was a front, then we simply return the cached tree.
     Sets the popped boolean to false.
   */
-  const(NewickTree) front() {
+  //Removed the constness of the returned tree to support the buggy array: std.container.Array that fails to compile when T
+  //is const/immutable.
+  NewickTree front() {
     //If the user recalls front without popFront, then simply return the cached result.
     if(!_popped) {return _nt;}
     //Resets the popping flag.
@@ -438,9 +479,9 @@ private struct NewickRange(Input)
     {
       nt._root = parseNode();
       //Makes sure the character read is the tree terminator.
-      enforce(!_input.empty(), new MissingTreeTerminator(treeStart));
+      enforce(!_input.empty(), new TreeTerminatorException(treeStart));
       auto currentPos = _input.front();
-      enforce(currentPos.character == ';', new MissingTreeTerminator(treeStart, currentPos));
+      enforce(currentPos.character == ';', new TreeTerminatorException(treeStart, currentPos));
       //Move to the next character.
       _input.popFront();
     }
@@ -494,17 +535,17 @@ private struct NewickRange(Input)
       //The input is either on '(' or ',' at this point.
       _input.popFront();
       //We don't expect the input to stop until we reach the closing parenthesis.
-      enforce(!_input.empty(), new MissingClosingParen(openParen));
+      enforce(!_input.empty(), new ChildrenParsingException(openParen));
       
       auto child = parseNode();
-      enforce(!_input.empty(), new MissingClosingParen(openParen));
+      enforce(!_input.empty(), new ChildrenParsingException(openParen));
       children.insertBack(child);
       
       current = _input.front();
       c = current.character;      
       if(c == ')') {break;}
       
-      enforce(c == ',', new UnexpectedCharacter(',', current)); 
+      enforce(c == ',', new ChildrenParsingException(openParen, current)); 
     } while(true);
     
     assert(c == ')', "expected ')' but found " ~ to!string(c));
@@ -525,16 +566,13 @@ private struct NewickRange(Input)
   /**
     Parses the node label, which is comprised of a species and distance to parent,
     formatted as such: [species][:dist]. Both fields are optional.
+    
     Returns:
       The parsed label. The fields that are found are accordingly parsed and set,
       the ones that aren't are left uninitialized.
   */
   //It expects parseChildren() to be called before.
-  private Label parseLabel()
-  in 
-  {
-    assert(_input.front().character != '(');  //This case should have been fully taken care by parseChildren().
-  }
+  private Label parseLabel()  
   body 
   {
     auto parsedSpecies  = parseSpecies();
@@ -544,6 +582,12 @@ private struct NewickRange(Input)
   
   /**
     Parse the species identifier.
+    
+    The consumed input until the end or the first special character is considered
+    the species identifier.
+    
+    Returns:
+      The parsed species identifier.
   */
   //Expects to be called from parseLabel.
   private auto parseSpecies()
@@ -554,9 +598,11 @@ private struct NewickRange(Input)
     
     //Restart the buffer.
     _buffer.length = 0;
-    //Get every character until ':', ',', '(', ')' or ';'.
+    //Get every character until any special characters.
     auto c = _input.front().character;
-    while(c != ':' && c != ';' && c != ',' && c != '(' && c != ')' )
+    
+    import std.algorithm: canFind;
+    while(!specialCharacters.canFind(c))
     {
       _buffer.insertBack(c);
       
@@ -578,10 +624,11 @@ private struct NewickRange(Input)
   
   /**
     This function parses the distance to parent.
+    
     It expects that distance to start with ':'. If this character is not at the 
-    start of the input at the moment of the call, than this function parse nothing.
+    start of the input at the moment of the call, than this function parses nothing.
     Otherwise, it will try and parse the distance until it reaches a
-    special character.
+    special character or the end of input.
     
     Returns:
       The parsed distance, possibly uninitialized.
@@ -601,14 +648,16 @@ private struct NewickRange(Input)
     auto colonPos = current;
     //If the distance prefix is provided, than a distance MUST be provided, so we expect at least one character.
     _input.popFront();
-    enforce(!_input.empty, new MissingDistance(colonPos));
+    enforce(!_input.empty, new DistanceParsingException(colonPos));
     
     auto distanceStart = _input.front();
     c = distanceStart.character;
     
     //Restart the buffer.
     _buffer.length = 0;
-    while(c != ':' && c != ';' && c != ',' && c != '(' && c != ')' )
+    
+    import std.algorithm: canFind;
+    while(!specialCharacters.canFind(c))
     {
       _buffer.insertBack(c);
       
@@ -621,7 +670,7 @@ private struct NewickRange(Input)
     }
     
     //Reinforce that we read at least one character.
-    enforce(_buffer.length, new MissingDistance(colonPos));
+    enforce(_buffer.length, new DistanceParsingException(colonPos));
     //Could use "parse" instead of "to" to save some heap.
     //TODO: this is a bug when Char is ubyte because it does not 
     //convert to a string per say, rather a string representation of a ubyte array.
@@ -632,7 +681,7 @@ private struct NewickRange(Input)
     } 
     catch(Exception e)
     {
-      throw new DistanceParseError(distanceStart, bufferStr);
+      throw new DistanceParsingException(distanceStart, bufferStr);
     }
     return parsedDist;    
   }
@@ -722,6 +771,9 @@ auto parse(F)(F file) if(is(F == File))
 
 unittest 
 {
+  //TODO: eventually rewrite those tests to use "test" for nodes instead of
+  //manual assertions.
+  
   //Sentinels for null based comparisons.
   const Nullable!string nullSpecies; 
   const Nullable!double nullDistance;
@@ -915,20 +967,45 @@ unittest
 
 version(unittest)
 {
+  /**
+    This function is provided while unit testing to standardize and reuse code for node testing.
+    Provide this function with the tested node and its expected species, distance to parent and children count.
+    This function will assert that the observed ones all match the expected ones.
+    Nullable arguments can be safely called with their unwrapped version.
+    
+    Examples:
+      ---
+      auto myNode = ...; //Parsed with the label "Species:1.0" and expecting 4 children.
+      myNode.test("Species", 1.0, 4);
+      
+      //Or with the nullable versions.
+      Nullable!string expectedS = "Species";
+      Nullable!double expectedD = 1.0;
+      myNode.test(expectedD, expectedD, 4);
+      
+      auto myNode2 = ...; //No label, no children.
+      myNodes.test(Nullable!string.init, Nullable!double.init, 0);      
+      ---
+  */
   private void test(S,D)(in NewickTree.Node* node, in S expectedS, in D expectedD, in size_t expectedCC, in size_t line = __LINE__)
   {
     import std.conv: to;
     import std.stdio: writeln;
+    
+    //Report where test was called on failure.
     scope(failure)
     {
       writeln("test node failed at line: " ~ to!string(line));
     }
+    
     static if(is(S == Nullable!string))
     {
+      //When not expecting a species.
       if(expectedS.isNull())
       {
         assert(node.species.isNull());
       }
+      //When expecting one.
       else
       {
         assert(!node.species.isNull());
@@ -937,6 +1014,7 @@ version(unittest)
     }
     else
     {
+      //User provides an explicit species, therefore one is expected.
       static assert(is(S == string));
       assert(!node.species.isNull());
       assert(node.species == expectedS);
@@ -944,10 +1022,12 @@ version(unittest)
     
     static if(is(D == Nullable!double))
     {
+      //When no distance is expected.
       if(expectedD.isNull())
       {
         assert(node.distance.isNull());
       }
+      //When one is.
       else
       {
         assert(!node.distance.isNull());
@@ -956,6 +1036,7 @@ version(unittest)
     }
     else
     {
+      //The user provided an explicit distance, so one is expected.
       import std.traits: isImplicitlyConvertible;
       static assert(isImplicitlyConvertible!(D, double));
       
@@ -963,6 +1044,7 @@ version(unittest)
       assert(node.distance == expectedD);
     }
     
+    //Compares the children count.
     import std.algorithm: count;    
     assert(count(node.children()) == expectedCC);    
   }
@@ -971,6 +1053,10 @@ version(unittest)
 //Test the reading of a file.
 unittest 
 {
+  //Comparison sentinels.
+  const Nullable!string nullSpecies; 
+  const Nullable!double nullDistance;
+  
   string someTree = "(1:0.1,(2,3):0.5,4:0.2)5;";
     
   import std.stdio: File;
@@ -989,29 +1075,20 @@ unittest
   //(1:0.1,(2,3):0.5,4:0.2)5;
   import std.algorithm: count;
   
-  Nullable!string nullSpecies; //Don't modify.
-  Nullable!double nullDistance;
-  
   assert(!parser.empty());
   auto tree     = parser.front();
-  auto node     = tree._root;
+  auto node     = tree.root();
   auto children = node.children();
-  assert(node.species == "5");
-  assert(node.distance.isNull());
-  assert(count(children) == 3);
+  node.test("5", nullDistance, 3);
     //1:0.1
     auto child         = children.front();
     auto childChildren = child.children();
-    assert(child.species == "1");
-    assert(child.distance == 0.1);
-    assert(count(childChildren) == 0);
+    child.test("1", 0.1, 0);
     //(2,3):0.5
     children.popFront();
-    child         = children.front();
+    child = children.front();
     childChildren = child.children();
-    assert(child.species.isNull());
-    assert(child.distance == 0.5);
-    assert(count(childChildren) == 2);
+    child.test(nullSpecies, 0.5, 2);
       //2
       childChildren.front().test("2", nullDistance, 0);
       //3
@@ -1024,4 +1101,24 @@ unittest
   //Make sure there is no more trees.
   parser.popFront();
   assert(parser.empty());   
+}
+
+//Testing failures.
+unittest
+{
+  import std.exception: assertThrown;
+  
+  auto malformed1 = "(a,b,c)\n(,)"; //Missing last semicolons
+  auto parser = parse(malformed1);
+  
+  import std.container: Array;
+  Array!NewickTree trees;
+  
+  assertThrown!(TreeTerminatorException)(trees.insertBack(parser));
+  trees.clear();  //Clear the array every time, to make sure no garbage is in.
+
+  auto malformed2 = "(toto); (tata,();"; //Missing a matching parenthesis.
+  parser = parse(malformed2);
+  assertThrown!(ChildrenParsingException)(trees.insertBack(parser));
+  
 }
