@@ -192,6 +192,7 @@ struct NewickTree
   {
     ///Node label.
     private Label _label;
+    private Label label() const {return cast(Label)_label;}
     
     import std.container: Array;   
     ///Node Children.
@@ -202,10 +203,10 @@ struct NewickTree
       _label = label;
     }
 
-    public auto species() {return _label.species;}
-    public auto distanceToParent() {return _label.distance;}
+    public auto species() const {return _label.species;}
+    public auto distanceToParent() const {return _label.distance;}
     public alias distance = distanceToParent;
-    public auto children() {return _children[];}
+    public auto children() const {return (cast(Array!(Node*))_children)[];}
   }
   
   ///The tree only keeps a reference to the label node.
@@ -215,20 +216,29 @@ struct NewickTree
     Returns:
       Whether or not the tree is empty.
   */
-  public bool empty() {return _root is null;}
+  public bool empty() const {return _root is null;}
   
   /**
     Returns:
       The root node. Should not be called on empty tree.
   */
-  public auto root() 
+  public const(Node)* root() const
   in
   {
     assert(!this.empty());
   }
   body
   {
-    return _root;
+    return cast(const(Node)*)_root;
+  }
+  
+  /**
+    It's ok to reassign a const tree to another.
+  */
+  void opAssign(in NewickTree rhs) const
+  {
+    auto noConstRoot = cast(Node**)(&(this._root));
+    *noConstRoot = cast(Node*)rhs._root;
   }
 }
 
@@ -387,7 +397,7 @@ private struct NewickRange(Input)
     If the last operation was a front, then we simply return the cached tree.
     Sets the popped boolean to false.
   */
-  NewickTree front() {
+  const(NewickTree) front() {
     //If the user recalls front without popFront, then simply return the cached result.
     if(!_popped) {return _nt;}
     //Resets the popping flag.
@@ -712,6 +722,10 @@ auto parse(F)(F file) if(is(F == File))
 
 unittest 
 {
+  //Sentinels for null based comparisons.
+  const Nullable!string nullSpecies; 
+  const Nullable!double nullDistance;
+
   //Empty tree.
   auto text   = ";";
   auto parser = parse(text);
@@ -725,7 +739,7 @@ unittest
   assert(!parser.empty());
   tree        = parser.front();
   assert(!tree.empty());
-  auto label  = tree._root._label;
+  auto label  = tree.root().label();
   assert(label.species == "A");
   assert(label.distance.isNull);
   
@@ -735,7 +749,7 @@ unittest
   assert(!parser.empty());
   tree        = parser.front();
   assert(!tree.empty());
-  label       = tree._root._label;
+  label       = tree.root().label();
   assert(label.species.isNull());
   assert(label.distance == 0);
   
@@ -747,42 +761,42 @@ unittest
   assert(!parser.empty());
   tree        = parser.front();
   assert(!tree.empty());
-  auto node   = tree._root;
-  label       = node._label;
+  auto node   = tree.root();
+  label       = node.label();
   assert(label.species == "D");
   assert(label.distance.isNull());
   //The root has 4 children.
-  auto children = node._children[];
+  auto children = node.children();
   import std.algorithm: count;
   assert(count(children) == 4);  
   //1st: empty child
-  label = children.front()._label;
+  label = children.front().label();
   assert(label.species.isNull());
   assert(label.distance.isNull());
   //2nd: ()A:0.1  
   children.popFront();
   node = children.front();
-  label = node._label;
+  label = node.label();
   assert(label.species == "A");
   assert(label.distance == 0.1);
   //()
-  auto nodeChildren = node._children[];
+  auto nodeChildren = node.children();
   assert(count(nodeChildren) == 1);
-  label = nodeChildren.front()._label;
+  label = nodeChildren.front().label();
   assert(label.species.isNull());
   assert(label.distance.isNull());
   //3rd: B
   children.popFront();
   node = children.front();
-  assert(count(node._children[]) == 0);
-  label = node._label;
+  assert(count(node.children()) == 0);
+  label = node.label();
   assert(label.species == "B");
   assert(label.distance.isNull());
   //4th: :04
   children.popFront();
   node = children.front();
-  assert(count(node._children[]) == 0);
-  label = node._label;
+  assert(count(node.children()) == 0);
+  label = node.label();
   assert(label.species.isNull());
   assert(label.distance == 4);
 
@@ -791,9 +805,9 @@ unittest
   assert(!parser.empty());
   tree        = parser.front();
   assert(!tree.empty());
-  node        = tree._root;
-  children    = node._children[];
-  label       = node._label;
+  node        = tree.root();
+  children    = node.children();
+  label       = node.label();
   assert(count(children) == 3);
   assert(label.species.isNull());
   assert(label.distance.isNull());
@@ -801,7 +815,7 @@ unittest
   //Make sure all children have nullified fields.
   foreach(child; children)
   {
-    label = child._label;
+    label = child.label();
     assert(label.species.isNull());
     assert(label.distance.isNull());
   }
@@ -812,158 +826,102 @@ unittest
   tree = parser.front();
   assert(!tree.empty());
   //( A,(B1,:40.4,B3:0.5)B:0.4,:01,C,(,D1,(,,)D2:0.4,0:3)):0.7
-  node      = tree._root;
-  children  = node._children[];
-  label     = node._label;
+  node      = tree.root();
+  children  = node.children();
+  label     = node.label();
   assert(count(children) == 5);
   assert(label.species.isNull());
   assert(label.distance == 0.7);
   //A
   node          = children.front();
-  nodeChildren  = node._children[];
-  label         = node._label;
+  nodeChildren  = node.children();
+  label         = node.label();
   assert(count(nodeChildren) == 0);
   assert(label.species == "A");
   assert(label.distance.isNull());  
   //(B1,:40.4,B3:0.5)B:0.4
   children.popFront();
   node          = children.front();
-  nodeChildren  = node._children[];
-  label         = node._label;
+  nodeChildren  = node.children();
+  label         = node.label();
   assert(count(nodeChildren) == 3);
   assert(label.species == "B");
   assert(label.distance == 0.4);  
     //B1
     auto child               = nodeChildren.front();
-    auto childChildren  = child._children[];
-    label               = child._label;
+    auto childChildren  = child.children();
+    label               = child.label();
     assert(count(childChildren) == 0);
     assert(label.species == "B1");
     assert(label.distance.isNull());    
     //:40.4
     nodeChildren.popFront();
     child          = nodeChildren.front();
-    childChildren  = child._children[];
-    label          = child._label;
+    childChildren  = child.children();
+    label          = child.label();
     assert(count(childChildren) == 0);
     assert(label.species.isNull());
     assert(label.distance == 40.4);        
     //B3:0.5
     nodeChildren.popFront();
     child          = nodeChildren.front();
-    childChildren  = child._children[];
-    label          = child._label;
+    childChildren  = child.children();
+    label          = child.label();
     assert(count(childChildren) == 0);
     assert(label.species == "B3");
     assert(label.distance == 0.5);        
   //:01
   children.popFront();
   node          = children.front();
-  nodeChildren  = node._children[];
-  label         = node._label;
+  nodeChildren  = node.children();
+  label         = node.label();
   assert(count(nodeChildren) == 0);
   assert(label.species.isNull());
   assert(label.distance == 1);
   //C
   children.popFront();
   node          = children.front();
-  nodeChildren  = node._children[];
-  label         = node._label;
+  nodeChildren  = node.children();
+  label         = node.label();
   assert(count(nodeChildren) == 0);
   assert(label.species == "C");
   assert(label.distance.isNull());
   //(,D1,(,,)D2:0.4,0:3)
   children.popFront();
   node          = children.front();
-  nodeChildren  = node._children[];
-  label         = node._label;
-  assert(count(nodeChildren) == 4);
-  assert(label.species.isNull());
-  assert(label.distance.isNull());
+  nodeChildren  = node.children();
+  node.test(nullSpecies, nullDistance, 4);
     //empty
-    child          = nodeChildren.front();
-    childChildren  = child._children[];
-    label          = child._label;
-    assert(count(childChildren) == 0);
-    assert(label.species.isNull());
-    assert(label.distance.isNull());    
+    nodeChildren.front().test(nullSpecies, nullDistance, 0);
     //D1
     nodeChildren.popFront();
-    child          = nodeChildren.front();
-    childChildren  = child._children[];
-    label          = child._label;
-    assert(count(childChildren) == 0);
-    assert(label.species == "D1");
-    assert(label.distance.isNull());    
+    nodeChildren.front().test("D1", nullDistance, 0);
     //(,,)D2:0.4
     nodeChildren.popFront();
     child          = nodeChildren.front();
-    childChildren  = child._children[];
-    label          = child._label;
-    assert(count(childChildren) == 3);
-    assert(label.species == "D2");
-    assert(label.distance == 0.4);    
-      foreach(childChild; childChildren)
+    child.test("D2", 0.4, 3);
+      foreach(childChild; child.children())
       {
-        label = childChild._label;
-        assert(label.species.isNull());
-        assert(label.distance.isNull());
+        childChild.test(nullSpecies, nullDistance, 0);
       }
     //0:3
     nodeChildren.popFront();
-    child          = nodeChildren.front();
-    childChildren  = child._children[];
-    label          = child._label;
-    assert(count(childChildren) == 0);
-    assert(label.species == "0");
-    assert(label.distance == 3);      
-    
-    parser.popFront();
-    assert(parser.empty());
-}
+    nodeChildren.front().test("0", 3, 0);
 
-/+
-void test(NewickTree.Node* node, Nullable!string expectedS, Nullable!double expectedD, size_t expectedCC, size_t line = __LINE__)
-{
-  scope(failure)
-  {
-    import std.conv: to;
-    import std.stdio: writeln;
-    writeln("test node called at line: " ~ to!string(line));
-  }
-  
-  if(expectedS.isNull())
-  {
-    assert(node.species.isNull());
-  }
-  else
-  {
-    assert(node.species == expectedS);
-  }
-  
-  if(expectedD.isNull())
-  {
-    assert(node.distance.isNull());
-  }
-  else
-  {
-    assert(node.distance == expectedD);
-  }
-  
-  import std.algorithm: count;
-  assert(count(node.children()) == expectedCC);    
+  //No more trees expected.
+  parser.popFront();
+  assert(parser.empty());
 }
-+/
 
 version(unittest)
 {
-  void test(S,D)(NewickTree.Node* node, in S expectedS, in D expectedD, in size_t expectedCC, in size_t line = __LINE__)
+  private void test(S,D)(in NewickTree.Node* node, in S expectedS, in D expectedD, in size_t expectedCC, in size_t line = __LINE__)
   {
     import std.conv: to;
     import std.stdio: writeln;
     scope(failure)
     {
-      writeln("test node called at line: " ~ to!string(line));
+      writeln("test node failed at line: " ~ to!string(line));
     }
     static if(is(S == Nullable!string))
     {
@@ -973,12 +931,14 @@ version(unittest)
       }
       else
       {
+        assert(!node.species.isNull());
         assert(node.species == expectedS);
       }
     }
     else
     {
       static assert(is(S == string));
+      assert(!node.species.isNull());
       assert(node.species == expectedS);
     }
     
@@ -990,16 +950,20 @@ version(unittest)
       }
       else
       {
+        assert(!node.distance.isNull());
         assert(node.distance == expectedD);
       }
     }
     else
     {
-      static assert(is(D == double));
+      import std.traits: isImplicitlyConvertible;
+      static assert(isImplicitlyConvertible!(D, double));
+      
+      assert(!node.distance.isNull());
       assert(node.distance == expectedD);
     }
     
-    import std.algorithm: count;
+    import std.algorithm: count;    
     assert(count(node.children()) == expectedCC);    
   }
 }
@@ -1030,7 +994,7 @@ unittest
   
   assert(!parser.empty());
   auto tree     = parser.front();
-  auto node     = tree.root();
+  auto node     = tree._root;
   auto children = node.children();
   assert(node.species == "5");
   assert(node.distance.isNull());

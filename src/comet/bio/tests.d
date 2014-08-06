@@ -1,6 +1,39 @@
 module comet.bio.tests;
 
 
+/+
+  Find why this does not compile. It seems to be something related to the scope failure using imports...
+void test(NewickTree.Node* node, Nullable!string expectedS, Nullable!double expectedD, size_t expectedCC, size_t line = __LINE__)
+{
+  scope(failure)
+  {
+    import std.conv: to;
+    import std.stdio: writeln;
+    writeln("test node called at line: " ~ to!string(line));
+  }
+  
+  if(expectedS.isNull())
+  {
+    assert(node.species.isNull());
+  }
+  else
+  {
+    assert(node.species == expectedS);
+  }
+  
+  if(expectedD.isNull())
+  {
+    assert(node.distance.isNull());
+  }
+  else
+  {
+    assert(node.distance == expectedD);
+  }
+  
+  import std.algorithm: count;
+  assert(count(node.children()) == expectedCC);    
+}
++/
 
 unittest
 {
