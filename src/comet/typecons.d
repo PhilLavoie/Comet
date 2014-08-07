@@ -9,10 +9,10 @@ import std.typecons;
   The notation "_<visbility>" is used because it is easy to remember.    
 */
 enum Visibility: string {
-  _public = "public",
-  _private = "private", 
-  _package = "package",
-  _protected = "protected"
+  public_ = "public",
+  private_ = "private", 
+  package_ = "package",
+  protected_ = "protected"
 }
 
 
@@ -22,7 +22,7 @@ enum Visibility: string {
   
   It enforces that the given symbol name starts with "_".
 */
-mixin template getter( alias var, Visibility vis = Visibility._public ) {
+mixin template getter( alias var, Visibility vis = Visibility.public_ ) {
   
   import comet.traits: identifier;
   
@@ -38,12 +38,21 @@ mixin template getter( alias var, Visibility vis = Visibility._public ) {
   Useful for creating new types to avoid confusion while passing parameters.
 */
 mixin template SizeT( string structName, size_t min = size_t.min, size_t max = size_t.max, size_t init = min ) {  
+  static assert(min <= max);
+  static assert(min <= init);
+  static assert(init <= max);
+  
+  import std.string: toLower;
+  
   mixin( 
     "struct " ~ structName ~ " {
-      private size_t _value = min;
+      private size_t _value = init;
       public mixin Proxy!_value;  
-      public @property auto value() { return _value; }
       
+      public @property auto value() { return _value; }
+   
+      alias value this;
+   
       private this( size_t value ) {
         
         _value = value;
@@ -73,18 +82,36 @@ mixin template SizeT( string structName, size_t min = size_t.min, size_t max = s
       }
       
       invariant() {
+        import std.conv: to;
         
-        assert( min <= _value, \"min: \" ~ min.to!string() ~ \" !<= value: \" ~ _value.to!string() );
-        assert( _value <= max, \"max: \" ~ max.to!string() ~ \" !>= value: \" ~ _value.to!string() );
-        
+        assert( min <= _value, \"min: \" ~ min.to!string() ~ \" > value: \" ~ _value.to!string() );
+        assert( _value <= max, \"max: \" ~ max.to!string() ~ \" < value: \" ~ _value.to!string() );        
       }
         
     }
+    /**
+      Factory function.
+    */
     auto " ~ toLower( structName[ 0 .. 1 ] )  ~ structName[ 1 .. $ ] ~ "( T... )( T args ) {
     
       return " ~ structName ~ "( args );
     
     }"
   );
+}
+
+unittest
+{
+  mixin SizeT!("Toto", 0, 10);
+  
+  Toto myToto;
+  myToto = 4;
+  assert(myToto == 4);
+  myToto = 0;
+  assert(myToto == 0);
+  myToto = 10;
+  assert(myToto == 10);
+  int x = myToto;
+  assert(x == 10);
 }
 
