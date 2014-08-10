@@ -21,9 +21,14 @@ public:
     }
     return _root; 
   }
-  @property auto root() { return _root; }
-  @property bool empty() { return _root is null; }
-  void clear() { _root = null; }
+  
+  @property Node* root() {return _root;}
+  @property const(Node) * root() const {return _root;}
+  
+  @property bool empty() const {return _root is null;}
+  
+  void clear() {_root = null;}
+  
   Node * appendChild( Node * node, T element = T.init ) {
     auto childNode = new Node( node, element );
     node.appendChild( childNode );
@@ -66,47 +71,58 @@ public:
       _next = null;
     }
     
-    bool hasPrevious() { return _previous !is null; }
-    bool hasNext() { return _next !is null; }
-    void appendChild( Node * newChild ) {
-      if( !hasChildren() ) {
+    bool hasPrevious() const {return _previous !is null;}
+    bool hasNext() const {return _next !is null;}
+    void appendChild(Node * newChild) 
+    {
+      if(!hasChildren()) 
+      {
         _firstChild = newChild;
-      } else {
+      } 
+      else 
+      {
         _lastChild._next = newChild;
         newChild._previous = _lastChild;
       }
       _lastChild = newChild;
     }
-    @property Node * deepestFirstChild() {
+    
+    @property Node* deepestFirstChild() {
       auto n = &this;
-      while( n.hasChildren() ) { n = n._firstChild; }
+      while(n.hasChildren()) {n = n._firstChild;}
       return n;
     }
         
   public:
-    @property bool hasChildren() { return _firstChild !is null; }
-    @property ref T element() { return _element; }
-    @property void element( T el ) { _element = el; }
-    @property ChildrenRange children() { return ChildrenRange( &this ); }    
+    @property bool hasChildren() const { return _firstChild !is null; }
+    @property auto ref element() {return _element;}
+    @property auto ref element() const {return _element;}
+    @property void element(T el) { _element = el; }
+    @property auto children() { return ChildrenRange!(Node*)(&this); }    
+    @property auto children() const { return ChildrenRange!(const(Node)*)(&this); }    
   }
   
   /**
   
   */
-  struct ChildrenRange {
+  struct ChildrenRange(N) {
   private:
     Node * _first;
     Node * _last;
     
-    this( Node * parent ) {
+    this(Node * parent) {
       _first = parent._firstChild;
       _last = parent._lastChild;
     }
+    this(const Node * parent)
+    {
+      this(cast(Node*) parent);
+    }
     
   public:
-    @property bool empty() { return _first is null; }
-    @property Node * front() { return _first; }
-    void popFront() { _first = _first._next; }
+    @property bool empty() {return _first is null;}
+    @property N front() {return _first;}
+    void popFront() {_first = _first._next;}
   }
   
   struct LeavesRange {

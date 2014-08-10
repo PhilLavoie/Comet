@@ -156,7 +156,7 @@ void printTimeCompilation( R )( File output, R entries ) if ( isInputRange!R && 
 void printTimeEntry( File output, in ref TimeEntry entry ) {
 
   import std.path: baseName;
-  import comet.utils;
+  import comet.loader;
 
   string ENTRY_WRITE_FORMAT = "%40s|%18s|%18s|%18s|%18s|%18s|%18s|%18s";
   

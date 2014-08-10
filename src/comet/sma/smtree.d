@@ -178,7 +178,7 @@ private:
 
   
   //Expects the leaves to be set.
-  private void gatherInfo( N, Range, U )( N node, Range states, U mutationCosts ) {   
+  private void gatherInfo(Range, U )( typeof(_tree.root()) node, Range states, U mutationCosts ) {   
   
     //Do nothing if it is a leaf.
     if( !node.hasChildren() ) { return; }

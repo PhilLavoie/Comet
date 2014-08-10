@@ -6,7 +6,6 @@ import std.typecons;
 
 /**
   Visbility enumeration. They represent their D language counterpart.
-  The notation "_<visbility>" is used because it is easy to remember.    
 */
 enum Visibility: string {
   public_ = "public",
@@ -36,6 +35,16 @@ mixin template getter( alias var, Visibility vis = Visibility.public_ ) {
 /**
   A mixin template for creating different types of bounded size_t values.
   Useful for creating new types to avoid confusion while passing parameters.
+  
+  This structure will not allow its wrapped value to be outside the inclusive bounds provided.
+  Note that it uses invariant and assertions to check its value against the bounds.
+  Those checks can therefore be turned off like any assertions.
+  
+  Params:
+    structName  = The generated structure name.
+    min         = The minimum value allowed, inclusive.
+    max         = The maximum value allowed, inclusive.
+    init        = The initial value, defaults to min.  
 */
 mixin template SizeT( string structName, size_t min = size_t.min, size_t max = size_t.max, size_t init = min ) {  
   static assert(min <= max);
@@ -100,6 +109,7 @@ mixin template SizeT( string structName, size_t min = size_t.min, size_t max = s
   );
 }
 
+///
 unittest
 {
   mixin SizeT!("Toto", 0, 10);
@@ -107,11 +117,17 @@ unittest
   Toto myToto;
   myToto = 4;
   assert(myToto == 4);
-  myToto = 0;
-  assert(myToto == 0);
-  myToto = 10;
-  assert(myToto == 10);
+  
+  myToto += 2;
+  assert(myToto == 6);
+  
+  //Out of bounds for a while.
+  myToto = myToto + 10 - 9;
+  assert(myToto == 7);
+  
   int x = myToto;
-  assert(x == 10);
+  assert(x == 7);
+  
+  //This crashes: myToto = 20;
 }
 

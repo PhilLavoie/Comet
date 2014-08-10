@@ -64,6 +64,8 @@ struct NewickTree
     public auto distanceToParent() const {return _label.distance;}
     public alias distance = distanceToParent;
     public auto children() const {return (cast(Array!(Node*))_children)[];}
+    public bool isInternal() const {return !_children.empty();}
+    public bool isLeaf() const {return _children.empty();}
   }
   
   ///The tree only keeps a reference to the label node.
@@ -79,7 +81,6 @@ struct NewickTree
     Returns:
       The root node. Should not be called on empty tree.
   */
-  //TODO: consider making the pointer const too. Will require a rewrite of the unit tests.
   public const(Node)* root() const
   in
   {
@@ -88,17 +89,6 @@ struct NewickTree
   body
   {
     return cast(const(Node)*)_root;
-  }
-  
-  /**
-    It's ok to reassign a const tree to another.
-  */
-  //TODO: it's not necessary, just convenient. Removing this will require either
-  //a rewrite of the unit tests.
-  void opAssign(in NewickTree rhs) const
-  {
-    auto noConstRoot = cast(Node**)(&(this._root));
-    *noConstRoot = cast(Node*)rhs._root;
   }
 }
 

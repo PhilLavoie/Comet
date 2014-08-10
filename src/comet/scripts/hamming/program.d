@@ -82,7 +82,7 @@ Program.
 import comet.results_io;
 import comet.programcons;
 import comet.results;
-import comet.utils;
+import comet.loader;
 
 import std.stdio: File, writeln;
 

@@ -275,9 +275,7 @@ private void phylogenize( Tree )( ref Tree tree, SequencesCount seqCount ) in {
       leftCurrent = tree.appendChild( leftCurrent );
       rightCurrent = tree.appendChild( rightCurrent );
     }
-  }
-  
-  
+  } 
 }
 
 private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {

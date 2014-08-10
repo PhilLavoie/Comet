@@ -102,7 +102,7 @@ import comet.results_io;
 import comet.logger;
 import comet.typedefs;
 import comet.core;
-import comet.utils;
+import comet.loader;
 import comet.programcons;
 
 import std.stdio;
@@ -129,7 +129,8 @@ mixin loadConfigMixin;
 */
 package void run( string command, string[] args ) {
 
-  //Standard mode starts with probing.    
+  //Standard mode starts with probing the command line
+  //to see which program to defer to, if any.
   auto mode = probe( args );
   
   /*

@@ -8,7 +8,7 @@ import comet.logger: Logger;
 import std.stdio: File;
 import comet.bio.dna: Nucleotide;
 import comet.configs.algos: Algo;
-import comet.utils;
+import comet.loader;
 import std.container: Array;
 import comet.typedefs: Cost;
 import comet.typedefs: LengthParameters;
