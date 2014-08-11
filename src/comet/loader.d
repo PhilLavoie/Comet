@@ -386,6 +386,37 @@ unittest
   assert(9 == nodeCount);
 }
 
+
+/**
+  This function extracts the phylogeny from the provided input.
+  
+  It reads the input and validate the extracted phylogeny with the following
+  rules:
+    - Every leaf must be labeled with a species
+    - No internal nodes must be labeled with a species
+    - Distances to parent (like in the Newick format) are not accepted
+    - The set of given species accepted is {1, .., noSequences}, where noSequences is
+      the number of sequences in the range provided.
+    - Every species must label a leaf exactly once.
+  
+  This function returns a tree that is an exact structural copy of the extracted phylogeny.
+  The leaves of the returned tree are assigned sequences.
+  The species number corresponds to the index in the provided range.
+  
+  For example, if a leaf is labeled with the species "3", then its homologous in the
+  returned tree will hold the third sequence of the ones provided.
+  
+  Params:
+    input = The input encoding the phylogeny tree. Up to now, only the Newick format is
+      supported.
+    sequences = The sequences that are going to be matched against the found input. The order
+      is important: the first sequence corresponds to the node labeled "1", the second sequence
+      corresponds to the node labeled "2", etc...
+    
+  Returns:
+    A structurally equivalent tree to the one extracted where the leaves elements are
+    the sequences mapped by the extracted tree.
+*/
 const(Tree!(Nullable!(ElementType!Range))) loadPhylo(Input, Range)(Input input, Range sequences)
 {
   alias S = ElementType!Range;
@@ -393,11 +424,16 @@ const(Tree!(Nullable!(ElementType!Range))) loadPhylo(Input, Range)(Input input, 
   Tree!E phylo;
   
   import comet.bio.newick;
+  //Up to now, only the newick format is supported.
   auto parser = parse(input);
   
   //Enforce one and only one tree.
-  enforce(!parser.empty(), "expected at least one phylogeny provided");
+  enforce(
+    !parser.empty(), 
+    "expected at least one phylogeny provided"
+  );
   auto nt = parser.front();
+  
   parser.popFront();
   enforce(parser.empty(), "expected at most one phylogeny provided");
   
@@ -418,48 +454,130 @@ const(Tree!(Nullable!(ElementType!Range))) loadPhylo(Input, Range)(Input input, 
   }
     
   import std.container: DList;
-  DList!(typeof(nt.root())) nodes;
-  nodes.insertBack(nt.root());
-  while(!nodes.empty())
+  
+  auto newickNode = nt.root();
+  DList!(typeof(newickNode)) newickNodes;
+  newickNodes.insertBack(newickNode);
+  
+  auto phyloNode = phylo.setRoot();
+  DList!(typeof(phyloNode)) phyloNodes;
+  phyloNodes.insertBack(phyloNode);
+  
+  while(!newickNodes.empty())
   {
-    auto current = nodes.front();
+    newickNode = newickNodes.front();
+    phyloNode  = phyloNodes.front();
+        
+    enforce(newickNode.distance.isNull(), "phylogeny distance to parent unsupported");
     
-    enforce(current.distance.isNull(), "distance to parent unsupported");
-    
-    if(current.isInternal())
+    if(newickNode.isInternal())
     {
-      enforce(current.species.isNull(), "internal nodes cannot be labeled with species");
+      enforce(newickNode.species.isNull(), "phylogeny internal newickNodes cannot be labeled with species");
     }
     else
     {
       //Enforce that all leaves are labeled with a species.
-      enforce(!current.species.isNull(), "all leaves must be labeled with species");
+      enforce(!newickNode.species.isNull(), "all leaves must be labeled with species in the given phylogeny");
       
       //Those labels must be integer values in [1, .., noSequences]
       import std.conv: to;      
+      import std.range: iota;
+      
       //Enforce integer.
-      auto species = to!int(current.species.get());
+      auto species = to!int(newickNode.species.get());
       //Enforce in the ones expected.
-      enforce(species in speciesFound, "unexpected species identifier");
+      enforce(
+        species in speciesFound, 
+        "unexpected species identifier: " ~ to!string(newickNode.species.get()) 
+        ~ ", expected values are: " ~ to!string(iota(1, noSequences + 1, 1))
+      );
       
       //Enforce not used before.
       auto entry = &speciesFound[species];
       enforce(!entry.found, "species identifier used twice");
-      entry.found = true;
+      //Make sure it's not used again.
+      entry.found = true;      
       
+      //Set the sequence in the phylo tree.
+      phyloNode.element = entry.sequence;
     }  
     
-    nodes.removeFront();
-    nodes.insertBack(current.children());    
-  }
+    auto newickChildren = newickNode.children();
+    foreach(child; newickChildren)
+    {
+      phylo.appendChild(phyloNode);
+    }
+    
+    auto phyloChildren = phyloNode.children();
+    assert(count(newickChildren) == count(phyloChildren));
+    
+    newickNodes.insertBack(newickChildren);    
+    phyloNodes.insertBack(phyloChildren);
+    
+    newickNodes.removeFront();
+    phyloNodes.removeFront();
+  }    
   
+  //Make sure all species were found.
+  foreach(int k; speciesFound.byKey())
+  {
+    import std.conv: to;
+    enforce(speciesFound[k].found, "species " ~ to!string(k) ~ " was not provided");
+  }
   
   return phylo;
 }
 
 unittest
 {
-  string newickTree = "(5,3,1,4,0);";
+  string newickTree = "(5,3,(1,4),2);";
   auto sequences = [1, 2, 3, 4, 5];
-  auto phylo = loadPhylo(newickTree, sequences);
+  auto phylo1 = loadPhylo(newickTree, sequences);
+  
+  auto nodeCount = 0;
+  
+  auto node = phylo1.root();
+  assert(node.element.isNull());
+  ++nodeCount; 
+  auto children = node.children();
+  
+  import std.algorithm: count;
+  assert(count(children) == 4);
+  
+  node = children.front();
+  ++nodeCount; 
+  assert(node.element == 5);
+  assert(count(node.children()) == 0);
+  
+  children.popFront();
+  node = children.front();
+  ++nodeCount; 
+  assert(node.element == 3);
+  assert(count(node.children()) == 0);
+  
+  children.popFront();
+  node = children.front();
+  ++nodeCount; 
+  assert(node.element.isNull());
+  auto children2 = node.children();
+  assert(count(children2) == 2);
+  
+  auto node2 = children2.front();
+  ++nodeCount; 
+  assert(node2.element == 1);
+  assert(node2.children().count() == 0);
+  
+  children2.popFront();
+  node2 = children2.front();
+  ++nodeCount; 
+  assert(node2.element == 4);
+  assert(node2.children().count() == 0);
+  
+  children.popFront();
+  node = children.front();
+  ++nodeCount; 
+  assert(node.element == 2);
+  assert(node.children().count() == 0);
+    
+  assert(nodeCount == 7);  
 }
