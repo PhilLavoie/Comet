@@ -13,6 +13,7 @@ private:
   Node * _root = null;
 
 public:
+
   auto setRoot( T element = T.init ) { 
     if( empty ) {
       _root = new Node( null, element ); 
@@ -32,6 +33,14 @@ public:
   Node * appendChild( Node * node, T element = T.init ) {
     auto childNode = new Node( node, element );
     node.appendChild( childNode );
+    return childNode;
+  }
+  
+  Node * appendSubTree(Node* parent, typeof(this) subTree)
+  {
+    if(subTree.empty()) {return null;}
+    auto childNode = subTree._root;
+    parent.appendChild(childNode);
     return childNode;
   }
   
@@ -74,6 +83,11 @@ public:
     bool hasPrevious() const {return _previous !is null;}
     bool hasNext() const {return _next !is null;}
     void appendChild(Node * newChild) 
+    in
+    {
+      assert(newChild !is null);
+    }
+    body
     {
       if(!hasChildren()) 
       {

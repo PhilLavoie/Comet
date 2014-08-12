@@ -194,10 +194,23 @@ private {
     alias Data = typeof( ( sequences[ 0 ] ).molecules );    
     auto nucleotides = new Data[ sequences.length ];
     
-    for( int i = 0; i < nucleotides.length; ++i ) {
+    for( int i = 0; i < nucleotides.length; ++i ) 
+    {    
+      nucleotides[ i ] = sequences[ i ].molecules;      
+    }
     
-      nucleotides[ i ] = sequences[ i ].molecules;
-      
+    import std.traits: Unqual;
+    alias PhyloType = Unqual!(typeof(defaultPhylogeny(nucleotides[])));
+    
+    PhyloType phylo;
+    //Extract the phylogeny.
+    if(cfg.phylo() == File.init)
+    {
+      phylo = cast(PhyloType)defaultPhylogeny(nucleotides[]);
+    }
+    else
+    {
+      phylo = cast(PhyloType)loadPhylogeny(cfg.phylo(), nucleotides[]);
     }
     
     //A parameters range that just work on one file.

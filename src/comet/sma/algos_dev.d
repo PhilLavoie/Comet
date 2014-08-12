@@ -1,3 +1,6 @@
+//Algos'api is being currently reviewed here. Some important changes are expected
+//to happen. This module is planned to replace alogs when finished.
+
 /**
   Module encapsulating logic regarding the calculation of segment pairs cost.
   It provides an interface to the user in the form of algorithms that evaluate the
@@ -6,7 +9,7 @@
   Only one function is offered publicly and provides a unified way to receive an algorithm
   object based on a set of parameters.
 */
-module comet.sma.algos;
+module comet.sma.algos_dev;
 
 public import comet.sma.mutation_cost;
 public import comet.typedefs: SequencesCount, sequencesCount;
@@ -91,6 +94,65 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,)
     //Phylogenize the tree according to the sequences, see documentation to see
     //how it is done.  
     phylogenize( _smTree, seqCount );       
+  }
+  
+  private this(Sequences, States, Phylo)(Sequences sequences, States states, typeof(_mutationCosts) mc, Phylo phylo)
+  {
+    _mutationCosts  = mutationCosts;
+    _smTree         = SMTree!State(states[]);
+    
+    import std.range: walkLength;
+    static if(usingWindow) 
+    {
+      auto sequencesLength = walkLength(sequences.front());
+      _window   = new Cost[sequencesLength];
+      _costSum  = 0;
+    }
+   
+    auto noSequences = walkLength(sequences);
+    
+    makeDST(_smTree, phylo);       
+  }
+  
+  //Duplication speciation tree.
+  private void makeDST(Tree1, Tree2)(ref Tree1 dst, in Tree2 phylo)
+  {
+    dst.clear();
+    
+    Tree1 leftSubTree;
+    Tree1 rightSubTree;
+    leftSubTree.mimick(phylo);
+    rightSubTree.mimick(phylo);
+    
+    auto root = dst.setRoot();
+    dst.appendSubTree(root, leftSubTree);
+    dst.appendSubTree(root, rightSubTree);    
+    
+    import std.range: walkLength;
+    assert(walkLength(dst.leaves()) == (2 * walkLength(phylo.leaves())));
+    
+    auto dstLeaves = dst.leaves();
+    auto phyloLeaves = phylo.leaves();
+    
+    //A mapping of the leaves to their corresponding sequences.
+    alias NodeType = typeof(dst.root());
+    alias SequenceType = typeof(phylo.root().element().get());
+    SequenceType[NodeType] sequencesNodes;    
+    
+    scope(exit)
+    {
+      assert(sequencesNodes.length == walkLength(dst.leaves()));
+    }
+    
+    for(int i = 0; i < 2; ++i)
+    {
+      foreach(phyloLeaf; phyloLeaves)
+      {
+        sequencesNodes[dstLeaves.front()] = phyloLeaf.element().get();      
+        dstLeaves.popFront();
+      }
+    }
+    assert(dstLeaves.empty());    
   }
   
   /**

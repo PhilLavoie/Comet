@@ -417,7 +417,7 @@ unittest
     A structurally equivalent tree to the one extracted where the leaves elements are
     the sequences mapped by the extracted tree.
 */
-const(Tree!(Nullable!(ElementType!Range))) loadPhylo(Input, Range)(Input input, Range sequences)
+const(Tree!(Nullable!(ElementType!Range))) loadPhylogeny(Input, Range)(Input input, Range sequences)
 {
   alias S = ElementType!Range;
   alias E = Nullable!S;
@@ -532,7 +532,7 @@ unittest
 {
   string newickTree = "(5,3,(1,4),2);";
   auto sequences = [1, 2, 3, 4, 5];
-  auto phylo1 = loadPhylo(newickTree, sequences);
+  auto phylo1 = loadPhylogeny(newickTree, sequences);
   
   auto nodeCount = 0;
   
