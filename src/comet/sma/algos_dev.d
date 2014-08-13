@@ -65,6 +65,10 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
   private size_t _noSequences;
   private size_t _sequencesLength;
   
+  //TODO:deprecate
+  @property auto sequencesLength() {return _sequencesLength;}
+  @property auto noSequences() {return _noSequences;}
+  
   private alias NodeType = typeof(_smTree.root());
   
   private struct NodeSequence
@@ -145,10 +149,17 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
     rightSubTree.mimic(phylo);
     
     auto root = dst.setRoot();
-    dst.appendSubTree(root, leftSubTree);
-    dst.appendSubTree(root, rightSubTree);    
     
+    auto node = dst.appendSubTree(root, leftSubTree);
+    assert(node !is null);
+    assert(node == leftSubTree.root(), "node: " ~ to!string(node) ~ " leftSubTree.root(): " ~ to!string(leftSubTree.root()));
+    assert(node.element() == leftSubTree.root().element());
     
+    node = dst.appendSubTree(root, rightSubTree);    
+    assert(node !is null);
+    assert(node == rightSubTree.root(), "node: " ~ to!string(node) ~ " rightSubTree.root(): " ~ to!string(rightSubTree.root()));
+    assert(node.element() == leftSubTree.root().element());
+        
     auto dstLeaves = dst.leaves();
     auto phyloLeaves = phylo.leaves();
     
@@ -221,13 +232,13 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
   {
     foreach(ns; _leftLeaves)
     {
-      ns.node.fixStates(ns.sequence[start]);
+      ns.node.element().fixStates(ns.sequence[start]);
     }
     
     auto offset = start + segmentsLength;
     foreach(ns; _rightLeaves)
     {
-      ns.node.fixStates(ns.sequence[offset]);
+      ns.node.element().fixStates(ns.sequence[offset]);
     }
     _smTree.update(_mutationCosts);
     return preSpeciationCost(_smTree, _mutationCosts);
@@ -316,7 +327,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
         sum += columnCost!usingPatterns(i, segmentsLength);
       }
       //Normalized sum.
-      return sum / pairs.segmentsLength;      
+      return sum / segmentsLength;      
     }  
   }  
 }
@@ -426,11 +437,14 @@ unittest
 }
 +/
 
+//TODO: known bug for very high values.
 private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
   
-  /*The pre speciation cost is associated with the number of mutations
+  /*
+    The pre speciation cost is associated with the number of mutations
     from the root to its children, accounting for every possible reconstructions.
-    That value is then averaged by the number of possible reconstructions.*/
+    That value is then averaged by the number of possible reconstructions.
+  */
   size_t noRecons = 0;
   Cost costSum = 0.0;
   
@@ -475,7 +489,7 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
         size_t multiplier = rootCount / equivalentsCount;      
       
         assert( 0 < equivalentsCount );
-        assert( rootCount % equivalentsCount == 0 );
+        assert(rootCount % equivalentsCount == 0, "rootCount: " ~ to!string(rootCount) ~ " equivalentsCount: " ~ to!string(equivalentsCount));
         assert( 0 < multiplier );
       
         foreach( childStateTuple; child.element[] ) {

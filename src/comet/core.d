@@ -47,12 +47,12 @@ template ResultTypeOf( State, VerboseResults v ) {
 struct RunParameters( T, S, M ) if( isMutationCostFor!( M, S ) ) {
 
   T[][]             sequencesGroup;   //Rows represent a sequence.
-  Algo              algorithm;
+  Algo              algorithm;  
   S[]               states;
   M                 mutationCosts;
   NoThreads         noThreads;
   LengthParameters  lengthParameters;
-  NoResults         noResults;
+  NoResults         noResults; 
 
 }
 
@@ -190,6 +190,9 @@ void calculateSegmentsPairsCosts( RunParametersRange, S ) (
     //TODO: here you will find support for multiple threads of execution.
     //However, empirical results reveal that no acceleration is obtained, therefore this code, or the libraries used,
     //might not be correct/adequate.
+    //UPDATE: I hypothesize that this is due to heavy garbage collector usage in the main loop.
+    //It is possible to reduce it importantly by implementing a custom results holder structure that reuses memory
+    //for removed and inserted results instead of delegating to std.container.RBTree.
     /* if( noThreads == 1 ) { */      
       
     final switch( runParams.algorithm ) {

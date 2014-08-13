@@ -113,8 +113,7 @@ public:
         
   public:
     @property bool hasChildren() const { return _firstChild !is null; }
-    @property auto ref element() {return _element;}
-    @property auto ref element() const {return _element;}
+    @property ref inout(T) element() inout {return _element;}
     @property void element(T el) { _element = el; }
     @property auto children() { return ChildrenRange!(Node*)(&this); }    
     @property auto children() const { return ChildrenRange!(const(Node)*)(&this); }    

@@ -46,7 +46,8 @@ mixin template getter( alias var, Visibility vis = Visibility.public_ ) {
     max         = The maximum value allowed, inclusive.
     init        = The initial value, defaults to min.  
 */
-mixin template SizeT( string structName, size_t min = size_t.min, size_t max = size_t.max, size_t init = min ) {  
+mixin template SizeT(string structName, size_t min = size_t.min, size_t max = size_t.max, size_t init = min) 
+{  
   static assert(min <= max);
   static assert(min <= init);
   static assert(init <= max);

@@ -56,24 +56,21 @@ mixin SizeT!( "NoResults", 1 );
   Since the trio of length parameters often go hand in hand in function calls or whatnot,
   they have been grouped under a single structure.
 */
-struct LengthParameters {
-
+struct LengthParameters 
+{
   MinLength   min;
   MaxLength   max;
   LengthStep  step;
   
-  invariant() {
-  
-    assert( min <= max );
-  
+  invariant() 
+  {  
+    assert(min <= max);  
   }
-
 }
 /**
   Factory function.
 */
-auto lengthParameters( MinLength min, MaxLength max, LengthStep step ) {
-
+auto lengthParameters(MinLength min, MaxLength max, LengthStep step)
+{
   return LengthParameters( min, max, step );
-
 }

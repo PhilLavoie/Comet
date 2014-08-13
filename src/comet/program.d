@@ -101,7 +101,7 @@ import comet.results_io;
 
 import comet.logger;
 import comet.typedefs;
-import comet.core;
+import comet.core_dev;
 import comet.loader;
 import comet.programcons;
 
@@ -200,6 +200,9 @@ private {
     }
     
     import std.traits: Unqual;
+    
+    //Have to remove the const qualifier otherwise have to assign differently.
+    //TODO: find another way.
     alias PhyloType = Unqual!(typeof(defaultPhylogeny(nucleotides[])));
     
     PhyloType phylo;
@@ -216,7 +219,7 @@ private {
     //A parameters range that just work on one file.
     auto runParamsRange = 
       new class( 
-        nucleotides, 
+        phylo, 
         cfg.algo, 
         loadStates(), 
         loadMutationCosts(), 
@@ -228,7 +231,7 @@ private {
         noResults( cfg.noResults )
       ) {
     
-        private typeof( nucleotides ) _nucleotides;
+        private typeof(phylo) _phylo;
         private Algo _algo;
         private typeof( loadStates() ) _states;
         private typeof( loadMutationCosts() ) _mutationCosts;
@@ -237,7 +240,7 @@ private {
         private NoResults _noResults;
         
         this( 
-          typeof( _nucleotides ) nucleotides, 
+          typeof( _phylo ) phylo, 
           typeof( _algo ) algo, 
           typeof( _states ) states, 
           typeof( _mutationCosts ) mutationCosts,
@@ -245,7 +248,7 @@ private {
           typeof( _noResults ) noResults
         ) {
         
-          _nucleotides = nucleotides;
+          _phylo = phylo;
           _algo = algo;
           _states = states;
           _mutationCosts = mutationCosts;
@@ -255,22 +258,20 @@ private {
         
         }     
         
-        bool empty() { return _empty; }
-        void popFront() { _empty = true; }
-        auto front() {
-        
+        bool empty() {return _empty;}
+        void popFront() {_empty = true;}
+        auto front() 
+        {        
           return makeRunParameters( 
-            _nucleotides,
+            _phylo,
             _algo,
             _states,
             _mutationCosts,
             noThreads( 1 ),
             _length,
             _noResults
-          );      
-          
-        }
-      
+          );                
+        }      
       };
     
     alias Rez = ResultTypeOf!(Nucleotide, VerboseResults.no );
