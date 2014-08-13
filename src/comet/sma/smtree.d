@@ -278,7 +278,19 @@ public:
   }
   body
   {
-    _tree.mimic(tree, StatesInfo!T(_states[]));
+    if(!_tree.empty()) {_tree.clear();}
+    if(tree.empty()) {return;}
+    
+    auto root = this.setRoot();
+    mimicNode(root, tree.root());    
+  }
+    
+  private void mimicNode(N)(typeof(_tree.root()) mimicking, N mimicked) 
+  {
+    foreach(mimickedChildren; mimicked.children) 
+    {
+      mimicNode(this.appendChild(mimicking), mimickedChildren);
+    }
   }
   
   auto opDispatch( string method, T... )( T args ) {

@@ -82,6 +82,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
       import std.traits: Unqual;
       auto sequenceP = cast(Unqual!(typeof(this.sequence))*)&this.sequence;
       *sequenceP = rhs.sequence;
+      assert(this.sequence == rhs.sequence);
     }
   }
   
@@ -316,7 +317,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
     in
     {
       assert(0 < segmentsLength);
-      assert(start + 2 * segmentsLength <= _sequencesLength);
+      assert(start + 2 * segmentsLength <= _sequencesLength, "start: " ~ to!string(start) ~ " segmentsLength: " ~ to!string(segmentsLength));
     }
     body
     {

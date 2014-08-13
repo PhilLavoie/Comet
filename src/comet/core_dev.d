@@ -225,8 +225,7 @@ unittest
   auto mutationCost = 
     (int i, int j) 
     {
-      if(i == j) {return cast(Cost)0;}
-      return cast(Cost)1;
+      return cast(Cost)0;
     };
   auto sequences = [[1, 2, 3, 4], [2, 4, 6, 8], [1, 3, 5, 7]];
   import comet.loader: defaultPhylogeny;
@@ -269,11 +268,13 @@ private void processSegmentsPairs(Alg, TheResults)(
 if(
   isAlgorithm!Alg
 ) {
+  import std.algorithm: min;
   //The outer loop is on segments length.
-  for(size_t sl = length.min; sl < length.max; sl += length.step)
+  //The maximum is inclusive.
+  auto max = min(length.max.value(), algorithm.sequencesLength() / 2);
+  for(size_t sl = length.min; sl <= max; sl += length.step)
   {
-    //Then on start position.
-    
+    //Then on start position.    
     //Inclusive last position.
     auto end = algorithm.sequencesLength() - (2 * sl);
     for(size_t start = 0; start <= end; ++start)
