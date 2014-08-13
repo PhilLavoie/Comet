@@ -12,7 +12,7 @@ struct Tree( T ) {
 private:
   Node * _root = null;
 
-public:
+public:  
 
   auto setRoot( T element = T.init ) { 
     if( empty ) {
@@ -45,7 +45,11 @@ public:
   }
   
   @property auto leaves() {
-    return LeavesRange( _root );
+    return LeavesRange!(typeof(_root))(_root);
+  }
+  @property auto leaves() const
+  {
+    return LeavesRange!(typeof(_root))(_root);
   }
   
   void mimic( Tree )( Tree tree, T init = T.init ) {
@@ -114,6 +118,8 @@ public:
     @property void element(T el) { _element = el; }
     @property auto children() { return ChildrenRange!(Node*)(&this); }    
     @property auto children() const { return ChildrenRange!(const(Node)*)(&this); }    
+    
+    alias element this;
   }
   
   /**
@@ -139,7 +145,7 @@ public:
     void popFront() {_first = _first._next;}
   }
   
-  struct LeavesRange {
+  struct LeavesRange(N) {
   private:
     Node * _node;
     
@@ -147,10 +153,14 @@ public:
       _node = root.deepestFirstChild();
       assert( root is null || _node !is null );
     }
+    this(in Node* root)
+    {
+      this(cast(Node*) root);
+    }
     
   public:
-    @property bool empty() { return _node is null; }
-    @property Node * front() { return _node; }
+    @property bool empty() const { return _node is null; }
+    @property N front() { return _node; }
     void popFront() {
       if( _node.hasNext() ) {
         _node = _node._next.deepestFirstChild();

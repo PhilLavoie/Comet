@@ -232,6 +232,8 @@ private:
     }
     
   }
+  
+  alias _tree this;
     
 public:
   
@@ -267,6 +269,16 @@ public:
 
     return _tree.appendChild( node, StatesInfo!T( _states[] ) );
   
+  }
+  
+  void mimic(Tree)(Tree tree) 
+  in
+  {
+    assert(_states.length);
+  }
+  body
+  {
+    _tree.mimic(tree, StatesInfo!T(_states[]));
   }
   
   auto opDispatch( string method, T... )( T args ) {
@@ -309,7 +321,9 @@ public:
         
     gatherInfo( _tree.root, _states[], mutationCosts );
     
-  }  
+  }
+
+  auto states() {return _states[];}
   
 }
 
