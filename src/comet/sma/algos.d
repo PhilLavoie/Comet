@@ -18,6 +18,7 @@ public import comet.sma.smtree: StatesInfo;
 import comet.sma.pattern;
 import comet.sma.segments;
 import comet.sma.smtree;
+import comet.results;
 
 import std.algorithm;
 import std.range: ElementType, isInputRange;
@@ -331,6 +332,72 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
       return sum / segmentsLength;      
     }  
   }  
+  
+  private alias Algo = typeof(this);
+  
+  private struct Results {
+    
+    Algo* _algoP;
+    
+    //Segments length loop parameters.
+    size_t _segmentsLength;
+    const size_t _maxLength;
+    const size_t _lengthStep;
+    
+    //Position loop parameters.
+    size_t _current;
+    size_t _end; 
+    
+    this(typeof(_algoP) algo, LengthParameters length) 
+    {
+      _algoP = algo; 
+    
+      import std.algorithm: min;   
+      //The maximum is inclusive.
+      _maxLength = min(length.max.value(), _algoP.sequencesLength() / 2);
+      assert(length.min <= _maxLength);
+      _segmentsLength = length.min;
+      _lengthStep = length.step;
+      
+      _current = 0;
+      //Inclusive last position.
+      _end = _algoP.sequencesLength() - (2 * _segmentsLength);
+    }
+    
+    @property auto save() {return this;}
+    @property auto front() 
+    {
+      static if(trn)
+      {
+        static assert(false);
+      }
+      else
+      {
+        auto cost = _algoP.costFor(_current, _segmentsLength);
+        return result(_current, segmentsLength(_segmentsLength), cost);
+      }
+    }
+    @property bool empty() const {return _maxLength < _segmentsLength;}
+    
+    void popFront()
+    {
+      //Move the current position.
+      ++_current;
+      //If we reached the end, move on to next segments length.
+      if(_end < _current)
+      {
+        _segmentsLength += _lengthStep;
+        _current = 0;
+        _end = _algoP.sequencesLength() - (2 * _segmentsLength);
+      }     
+    }     
+  }
+  
+  auto resultsFor(LengthParameters length)
+  {
+    return Results(&this, length);
+  }  
+  
 }
 
 /**
@@ -408,6 +475,8 @@ unittest
   {
     auto cost = algo.costFor(0, 2);  
   }
+  
+  auto results = algo.resultsFor(lengthParameters(minLength(1), maxLength(10000), lengthStep(1)));
 }
 
 /+

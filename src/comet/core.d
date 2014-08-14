@@ -268,6 +268,7 @@ private void processSegmentsPairs(Alg, TheResults)(
 if(
   isAlgorithm!Alg
 ) {
+  /+
   import std.algorithm: min;
   //The outer loop is on segments length.
   //The maximum is inclusive.
@@ -282,5 +283,10 @@ if(
       auto cost = algorithm.costFor(start, sl);
       results.add(result(start, segmentsLength(sl), cost));
     }
+  }
+  +/
+  foreach(result; algorithm.resultsFor(length))
+  {
+    results.add(result);
   }
 }

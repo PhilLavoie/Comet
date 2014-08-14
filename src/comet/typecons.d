@@ -71,7 +71,7 @@ mixin template SizeT(string structName, size_t min = size_t.min, size_t max = si
       
       private this( int value ) in {
         
-        assert( 0 < value );
+        assert( 0 <= value );
         
       } body {
       
