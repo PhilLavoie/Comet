@@ -83,6 +83,7 @@ import comet.results_io;
 import comet.programcons;
 import comet.results;
 import comet.loader;
+import comet.typedefs;
 
 import std.stdio: File, writeln;
 
@@ -107,8 +108,6 @@ void run( string command, string[] args ) {
 
 }
 
-import comet.core;
-
 package void run( HammingConfig cfg ) {
 
   //Extract sequence from file.
@@ -121,19 +120,20 @@ package void run( HammingConfig cfg ) {
   auto nucleotides = sequence.molecules;
   
   auto length = lengthParameters( minLength( cfg.minLength ), maxLength( cfg.maxLength ), lengthStep( cfg.lengthStep ) );
-  auto results = Results!(ResultTypeOf!(Nucleotide, VerboseResults.no))( noResults( cfg.noResults ) );
+  auto results = Results!(Result!void)( noResults( cfg.noResults ) );
   
   //Launch processing.
   processSegmentPairs( nucleotides, length, results );
   
   //Print results somewhere.
-  if( cfg.printResults ) {
+  if( cfg.printResults ) 
+  {
     printResults( cfg.resultsFile, results[] );
   }
-
 }
 
 package void processSegmentPairs( T, R )( T[] sequence, LengthParameters length, R results ) {
+  import comet.sma.segments;
 
   auto seqLength = sequenceLength( sequence.length );
 
@@ -187,7 +187,7 @@ package void processSegmentPairs( T, R )( T[] sequence, LengthParameters length,
 unittest {
 
   auto seq = "acgtacctacggacct";
-  auto res = Results!(ResultTypeOf!(Nucleotide, VerboseResults.no))( noResults( 100 ) );
+  auto res = Results!(Result!void)( noResults( 100 ) );
   auto length = lengthParameters( minLength( 1 ), maxLength( 1000000 ), lengthStep( 1 ) );
   
   processSegmentPairs( seq, length, res );

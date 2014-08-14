@@ -86,7 +86,7 @@ mixin loadConfigMixin;
 
 import comet.scripts.run_tests.callbacks;
 
-import comet.core;
+import comet.core_dev;
 
 void run( string command, string[] args ) {
 

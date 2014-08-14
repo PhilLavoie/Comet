@@ -13,11 +13,11 @@ import std.container: Array;
 import comet.typedefs: Cost;
 import comet.typedefs: LengthParameters;
 import comet.typecons: getter;
-import comet.core: RunSummary, makeRunParameters;
 import std.range: isInputRange, ElementType;
 import std.datetime: Duration;
 import std.traits: FieldTypeTuple;
 
+import comet.core_dev;
 import comet.results;
 import comet.results_io;
 import comet.scripts.compare_results.program: allEquivalents;
@@ -136,7 +136,8 @@ class RunParamsRange {
     _logger.logln( 1, "Processing file: ", currentFile().fileName() );
     _logger.logln( 2, "Using Configuration: " );  //TODO: add configuration printing.
   
-    return makeRunParameters( currentSequencesGroup(), currentAlgo(), _states, _mutationCosts, currentNoThreads(), _lengthParams, _noResults );
+    import comet.loader: defaultPhylogeny;    
+    return makeRunParameters( defaultPhylogeny(currentSequencesGroup()[]), currentAlgo(), _states, _mutationCosts, currentNoThreads(), _lengthParams, _noResults );
   
   }
   
