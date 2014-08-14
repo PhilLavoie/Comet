@@ -127,7 +127,7 @@ string executionTimeInSeconds( in Duration time ) {
 */
 string fileName(in File file) 
 {
-  if( file == stdout ) 
+  if(file == stdout) 
   {  
     return "stdout";    
   }
@@ -142,7 +142,12 @@ string fileName(in File file)
     return "stderr";    
   }
   
-  return file.name;  
+  if(!file.name().length)
+  {
+    return "none";
+  }
+  
+  return file.name();  
 }
 
 unittest 

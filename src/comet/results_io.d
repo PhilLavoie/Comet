@@ -86,27 +86,34 @@ public:
 }
 
 private string VERBOSE_RESULTS_HEADER_FORMAT = "%12s%12s%12s%12s\n";
-private string VERBOSE_RESULT_WRITE_FORMAT = "%12d%12d%12d";
-private string SANKOFF_ROOT_STATE_FORMAT = "%s %f %d ";
+private string VERBOSE_RESULT_WRITE_FORMAT = "%12d%12d%12d        ";
+private string ROOTS_FORMAT = "%s %f %d ";
 
 /**
   Prints verbose results. Verbose results are similar to standard results apart from the fact that they also
   list information for every position analyzed that lead to a given result.
 */
-public void printVerboseResults( Range )( File output, Range results ) if( isForwardRange!Range ) {
-  output.writef( VERBOSE_RESULTS_HEADER_FORMAT, "start", "length", "relPos", "sankoffRoot" );
+public void printVerboseResults(Range)(File output, Range results) if(isForwardRange!Range) 
+{
+  output.writefln( VERBOSE_RESULTS_HEADER_FORMAT, "start", "length", "relPos", "roots" );
   
-  foreach( result, i ; results ) {
-  
-    output.printVerboseResult( result, i );
-    
+  foreach(result; results) 
+  {
+    output.printVerboseResult(result);    
   }
 }
 
-private void printVerboseResult( R )( File output, R result, int counter ) if( isResult!R && hasContainer!R ) {
-  output.writef( VERBOSE_RESULT_WRITE_FORMAT, result.start, result.length, counter );
-  foreach( stateData; result.perPosition() ) {
-    output.writef( SANKOFF_ROOT_STATE_FORMAT, stateData.state, stateData.cost, stateData.count );
+private void printVerboseResult(R)(File output, R result) if(isResult!R && hasContainer!R) 
+{
+  int pos = 0;
+  foreach(root; result.perPosition()) 
+  {
+    output.writef(VERBOSE_RESULT_WRITE_FORMAT, result.start, result.length, pos);  
+    foreach(state; root[])
+    {
+      output.writef(ROOTS_FORMAT, state.state, state.cost, state.count);
+    }
+    output.writeln();
+    ++pos;
   }
-  output.writeln();
 }

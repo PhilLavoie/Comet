@@ -41,6 +41,7 @@ private {
       Field.noThreads,
       Field.algo,    
       Field.phylo,
+      Field.verboseResultsFile
     )();
     
   }
@@ -58,17 +59,18 @@ private {
     parser.name = commandName;
     
     parser.add(
-      cfg.argFor!( Field.sequencesFile )(),
-      cfg.argFor!( Field.verbosity )(),
-      cfg.argFor!( Field.noResults )(),
-      cfg.argFor!( Field.printResults )(),
-      cfg.argFor!( Field.resultsFile )(),
-      cfg.argFor!( Field.printExecutionTime )(),
-      cfg.argFor!( Field.minLength )(),
-      cfg.argFor!( Field.maxLength )(),
-      cfg.argFor!( Field.lengthStep )(),
-      cfg.argFor!( Field.algo )(),
-      cfg.argFor!( Field.phylo )(),
+      cfg.argFor!(Field.sequencesFile)(),
+      cfg.argFor!(Field.verbosity)(),
+      cfg.argFor!(Field.noResults)(),
+      cfg.argFor!(Field.printResults)(),
+      cfg.argFor!(Field.resultsFile)(),
+      cfg.argFor!(Field.printExecutionTime)(),
+      cfg.argFor!(Field.minLength)(),
+      cfg.argFor!(Field.maxLength)(),
+      cfg.argFor!(Field.lengthStep)(),
+      cfg.argFor!(Field.algo)(),
+      cfg.argFor!(Field.phylo)(),
+      cfg.argFor!(Field.verboseResultsFile)(),
     );
     
     bool printConfig = false;
@@ -274,50 +276,101 @@ private {
         }      
       };
     
-    alias Rez = ResultTypeOf!(Nucleotide, VerboseResults.no );
+    if(cfg.verboseResultsFile.isOpen())
+    {  
+      alias ResultType = ResultTypeOf!(Nucleotide, VerboseResults.yes);
+      //Basic storage that prints results and execution time to the request of the user.
+      auto storage = new class( cfg )  
+      {
     
-    //Basic storage that prints results and execution time to the request of the user.
-    auto storage = new class( cfg )  {
-  
-      private StandardConfig _cfg;
+        private StandardConfig _cfg;
+      
+        private this( typeof( _cfg ) config ) {
+        
+          _cfg = config;
+          
+        }
+                  
+        private void printExecutionTime( Duration time ) { 
+        
+          if( !_cfg.printExecutionTime ) { return; }
+          
+          .printExecutionTime( stdout, time );
+        
+        }
+        
+        private void printResults( R )( R results ) if( isInputRange!R && isResult!(ElementType!R) ) {
+        
+          if( !_cfg.printResults ) { return; }
+          
+          .printResults( _cfg.resultsFile, results );
+        
+        }
+        
+        private void printVerboseResults(Range)(Range results) if(isInputRange!Range && isResult!(ElementType!Range))
+        {
+          if(!_cfg.verboseResultsFile().isOpen()) {return;}
+          .printVerboseResults(_cfg.verboseResultsFile, results);
+        }
+        
+        public void store(RunSummary!ResultType summary) 
+        {        
+          printResults(summary.results[]);
+          printVerboseResults(summary.results[]);
+          printExecutionTime(summary.executionTime);        
+        }      
+      };
     
-      private this( typeof( _cfg ) config ) {
-      
-        _cfg = config;
-        
-      }
-                
-      private void printExecutionTime( Duration time ) { 
-      
-        if( !_cfg.printExecutionTime ) { return; }
-        
-        .printExecutionTime( stdout, time );
-      
-      }
-      
-      private void printResults( R )( R results ) if( isInputRange!R && isResult!(ElementType!R) ) {
-      
-        if( !_cfg.printResults ) { return; }
-        
-        .printResults( _cfg.resultsFile, results );
-      
-      }
-      
-      public void store( RunSummary!Rez summary ) {
-      
-        printResults( summary.results[] );
-        printExecutionTime( summary.executionTime );
-      
-      }
+      //Start the algorithm with the given configuration.
+      calculateSegmentsPairsCosts!(VerboseResults.yes)(
+        runParamsRange,      
+        storage
+      );
+    }
+    else
+    {
+      alias ResultType = ResultTypeOf!(Nucleotide, VerboseResults.no);
+      //Basic storage that prints results and execution time to the request of the user.
+      auto storage = new class( cfg )  {
     
-    };
+        private StandardConfig _cfg;
+      
+        private this( typeof( _cfg ) config ) {
+        
+          _cfg = config;
+          
+        }
+                  
+        private void printExecutionTime( Duration time ) { 
+        
+          if( !_cfg.printExecutionTime ) { return; }
+          
+          .printExecutionTime( stdout, time );
+        
+        }
+        
+        private void printResults( R )( R results ) if( isInputRange!R && isResult!(ElementType!R) ) {
+        
+          if( !_cfg.printResults ) { return; }
+          
+          .printResults( _cfg.resultsFile, results );
+        
+        }
+        
+        public void store( RunSummary!ResultType summary ) {
+        
+          printResults( summary.results[] );
+          printExecutionTime( summary.executionTime );
+        
+        }
+      
+      };
    
-   //Start the algorithm with the given configuration.
-   calculateSegmentsPairsCosts(
-      runParamsRange,      
-      storage
-    );
-    
-  } 
-  
+     //Start the algorithm with the given configuration.
+     calculateSegmentsPairsCosts!(VerboseResults.no)(
+        runParamsRange,      
+        storage
+      );
+    }    
+  }   
 }

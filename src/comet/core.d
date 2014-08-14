@@ -3,7 +3,6 @@
 */
 module comet.core;
 
-public import comet.results: Result;
 public import comet.sma.segments;
 
 public import comet.logger;
@@ -27,10 +26,14 @@ import std.range: isInputRange, ElementType;
 import std.typecons: Flag;
 alias VerboseResults = Flag!"VerboseResults";
 
-template ResultTypeOf(State, VerboseResults v) {
-  static if( v ) {
-    alias ResultTypeOf = Result!(StatesInfo!(T)[]) ;
-  } else {
+template ResultTypeOf(State, VerboseResults v) 
+{
+  static if(v) 
+  {
+    alias ResultTypeOf = Result!(StatesInfo!(State)[]) ;
+  } 
+  else 
+  {
     alias ResultTypeOf = Result!void;
   }
 }
@@ -161,7 +164,7 @@ private template isRunParametersRange(T)
   start over with the new parameters until the range is depleted.
   A range possibly iterates more than once over a given sequences groups, but it is expected that at least one of the run parameters change (algorithm used, number of threads, etc...).
 */
-void calculateSegmentsPairsCosts(RunParametersRange, S) (
+void calculateSegmentsPairsCosts(VerboseResults vr, RunParametersRange, S) (
   RunParametersRange  runParametersRange,
   S                   storage  
 ) {
@@ -171,7 +174,7 @@ void calculateSegmentsPairsCosts(RunParametersRange, S) (
   alias SequenceType = ElementType!SequencesType;
   alias SequencesElement = ElementType!SequenceType;
   alias State = ElementType!(typeof(RunParamsType.states));
-  alias ResultType = ResultTypeOf!(State, VerboseResults.no);
+  alias ResultType = ResultTypeOf!(State, vr);
   
   static assert(isRunParametersRange!RunParametersRange);
   static assert(isStorageFor!(S, RunSummary!ResultType));
@@ -194,26 +197,35 @@ void calculateSegmentsPairsCosts(RunParametersRange, S) (
     
     //Start the clock...
     SysTime startTime = Clock.currTime();    
-    //Make the bridge between the configuration algorithms and the actual algorithm implementations.
-    final switch(algorithm) 
+    static if(!vr)
     {
-      case Algo.standard:
-        auto algo = makeAlgorithm!(Optimization.none, TrackRootNodes.no)(phylo, states, mutationCosts);
-        processSegmentsPairs(algo, results, lengthParams);
-        break;        
-      case Algo.cache:      
-        auto algo = makeAlgorithm!(Optimization.windowing, TrackRootNodes.no)(phylo, states, mutationCosts);
-        processSegmentsPairs(algo, results, lengthParams);
-        break;        
-      case Algo.patterns:      
-        auto algo = makeAlgorithm!(Optimization.patterns, TrackRootNodes.no)(phylo, states, mutationCosts);
-        processSegmentsPairs(algo, results, lengthParams);
-        break;        
-      case Algo.cachePatterns:        
-        auto algo = makeAlgorithm!(Optimization.windowingPatterns, TrackRootNodes.no)(phylo, states, mutationCosts);
-        processSegmentsPairs(algo, results, lengthParams );
-        break;        
-    }     
+      //Make the bridge between the configuration algorithms and the actual algorithm implementations.
+      final switch(algorithm) 
+      {
+        case Algo.standard:
+          auto algo = makeAlgorithm!(Optimization.none, TrackRootNodes.no)(phylo, states, mutationCosts);
+          processSegmentsPairs(algo, results, lengthParams);
+          break;        
+        case Algo.cache:      
+          auto algo = makeAlgorithm!(Optimization.windowing, TrackRootNodes.no)(phylo, states, mutationCosts);
+          processSegmentsPairs(algo, results, lengthParams);
+          break;        
+        case Algo.patterns:      
+          auto algo = makeAlgorithm!(Optimization.patterns, TrackRootNodes.no)(phylo, states, mutationCosts);
+          processSegmentsPairs(algo, results, lengthParams);
+          break;        
+        case Algo.cachePatterns:        
+          auto algo = makeAlgorithm!(Optimization.windowingPatterns, TrackRootNodes.no)(phylo, states, mutationCosts);
+          processSegmentsPairs(algo, results, lengthParams );
+          break;        
+      }     
+    }
+    else
+    {
+      assert(algorithm == Algo.standard);
+      auto algo = makeAlgorithm!(Optimization.none, TrackRootNodes.yes)(phylo, states, mutationCosts);
+      processSegmentsPairs(algo, results, lengthParams);
+    }
     
     //Stop the clock and store the results.
     storage.store(makeRunSummary!ResultType(results, Clock.currTime() - startTime));          
@@ -256,7 +268,7 @@ unittest
       }  
     };
     
-  calculateSegmentsPairsCosts(rpr[], storage);  
+  calculateSegmentsPairsCosts!VerboseResults.no(rpr[], storage);  
 }
 
 
@@ -268,23 +280,6 @@ private void processSegmentsPairs(Alg, TheResults)(
 if(
   isAlgorithm!Alg
 ) {
-  /+
-  import std.algorithm: min;
-  //The outer loop is on segments length.
-  //The maximum is inclusive.
-  auto max = min(length.max.value(), algorithm.sequencesLength() / 2);
-  for(size_t sl = length.min; sl <= max; sl += length.step)
-  {
-    //Then on start position.    
-    //Inclusive last position.
-    auto end = algorithm.sequencesLength() - (2 * sl);
-    for(size_t start = 0; start <= end; ++start)
-    {    
-      auto cost = algorithm.costFor(start, sl);
-      results.add(result(start, segmentsLength(sl), cost));
-    }
-  }
-  +/
   foreach(result; algorithm.resultsFor(length))
   {
     results.add(result);

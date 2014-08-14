@@ -32,6 +32,6 @@ coût position 2,5 = 2/2
 coût position 3,6 = 10/13
 
 Phylo2:
-coût position 1,4 = 4/7   ([A:3:3], [C:3:2], [T:3:2])
+coût position 1,4 = 4/6   ([A:3:3], [C:3:1], [T:3:2])
 coût position 2,5 = 2/2   ([A:2:1], [T:2:1])
 coût position 3,6 = 10/13 

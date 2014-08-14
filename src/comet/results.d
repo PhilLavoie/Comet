@@ -30,41 +30,23 @@ template hasContainer( R ) if( isResult!R ) {
   A structure built to represent a result of a segments pairs distance (cost) calculation. It holds the left segment
   start index position, the segments length, and the cost of the calculation.  
 */
-struct Result( C = void ) {
+struct Result(C = void) 
+{
+  private enum hasContainer = !is(C == void); 
 
-  static if( !is( C == void ) ) {
+  private size_t _start;    //The left segment start index of the segments pairs.
+  private size_t _length;   //The length of each segment.
+  private Cost _cost;       //The total cost of the segments pairs associated with the previous fields.
   
-    private C _perPosition;
-    
-    @property public auto perPosition() { return _perPosition[]; }
+  static if(hasContainer) 
+  {  
+    private C _perPosition;    
+    @property public auto perPosition() {return _perPosition[];}  
+  }  
   
-  }
-
-private:
-
-  size_t _start;    //The left segment start index of the segments pairs.
-  size_t _length;   //The length of each segment.
-  Cost _cost;       //The total cost of the segments pairs associated with the previous fields.
-  
-  
-  
-  this( size_t start, size_t length, Cost cost ) {
-  
-    _start = start;
-    _length = length;
-    _cost = cost;
-    
-  }
-  
-  @property void start( typeof( _start ) start ) { _start = start; }
-  @property void length( typeof( _length ) length ) { _length = length; }
-  @property void cost( typeof( _cost ) cost ) { _cost = cost; }
-  
-public:
-
-  @property auto start()  { return _start; }
-  @property auto length() { return _length; }
-  @property auto cost()   { return _cost; }
+  @property public auto start()  { return _start; }
+  @property public auto length() { return _length; }
+  @property public auto cost()   { return _cost; }
   
   /**
     A cost based comparison ordering. When the cost is equals, the
@@ -74,8 +56,8 @@ public:
     Unless every field are the same for both results, this function
     will return an unequal comparison.
   */
-  int opCmp( Result rhs ) {
-  
+  public int opCmp(Result rhs)
+  {  
     //First compare on the cost criteria.
     if( _cost < rhs._cost - Cost.epsilon ) { 
     
@@ -89,11 +71,10 @@ public:
     
     //If the cost is equals, then the longer segments length wins.
     auto cmp = rhs._length - _length;
-    if( cmp ) { return cmp; }
+    if(cmp) {return cmp;}
     
     //Arbitrary ordering otherwise, based on left segment start.
-    return _start - rhs._start;
-    
+    return _start - rhs._start;    
   }
   
   /**
@@ -102,16 +83,15 @@ public:
     to compare two results on the basis of their cost but with an
     epsilon parameter to be more flexible.
   */
-  bool isEquivalentTo( Result rhs, Cost epsilon = Cost.epsilon ) in {
-  
-    assert( epsilon > 0 );
-    
-  } body {
-  
-    return ( ( _cost - epsilon <= rhs._cost && rhs._cost <= _cost + epsilon ) );  
-  
-  }
-  
+  public bool isEquivalentTo(Result rhs, Cost epsilon) 
+  in 
+  {  
+    assert(epsilon > 0);    
+  } 
+  body 
+  {  
+    return ((_cost - epsilon <= rhs._cost && rhs._cost <= _cost + epsilon));    
+  }  
 }
 
 /**
@@ -119,6 +99,10 @@ public:
 */
 auto result( size_t start, SegmentsLength length, Cost cost ) {
   return Result!(void)( start, length.value, cost );
+}
+auto result(C)(size_t start, SegmentsLength length, Cost cost, C rootNodes)
+{
+  return Result!(C)(start, length.value, cost, rootNodes);
 }
 
 unittest {

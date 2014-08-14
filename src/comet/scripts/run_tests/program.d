@@ -120,7 +120,7 @@ private void run( RunTestsConfig cfg ) {
   
   try {
   
-    calculateSegmentsPairsCosts(
+    calculateSegmentsPairsCosts!(VerboseResults.no)(
       runParamsRange,
       storage
     );

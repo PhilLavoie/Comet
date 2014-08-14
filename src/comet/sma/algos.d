@@ -59,16 +59,19 @@ enum Optimization {
 */
 struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M) 
 {
+  //Up to now, supports only when no optimization is used for verbose results.
+  static assert(!trn || opt == Optimization.none);
+
   //Those are the fields shared by all algorithms.
   private M _mutationCosts;           //The callable used to evaluate the cost of mutation a state to a given one.
   private SMTree!State _smTree;       //The state mutations analysis tree.
   
-  private size_t _noSequences;
-  private size_t _sequencesLength;
+  private const size_t _noSequences;
+  private const size_t _sequencesLength;
   
   //TODO:deprecate
-  @property auto sequencesLength() {return _sequencesLength;}
-  @property auto noSequences() {return _noSequences;}
+  @property private auto sequencesLength() {return _sequencesLength;}
+  @property private auto noSequences() {return _noSequences;}
   
   private alias NodeType = typeof(_smTree.root());
   
@@ -87,7 +90,6 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
     }
   }
   
-  //private Sequence[NodeType] _nodesSequences;
   private NodeSequence[] _leftLeaves;
   private NodeSequence[] _rightLeaves;
 
@@ -107,6 +109,13 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
     //The cost of the previously calculated segments pairs.
     private real _costSum;
   }  
+  
+  static if(trn)
+  {
+    alias RootData = typeof(_smTree.root().element());
+    //We need to make a deep copy of the data, because it is reused for every analysis.
+    RootData[] _rootNodes;
+  }
   
   private this(Phylo, States)(Phylo phylo, States states, typeof(_mutationCosts) mc)
   {
@@ -137,7 +146,12 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
     _noSequences = walkLength(leaves);
     assert(2 <= _noSequences);
     
-    makeDST(_smTree, phylo);       
+    makeDST(_smTree, phylo);   
+
+    static if(trn)
+    {
+      _rootNodes = new RootData[_sequencesLength/2];  //It will never be bigger than half the sequences length.
+    }
   }
   
   //Duplication speciation tree.
@@ -246,6 +260,16 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
     return preSpeciationCost(_smTree, _mutationCosts);
   }
   
+  static if(trn)
+  {
+    import std.typecons: Tuple;
+    alias Return = Result!(typeof(_rootNodes[]));
+  }
+  else
+  {
+    alias Return = Result!void;
+  }
+  
   static if(usingWindow)
   {
     /**
@@ -263,7 +287,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
       Return:
         The average pre speciation cost of the given segments pairs.
     */    
-    public Cost costFor(in size_t start, in size_t segmentsLength) 
+    private Return costFor(in size_t start, in size_t segmentsLength) 
     in
     {
       assert(0 < segmentsLength);
@@ -285,7 +309,8 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
           _costSum += posCost;
         }
         
-        return _costSum / segmentsLength;        
+        auto cost = _costSum / segmentsLength;      
+        return result(start, .segmentsLength(segmentsLength), cost);
       } 
       
       //Remove the first column cost of the previously processed segment pairs.
@@ -298,11 +323,12 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
       //Add it to the current cost.
       _costSum += posCost;
       
-      return _costSum / segmentsLength;      
+      auto cost = _costSum / segmentsLength;      
+      return result(start, .segmentsLength(segmentsLength), cost);
     }  
   }
   else
-  {
+  { 
     /**
       Calculates the average pre speciations cost of the given segments pairs starting at the given position
       and of the given length.
@@ -314,7 +340,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
       Return:
         The average pre speciation cost of the given segments pairs.
     */    
-    public Cost costFor(in size_t start, in size_t segmentsLength)
+    private Return costFor(in size_t start, in size_t segmentsLength)
     in
     {
       assert(0 < segmentsLength);
@@ -323,13 +349,33 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
     body
     {
       real sum = 0;
+      
+      static if(trn)
+      {
+        _rootNodes.length = segmentsLength;
+      }
+      
       auto segmentsEnd = start + segmentsLength;
       for(size_t i = start; i < segmentsEnd; ++i)
       {
         sum += columnCost!usingPatterns(i, segmentsLength);
-      }
+        static if(trn)
+        {
+          _rootNodes[i - start] = _smTree.root().element().clone();
+        }
+      }      
+      
       //Normalized sum.
-      return sum / segmentsLength;      
+      auto cost = sum / segmentsLength;      
+      
+      static if(trn)
+      {
+        return result(start, .segmentsLength(segmentsLength), cost, _rootNodes.dup);
+      }
+      else
+      {
+        return result(start, .segmentsLength(segmentsLength), cost);
+      }
     }  
   }  
   
@@ -367,15 +413,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
     @property auto save() {return this;}
     @property auto front() 
     {
-      static if(trn)
-      {
-        static assert(false);
-      }
-      else
-      {
-        auto cost = _algoP.costFor(_current, _segmentsLength);
-        return result(_current, segmentsLength(_segmentsLength), cost);
-      }
+      return _algoP.costFor(_current, _segmentsLength);     
     }
     @property bool empty() const {return _maxLength < _segmentsLength;}
     

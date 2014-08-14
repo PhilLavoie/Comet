@@ -46,7 +46,8 @@ public {
     phylo,
     epsilon,
     comparedResultsFiles,
-    compileTime
+    compileTime,
+    verboseResultsFile
   }
   
   /**
@@ -201,6 +202,11 @@ public {
       
         writeln( "Compared results files: ", cfg.get!( Field.comparedResultsFiles )()[].map!( a => a.fileName() ) );
       
+      }
+      
+      static if(hasField!(cfg, Field.verboseResultsFile))
+      {
+        writeln("Verbose results file: ", fileName(cfg.get!(Field.verboseResultsFile)()));
       }
       
      
@@ -465,6 +471,13 @@ private {
     mixin getter!_compileTime;
   
   }
+  
+  mixin template verboseResultsFileField() {
+  
+    private std.stdio.File _verboseResultsFile;
+    mixin getter!_verboseResultsFile;
+  
+  }
     
   /*********************************************************************************************************
     Launch initialization.
@@ -721,8 +734,17 @@ private {
         "--phylo",
         "Phylogeny file. The default phylogeny is generated."      
       );
-
-
+      
+    }
+    else static if(field == Field.verboseResultsFile)
+    {
+      return Arguments.file(
+        v,
+        "w",
+        "--vr",
+        "Verbose results file. If provided, the program will list out, for every results, the state mutations tree root nodes for every position in the given file."
+        "This option will slow down the processing."
+      );   
     } else static if( field == Field.sequencesDir ) {
 
       return Arguments.indexedRight( 
