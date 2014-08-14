@@ -17,7 +17,7 @@ import std.range: isInputRange, ElementType;
 import std.datetime: Duration;
 import std.traits: FieldTypeTuple;
 
-import comet.core_dev;
+import comet.core;
 import comet.results;
 import comet.results_io;
 import comet.scripts.compare_results.program: allEquivalents;

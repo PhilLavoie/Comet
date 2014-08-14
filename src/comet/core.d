@@ -14,7 +14,7 @@ import std.datetime;
 import comet.results;
 import comet.typecons;
 import comet.typedefs;
-import comet.sma.algos;
+import comet.sma.algos_dev;
 import comet.sma.mutation_cost: isMutationCostFor;
 import comet.configs.algos: Algo;
 
@@ -27,9 +27,9 @@ import std.range: isInputRange, ElementType;
 import std.typecons: Flag;
 alias VerboseResults = Flag!"VerboseResults";
 
-template ResultTypeOf( State, VerboseResults v ) {
+template ResultTypeOf(State, VerboseResults v) {
   static if( v ) {
-    alias ResultTypeOf = Result!( StatesInfo!(T) [] );
+    alias ResultTypeOf = Result!(StatesInfo!(T)[]) ;
   } else {
     alias ResultTypeOf = Result!void;
   }
@@ -39,112 +39,118 @@ template ResultTypeOf( State, VerboseResults v ) {
   Run specific parameters. Those parameters are expected to be constant for the processing
   of segments pairs contractions costs for a sequences group. 
   
-  T is the type held by the sequences, S is the states held by the Sankoff tree and M is
-  the type of the mutation costs provider (callable object, function or delegate).
-  
-  T is expected to be a range over S: it could be a set of nucleotides for example.
+  TODO: describe the types.
 */
-struct RunParameters( T, S, M ) if( isMutationCostFor!( M, S ) ) {
-
-  T[][]             sequencesGroup;   //Rows represent a sequence.
+//So far, only one thread is supported because empirical results show that no acceleration is gained from parallelism.
+//The hypothesis is because garbage collector is heavily used in the main loop and it stops all thread when collecting.
+//It is possible to reduce its usage by reimplementing the results structure, for example, to reuse the nodes when
+//inserting/removing a new result.
+struct RunParameters(Phylo, S, M) 
+if(isMutationCostFor!(M, S)) 
+{
+  Phylo             phylo;            //Phylogenetic tree.
   Algo              algorithm;  
   S[]               states;
   M                 mutationCosts;
-  NoThreads         noThreads;
+  NoThreads         noThreads;          
   LengthParameters  lengthParameters;
-  NoResults         noResults; 
-
+  NoResults         noResults;
+  
+  //To support the copy of the phylogeny because it is expected to be a const type.
+  void opAssign(typeof(this) rhs)
+  {
+    this.algorithm          = rhs.algorithm;
+    this.states             = rhs.states;
+    this.mutationCosts      = rhs.mutationCosts;
+    this.noThreads          = rhs.noThreads;
+    this.lengthParameters   = rhs.lengthParameters;
+    this.noResults          = rhs.noResults;
+    
+    alias UnqualifiedPhylo = std.traits.Unqual!Phylo;
+    cast(UnqualifiedPhylo)(this.phylo) = cast(UnqualifiedPhylo)(rhs.phylo);
+    assert(this.phylo == rhs.phylo);
+  }
 }
 
 /**
   Factory function to easily create run parameters.
 */
-auto makeRunParameters( T, S, M )( 
-  T[][] sequencesGroup, 
+auto makeRunParameters(Phylo, S, M)( 
+  Phylo phylo, 
   Algo algo, 
   S[] states, 
   M mutationCosts, 
   NoThreads noThreads, 
   LengthParameters length, 
   NoResults noResults 
-) {
-  
-  static assert( isMutationCostFor!( M, S ) );
-  
-  return RunParameters!( T, S, M )( sequencesGroup, algo, states, mutationCosts, noThreads, length, noResults );
-  
+) {  
+  static assert(isMutationCostFor!(M, S));  
+  return RunParameters!(Phylo, S, M)(phylo, algo, states, mutationCosts, noThreads, length, noResults);  
 }
 
 /**
   Result of the run.
 */
-struct RunSummary(R) {
-
+struct RunSummary(R) 
+{
   Results!R results;
   Duration executionTime;  
   NoThreads noThreadsUsed; //Since the actual number of thread used might vary from the one requested.
-
 }
 
 /**
   Factory function.
 */
-auto makeRunSummary( R, Args... )( Args args ) {
-  
-  return RunSummary!R( args );
-
+auto makeRunSummary(R, Args...)(Args args) 
+{  
+  return RunSummary!(R)(args);
 }
 
 /**
   Formal storage definition.  
 */
-interface Storage(R) {
-
-  void store( RunSummary!R summary );
-
+interface Storage(R) 
+{
+  void store(RunSummary!R summary);
 }
 
 /**
-  Returns whether or not the given type is storage for the other type.
+  Returns whether or not the given type S is storage for T.
 */
-private template isStorageFor( S, T ) {
-
-  static if( is(
+private template isStorageFor(S, T) 
+{
+  static if( 
+    is(
       typeof(
         () {
           S s;
-          s.store( T.init );        
+          s.store(T.init);        
         }
       )  
     )
   ) {
-
-    enum isStorageFor = true;
-    
-  } else {
-  
-    enum isStorageFor = false;
-    
+    enum isStorageFor = true;    
+  } 
+  else 
+  {  
+    enum isStorageFor = false;    
   }
-
 }
 
 /**
   Returns whether or not the given type can provide the information needed to manage
   the outer loop. The element type of the range must be RunParameters.
 */
-private template isRunParametersRange( T ) {
-
-  static if( isInputRange!T && isInstanceOf!( RunParameters, ElementType!T ) ) {
-
-    enum isRunParametersRange = true;
-    
-  } else {
-  
-    enum isRunParametersRange = false;
-  
+private template isRunParametersRange(T) 
+{
+  static if(isInputRange!T && isInstanceOf!(RunParameters, ElementType!T)) 
+  {
+    enum isRunParametersRange = true;    
+  } 
+  else 
+  {  
+    enum isRunParametersRange = false;  
   }
-
 }
 
 /**
@@ -155,346 +161,126 @@ private template isRunParametersRange( T ) {
   start over with the new parameters until the range is depleted.
   A range possibly iterates more than once over a given sequences groups, but it is expected that at least one of the run parameters change (algorithm used, number of threads, etc...).
 */
-void calculateSegmentsPairsCosts( RunParametersRange, S ) (
+void calculateSegmentsPairsCosts(RunParametersRange, S) (
   RunParametersRange  runParametersRange,
   S                   storage  
 ) {
-
   alias RunParamsType = ElementType!RunParametersRange;
-  alias SequencesType = typeof(RunParamsType.sequencesGroup);
+  alias PhyloType     = typeof(RunParamsType.phylo);
+  alias SequencesType = typeof(PhyloType.root().element().get());
   alias SequenceType = ElementType!SequencesType;
   alias SequencesElement = ElementType!SequenceType;
-  alias State = ElementType!(typeof(ElementType!(RunParametersRange).states));
+  alias State = ElementType!(typeof(RunParamsType.states));
   alias ResultType = ResultTypeOf!(State, VerboseResults.no);
   
-  static assert( isRunParametersRange!RunParametersRange );
-  static assert( isStorageFor!( S, RunSummary!ResultType ) );
-  
-  
-  foreach( runParams; runParametersRange ) {
+  static assert(isRunParametersRange!RunParametersRange);
+  static assert(isStorageFor!(S, RunSummary!ResultType));
     
-    auto sequencesGroup = runParams.sequencesGroup;
-    auto seqsCount      = sequencesCount(sequencesGroup.length);
-    auto length         = sequenceLength(sequencesGroup[0].length);
+  foreach(runParams; runParametersRange) 
+  {    
+    //Extract the per algorithm parameter.
+    auto phylo          = runParams.phylo;
     auto states         = runParams.states;
-    auto mutationCosts  = runParams.mutationCosts;
-  
+    auto mutationCosts  = runParams.mutationCosts;    
+    //Extract the algorithm.
+    auto algorithm      = runParams.algorithm;
+    //Extract the loop parameters.
     auto noThreads      = runParams.noThreads;
     auto lengthParams   = runParams.lengthParameters;
     auto noResults      = runParams.noResults;
     
-    auto results = Results!ResultType( noResults );
+    //Construct the results structure.
+    auto results = Results!ResultType(noResults);
     
-    SysTime startTime = Clock.currTime();
-    
-    //TODO: here you will find support for multiple threads of execution.
-    //However, empirical results reveal that no acceleration is obtained, therefore this code, or the libraries used,
-    //might not be correct/adequate.
-    //UPDATE: I hypothesize that this is due to heavy garbage collector usage in the main loop.
-    //It is possible to reduce it importantly by implementing a custom results holder structure that reuses memory
-    //for removed and inserted results instead of delegating to std.container.RBTree.
-    /* if( noThreads == 1 ) { */      
-      
-    final switch( runParams.algorithm ) {
-
+    //Start the clock...
+    SysTime startTime = Clock.currTime();    
+    //Make the bridge between the configuration algorithms and the actual algorithm implementations.
+    final switch(algorithm) 
+    {
       case Algo.standard:
-      
-        auto algo = makeAlgorithm!(Optimization.none, TrackRootNodes.no)(seqsCount, length, states, mutationCosts);
-        processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
-        break;
-        
-      case Algo.cache:
-      
-        auto algo = makeAlgorithm!(Optimization.windowing, TrackRootNodes.no)(seqsCount, length, states, mutationCosts);
-        processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
-        break;
-        
-      case Algo.patterns:
-      
-        auto algo = makeAlgorithm!(Optimization.patterns, TrackRootNodes.no)(seqsCount, length, states, mutationCosts);
-        processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
-        break;
-        
-      case Algo.cachePatterns:  
-      
-        auto algo = makeAlgorithm!(Optimization.windowingPatterns, TrackRootNodes.no)(seqsCount, length, states, mutationCosts);
-        processSegmentsPairs( sequencesGroup, algo, results, lengthParams );
-        break;
-        
+        auto algo = makeAlgorithm!(Optimization.none, TrackRootNodes.no)(phylo, states, mutationCosts);
+        processSegmentsPairs(algo, results, lengthParams);
+        break;        
+      case Algo.cache:      
+        auto algo = makeAlgorithm!(Optimization.windowing, TrackRootNodes.no)(phylo, states, mutationCosts);
+        processSegmentsPairs(algo, results, lengthParams);
+        break;        
+      case Algo.patterns:      
+        auto algo = makeAlgorithm!(Optimization.patterns, TrackRootNodes.no)(phylo, states, mutationCosts);
+        processSegmentsPairs(algo, results, lengthParams);
+        break;        
+      case Algo.cachePatterns:        
+        auto algo = makeAlgorithm!(Optimization.windowingPatterns, TrackRootNodes.no)(phylo, states, mutationCosts);
+        processSegmentsPairs(algo, results, lengthParams );
+        break;        
     }     
     
-    storage.store( makeRunSummary!ResultType( results, Clock.currTime() - startTime ) );     
-   
-    /* } else if( noThreads > 1 ) {
-    
-      version( parallelism ) {
-    
-        import std.parallelism;
-        import std.algorithm: min;
-        import std.traits;
-        import comet.bio.dna: Nucleotide;
-      
-        auto maxSegmentsLength = min( sequencesGroup[ 0 ].length / 2, lengthParams.max.value );
-        auto maxNoThreads = ( ( maxSegmentsLength - lengthParams.min.value ) / lengthParams.step.value ) + 1;
-        auto workingThreads = min( maxNoThreads, noThreads.value );
-        auto additionalThreads = workingThreads - 1;
-       
-        auto tasks =
-          Array!( Task!( processSegmentsPairs, ParameterTypeTuple!( processSegmentsPairs!( Nucleotide ) ) ) * )();
-        
-        auto taskResults = Array!Results();
-        for( int i = 0; i < additionalThreads; ++i ) {
-        
-          taskResults.insertBack( Results( noResults ) );
-          tasks.insertBack( 
-            task!processSegmentsPairs( 
-              sequencesGroup, 
-              algorithmFor!(SequencesElement)( 
-                runParams.algorithm, 
-                sequencesCount( sequencesGroup.length ), 
-                sequenceLength( sequencesGroup[ 0 ].length ), 
-                runParams.states, 
-                runParams.mutationCosts 
-              ),
-              taskResults[ i ], 
-              lengthParameters(
-                minLength( lengthParams.min + ( i + 1 ) * lengthParams.step ),
-                lengthParams.max,
-                lengthStep( lengthParams.step * workingThreads  )
-              )
-            )
-          );
-          ( tasks[ i ] ).executeInNewThread();
-        
-        }
-        
-        //Do this thread's processing.      
-        auto results = Results( noResults );
-        processSegmentsPairs( 
-          sequencesGroup, 
-          algorithmFor!(SequencesElement)( 
-            runParams.algorithm, 
-            sequencesCount( sequencesGroup.length ), 
-            sequenceLength( sequencesGroup[ 0 ].length ), 
-            runParams.states, 
-            runParams.mutationCosts 
-          ), 
-          results, 
-          lengthParameters( 
-            lengthParams.min,
-            lengthParams.max,
-            lengthStep( lengthParams.step * workingThreads )
-          ) 
-        );
-        
-               
-        for( int i = 0; i < tasks.length; ++i ) {
-        
-          tasks[ i ].yieldForce();
-          results.add( taskResults[ i ][] );
-        
-        }
-        
-        storage.store( makeRunSummary( results, Clock.currTime() - startTime ) );  
-
-      //Thread version.
-      } else {
-      
-        import core.thread;
-        import std.algorithm: min;
-        import std.traits;
-      
-        auto maxSegmentsLength = min( sequencesGroup[ 0 ].length / 2, lengthParams.max.value );
-        auto maxNoThreads = ( ( maxSegmentsLength - lengthParams.min.value ) / lengthParams.step.value ) + 1;
-        auto workingThreads = min( maxNoThreads, noThreads.value );
-        auto additionalThreads = workingThreads - 1;
-       
-        class MyThread: Thread {
-          Results results;
-        
-          this( int threadNo, Results results ) {
-            this.results = results;
-            auto length = lengthParameters(
-              minLength( lengthParams.min + ( threadNo + 1 ) * lengthParams.step ),
-              lengthParams.max,
-              lengthStep( lengthParams.step * workingThreads  )
-            );
-            
-            super( 
-              () {
-              
-                processSegmentsPairs( 
-                  sequencesGroup, 
-                  algorithmFor!(SequencesElement)( 
-                    runParams.algorithm, 
-                    sequencesCount( sequencesGroup.length ), 
-                    sequenceLength( sequencesGroup[ 0 ].length ), 
-                    runParams.states, 
-                    runParams.mutationCosts 
-                  ),
-                  this.results, 
-                  length
-                );
-                
-              }            
-              
-            );
-          
-          }
-        
-        }
-       
-        auto threadsGroup = Array!( MyThread )();
-        
-        for( int i = 0; i < additionalThreads; ++i ) {
-
-          threadsGroup.insertBack( new MyThread( i, Results( noResults ) ) );          
-          threadsGroup[ i ].start();
-        
-        }
-        
-        assert( threadsGroup.length );
-        
-        //Do this thread's processing.      
-        auto results = Results( noResults );
-        processSegmentsPairs( 
-          sequencesGroup, 
-          algorithmFor!(SequencesElement)( 
-            runParams.algorithm, 
-            sequencesCount( sequencesGroup.length ), 
-            sequenceLength( sequencesGroup[ 0 ].length ), 
-            runParams.states, 
-            runParams.mutationCosts 
-          ), 
-          results, 
-          lengthParameters( 
-            lengthParams.min,
-            lengthParams.max,
-            lengthStep( lengthParams.step * workingThreads )
-          ) 
-        );
-        
-               
-        foreach( thread; threadsGroup ) {
-          
-          thread.join();                  
-          results.add( thread.results[] );
-          
-        }
-        
-        storage.store( makeRunSummary( results, Clock.currTime() - startTime, .noThreads( workingThreads ) ) );      
-      
-      }
-    
-    } else {
-    
-      assert( false );
-    
-    }    */
-      
+    //Stop the clock and store the results.
+    storage.store(makeRunSummary!ResultType(results, Clock.currTime() - startTime));          
   }
+}
 
+unittest
+{
+  auto mutationCost = 
+    (int i, int j) 
+    {
+      return cast(Cost)0;
+    };
+  auto sequences = [[1, 2, 3, 4], [2, 4, 6, 8], [1, 3, 5, 7]];
+  import comet.loader: defaultPhylogeny;
+  auto phylo = defaultPhylogeny(sequences[]);
+  
+  alias RunParamsType = RunParameters!(typeof(phylo), int, typeof(mutationCost));
+  RunParamsType[] rpr;
+  static assert(isRunParametersRange!(typeof(rpr)));
+  rpr = new RunParamsType[1];
+  
+  rpr[0] = 
+    makeRunParameters(
+      phylo, 
+      Algo.standard, 
+      [1, 2, 3, 4, 5, 6, 7, 8][],
+      mutationCost,
+      noThreads(1),
+      lengthParameters(minLength(1), maxLength(2), lengthStep(1)),
+      noResults(100)
+    );
+    
+  alias ResultType = ResultTypeOf!(int, VerboseResults.no);
+    
+  auto storage = new class() {  
+      public void store(RunSummary!ResultType summary) 
+      {      
+        //Do nothing.
+      }  
+    };
+    
+  calculateSegmentsPairsCosts(rpr[], storage);  
 }
 
 
-private void processSegmentsPairs( T, Alg, TheResults )( 
-  T[][] sequencesGroup, 
+private void processSegmentsPairs(Alg, TheResults)( 
   Alg algorithm,
   TheResults results, 
   LengthParameters length 
+) 
+if(
+  isAlgorithm!Alg
 ) {
-  
-  //Get all segments length possible.
-  auto segmentsLengths = 
-    segmentsLengthsFor(     
-      sequenceLength( sequencesGroup[ 0 ].length ), 
-      length
-    );
-          
-  //For every segments length, generate segments pairs.
-  foreach( segmentsLength; segmentsLengths ) {    
-      
-    auto segmentsPairsRange = sequencesGroup.segmentPairsForLength( segmentsLength );
-    
-    //The segments pairs start on index 0 and increment by 1 index every time.
-    foreach( segmentsPairs; segmentsPairsRange ) {
-    
-      //Get the cost of the segments pairs using the appropriate algorithm.
-      auto cost = algorithm.costFor( segmentsPairs );
-      //Store the structured result.
-      results.add( result( segmentsPairs.leftSegmentStart, segmentsPairs.segmentsLength, cost ) );
-      
-    }  
-  
+  import std.algorithm: min;
+  //The outer loop is on segments length.
+  //The maximum is inclusive.
+  auto max = min(length.max.value(), algorithm.sequencesLength() / 2);
+  for(size_t sl = length.min; sl <= max; sl += length.step)
+  {
+    //Then on start position.    
+    //Inclusive last position.
+    auto end = algorithm.sequencesLength() - (2 * sl);
+    for(size_t start = 0; start <= end; ++start)
+    {    
+      auto cost = algorithm.costFor(start, sl);
+      results.add(result(start, segmentsLength(sl), cost));
+    }
   }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
-  This function constructs and returns an algorithm object based on the given parameters. 
-  The algorithm object is provided in order to encapsulate the possible optimization used underneath.
-  
-  The formal definition interface can be found in this module. Those objects provide functions to calculate the
-  cost of a segments pairs. Segments are expected to hold a compound type of the one held by the Sankoff tree, namely STATES. For example, if
-  the tree STATES are DNA nucleotides, then a sequence could hold nucleotide sets as its element. Those sets (possibly singletons) are
-  used to initialize the leaves of the sankoff tree.
-  
-  The mutation costs function must provide costs for pairs of STATES.
-  
-  Given those requirements, the algorithm objects will provide methods to calculate the cost of segments pairs, i.e. subsequences.
-  Every call to this function returns a NEW object, and so internal states are not shared between algorithm objects.
-  
-*/
-//TODO: add "is mutation costs for" type constraint  here.
-/* AlgoI!SequenceElement algorithmFor( SequenceElement, State, MutationCosts )( Algo algo, SequencesCount seqsCount, SequenceLength length, State[] states, MutationCosts mutationCosts ) {
-
-  final switch( algo ) {
-  
-    case Algo.standard:
-    
-      return standard!(SequenceElement)( seqsCount, length, states, mutationCosts );
-      break;
-      
-    case Algo.cache:
-    
-      return cache!(SequenceElement)( seqsCount, length, states, mutationCosts );
-      break;
-      
-    case Algo.patterns:
-    
-      return patterns!(SequenceElement)( seqsCount, length, states, mutationCosts );
-      break;
-      
-    case Algo.cachePatterns:  
-    
-      return cachePatterns!(SequenceElement)( seqsCount, length, states, mutationCosts );
-      break;
-      
-  }
-  
-  assert( false );  
-  
-}
-
-
- */

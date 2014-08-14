@@ -101,7 +101,7 @@ import comet.results_io;
 
 import comet.logger;
 import comet.typedefs;
-import comet.core_dev;
+import comet.core;
 import comet.loader;
 import comet.programcons;
 
