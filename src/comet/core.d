@@ -14,7 +14,7 @@ import std.datetime;
 import comet.results;
 import comet.typecons;
 import comet.typedefs;
-import comet.sma.algos_dev;
+import comet.sma.algos;
 import comet.sma.mutation_cost: isMutationCostFor;
 import comet.configs.algos: Algo;
 

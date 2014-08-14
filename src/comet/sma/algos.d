@@ -1,3 +1,6 @@
+//Algos'api is being currently reviewed here. Some important changes are expected
+//to happen. This module is planned to replace alogs when finished.
+
 /**
   Module encapsulating logic regarding the calculation of segment pairs cost.
   It provides an interface to the user in the form of algorithms that evaluate the
@@ -9,8 +12,6 @@
 module comet.sma.algos;
 
 public import comet.sma.mutation_cost;
-public import comet.typedefs: SequencesCount, sequencesCount;
-public import comet.typedefs: SequenceLength, sequenceLength;
 public import comet.configs.algos: Algo;
 public import comet.sma.smtree: StatesInfo;
 
@@ -19,7 +20,9 @@ import comet.sma.segments;
 import comet.sma.smtree;
 
 import std.algorithm;
-import range = std.range;
+import std.range: ElementType, isInputRange;
+import std.traits: isInstanceOf;
+import std.typecons: Nullable;
 
 /**
   The user can request the algorithm to record intermediate data allowing
@@ -53,11 +56,39 @@ enum Optimization {
   calculated first before changing the length. Also, this calculation should start at index 0.
   Note: This structure was not intended to be used with the default constructor, use the factory function(s) provided.
 */
-struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,) 
+struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M) 
 {
   //Those are the fields shared by all algorithms.
-  private M _mutationCosts;           //The callable used to evaluate the cost of mutatin a state to a given one.
+  private M _mutationCosts;           //The callable used to evaluate the cost of mutation a state to a given one.
   private SMTree!State _smTree;       //The state mutations analysis tree.
+  
+  private size_t _noSequences;
+  private size_t _sequencesLength;
+  
+  //TODO:deprecate
+  @property auto sequencesLength() {return _sequencesLength;}
+  @property auto noSequences() {return _noSequences;}
+  
+  private alias NodeType = typeof(_smTree.root());
+  
+  private struct NodeSequence
+  {
+    NodeType node;
+    Sequence sequence;
+    
+    void opAssign(typeof(this) rhs)
+    {
+      this.node = rhs.node;
+      import std.traits: Unqual;
+      auto sequenceP = cast(Unqual!(typeof(this.sequence))*)&this.sequence;
+      *sequenceP = rhs.sequence;
+      assert(this.sequence == rhs.sequence);
+    }
+  }
+  
+  //private Sequence[NodeType] _nodesSequences;
+  private NodeSequence[] _leftLeaves;
+  private NodeSequence[] _rightLeaves;
 
   private enum usingPatterns  = opt == Optimization.patterns  || opt == Optimization.windowingPatterns;
   private enum usingWindow    = opt == Optimization.windowing || opt == Optimization.windowingPatterns;
@@ -76,149 +107,310 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, State, M,)
     private real _costSum;
   }  
   
-  private this(States)( SequencesCount seqCount, SequenceLength length, States states, typeof( _mutationCosts ) mutationCosts ) 
-  if(is(ElementType!States == State))
-  {  
-    _mutationCosts  = mutationCosts;
+  private this(Phylo, States)(Phylo phylo, States states, typeof(_mutationCosts) mc)
+  {
+    _mutationCosts  = mc;
     _smTree         = SMTree!State(states[]);
-   
+    
+    auto leaves = phylo.leaves();
+    import std.range: walkLength;
+    _sequencesLength = walkLength(leaves.front().element().get());
+    
+    foreach(leaf; leaves)
+    {
+      import std.conv: to;
+      auto leafSequenceLength = walkLength(leaf.element().get());
+      assert( 
+        leafSequenceLength == _sequencesLength, 
+        "expected all sequences to be of length: " ~ to!string(_sequencesLength) 
+        ~ " but found: " ~ to!string(leafSequenceLength)
+      );
+    }
+    
     static if(usingWindow) 
     {
-      _window   = new Cost[length.value];
+      _window   = new Cost[_sequencesLength];
       _costSum  = 0;
     }
    
-    //Phylogenize the tree according to the sequences, see documentation to see
-    //how it is done.  
-    phylogenize( _smTree, seqCount );       
+    _noSequences = walkLength(leaves);
+    assert(2 <= _noSequences);
+    
+    makeDST(_smTree, phylo);       
+  }
+  
+  //Duplication speciation tree.
+  private void makeDST(Tree1, Tree2)(ref Tree1 dst, in Tree2 phylo)
+  {
+    dst.clear();
+    
+    Tree1 leftSubTree = Tree1(dst.states());
+    Tree1 rightSubTree = Tree1(dst.states());
+    leftSubTree.mimic(phylo);
+    rightSubTree.mimic(phylo);
+    
+    auto root = dst.setRoot();
+    
+    auto node = dst.appendSubTree(root, leftSubTree);
+    assert(node !is null);
+    assert(node == leftSubTree.root(), "node: " ~ to!string(node) ~ " leftSubTree.root(): " ~ to!string(leftSubTree.root()));
+    assert(node.element() == leftSubTree.root().element());
+    
+    node = dst.appendSubTree(root, rightSubTree);    
+    assert(node !is null);
+    assert(node == rightSubTree.root(), "node: " ~ to!string(node) ~ " rightSubTree.root(): " ~ to!string(rightSubTree.root()));
+    assert(node.element() == leftSubTree.root().element());
+        
+    auto dstLeaves = dst.leaves();
+    auto phyloLeaves = phylo.leaves();
+    
+    import std.range: walkLength;
+    auto noDSTLeaves = walkLength(dstLeaves);
+    auto noPhyloLeaves = walkLength(phyloLeaves);
+    
+    assert(noDSTLeaves == (2 * noPhyloLeaves));
+    
+    scope(success)
+    {
+      assert(_leftLeaves.length == noPhyloLeaves);
+      assert(_rightLeaves.length == noPhyloLeaves);
+      assert(_leftLeaves.length + _rightLeaves.length == noDSTLeaves);
+    }
+    
+    _leftLeaves = new NodeSequence[noPhyloLeaves];
+    size_t index = 0;
+    foreach(phyloLeaf; phyloLeaves)
+    {
+      _leftLeaves[index] = NodeSequence(dstLeaves.front(), phyloLeaf.element().get());
+      dstLeaves.popFront();
+      ++index;
+    }
+    
+    _rightLeaves = new NodeSequence[noPhyloLeaves];
+    index = 0;
+    foreach(phyloLeaf; phyloLeaves)
+    {
+      _rightLeaves[index] = NodeSequence(dstLeaves.front(), phyloLeaf.element().get());
+      dstLeaves.popFront();
+      ++index;
+    }
+
+    assert(dstLeaves.empty());    
   }
   
   /**
     Calculates the cost of a single position inside the segments pairs.
-    A specialization exist when using patterns.
-  */
-  //Patterns version.
-  private Cost columnCost( bool useP, Range )( Range column ) if( range.isInputRange!Range && useP ) 
+    
+    Params:
+      useP = When set to true, this function uses the patterns optimization. Note that
+        this will not compile if the user did not configure the algorithm to use the optimization
+        in the first place.
+      
+      start = The index on which the segments pairs begin.
+      segmentsLength = The length of each segment.
+  */  
+  private Cost columnCost(bool useP)(size_t start, size_t segmentsLength) if(useP) 
   {        
+    import std.algorithm: map;
+    auto left = _leftLeaves.map!(ns => ns.sequence[start]);
+    auto right = _rightLeaves.map!(ns => ns.sequence[start + segmentsLength]);
+    
+    import std.algorithm: chain;    
     //Calculate the pattern of the leaves.
     //TODO: how does this work with nucleotide sequences?????
-    auto pattern = Pattern( column ); 
+    auto pattern = Pattern(chain(left,right)); 
    
     //If a similar set of leaves have already been calculated, then use the previously stored cost.
-    if( pattern !in _patternsCost ) 
+    if(pattern !in _patternsCost) 
     {      
-      _patternsCost[ pattern ] = columnCost!(false)( column );        
+      _patternsCost[pattern] = columnCost!(false)(start, segmentsLength);        
     } 
     
     return _patternsCost[ pattern ];    
   }
-  ///Ditto.
-  //No patterns version.
-  private Cost columnCost( bool useP, Range )( Range column ) if( range.isInputRange!Range && !useP) 
-  {    
-    //Start by extracting the states from the hierarchy: use them to set the leaves of the smtree.
-    _smTree.setLeaves( column );
+  ///Ditto.  
+  private Cost columnCost(bool useP)(size_t start, size_t segmentsLength) if(!useP)
+  {
+    foreach(ns; _leftLeaves)
+    {
+      ns.node.element().fixStates(ns.sequence[start]);
+    }
     
-    //Process the state mutation algorithm then extract the preSpeciation cost.
-    _smTree.update( _mutationCosts );
-    return preSpeciationCost( _smTree, _mutationCosts );
-  } 
+    auto offset = start + segmentsLength;
+    foreach(ns; _rightLeaves)
+    {
+      ns.node.element().fixStates(ns.sequence[offset]);
+    }
+    _smTree.update(_mutationCosts);
+    return preSpeciationCost(_smTree, _mutationCosts);
+  }
   
   static if(usingWindow)
   {
     /**
-      Calculates the average pre speciations cost of the given segments pairs.
-      The segments can hold the same type as the state type or a range over this type, i.e. a slice of state for example.
+      Calculates the average pre speciations cost of the given segments pairs starting at the given position
+      and of the given length.
       
+      This function uses the windowing optimization.
       Relies on the fact that the outer loop is on period length.
       Relies on the fact that the first duplication for a given length starts at position 0.
+            
+      Params:
+        start = The start index of the segments pairs.
+        segmentsLength = The length of the segments.
+        
+      Return:
+        The average pre speciation cost of the given segments pairs.
     */    
-    public Cost costFor( T )( SegmentPairs!( T ) pairs ) 
+    public Cost costFor(in size_t start, in size_t segmentsLength) 
+    in
+    {
+      assert(0 < segmentsLength);
+      assert(start + 2 * segmentsLength <= _sequencesLength);
+    }
+    body
     {    
       //If those are the first segment pairs of a given length.
-      size_t segmentsStart = pairs.leftSegmentStart;
-      if( segmentsStart == 0 ) 
+      if(start == 0) 
       {
         _costSum = 0;
-        foreach( column; pairs.byColumns ) 
-        {              
-          auto posCost = columnCost!usingPatterns( column );          
-          _window[ column.index ] = posCost;
-          _costSum += posCost;          
+        
+        auto segmentsEnd = start + segmentsLength;
+        
+        for(size_t i = start; i < segmentsEnd; ++i)
+        {
+          auto posCost = columnCost!usingPatterns(i, segmentsLength);
+          _window[i] = posCost;
+          _costSum += posCost;
         }
         
-        return _costSum / pairs.segmentsLength;        
+        return _costSum / segmentsLength;        
       } 
       
       //Remove the first column cost of the previously processed segment pairs.
-      _costSum -= _window[ segmentsStart - 1 ];
+      _costSum -= _window[start - 1];
       //Calculate the cost of this segment pairs last column.
-      auto posCost = columnCost!usingPatterns( pairs.byColumns[ $ - 1 ]  );
+      auto lastColumn = start + segmentsLength - 1;
+      auto posCost = columnCost!usingPatterns(lastColumn, segmentsLength);
       //Store it.    
-      _window[ segmentsStart + pairs.segmentsLength - 1 ] = posCost;
+      _window[lastColumn] = posCost;
       //Add it to the current cost.
       _costSum += posCost;
       
-      return _costSum / pairs.segmentsLength;      
+      return _costSum / segmentsLength;      
     }  
   }
   else
   {
     /**
-      Calculates the average pre speciations cost of the given segments pairs.
-      The segments can hold the same type as the state type or a range over this type, i.e. a slice of state for example.
-    */
-    public Cost costFor( T )( SegmentPairs!( T ) pairs ) 
+      Calculates the average pre speciations cost of the given segments pairs starting at the given position
+      and of the given length.
+      
+      Params:
+        start = The start index of the segments pairs.
+        segmentsLength = The length of the segments.
+        
+      Return:
+        The average pre speciation cost of the given segments pairs.
+    */    
+    public Cost costFor(in size_t start, in size_t segmentsLength)
+    in
+    {
+      assert(0 < segmentsLength);
+      assert(start + 2 * segmentsLength <= _sequencesLength, "start: " ~ to!string(start) ~ " segmentsLength: " ~ to!string(segmentsLength));
+    }
+    body
     {
       real sum = 0;
-      foreach( column; pairs.byColumns ) 
-      {      
-        sum += columnCost!usingPatterns( column );        
+      auto segmentsEnd = start + segmentsLength;
+      for(size_t i = start; i < segmentsEnd; ++i)
+      {
+        sum += columnCost!usingPatterns(i, segmentsLength);
       }
-      
       //Normalized sum.
-      return sum / pairs.segmentsLength;      
-    }
-  
+      return sum / segmentsLength;      
+    }  
   }  
 }
-
-/**
-  Factory function for easy type inference of the construction parameters.
-  This function will become deprecated.
-*/
-//TODO: deprecate.
-auto makeAlgorithm(Optimization opt, TrackRootNodes trn, State, M)(SequencesCount seqCount, SequenceLength length, State[] states, M mutationCosts) 
-{
-  return Algorithm!(opt, trn, State, M)(seqCount, length, states, mutationCosts);
-}
-
-/**
-  Overload with phylogenetic tree as a parameter.
-  New code is expected to use this one.
-*/
-/* auto makeAlgorithm(
-  Optimization opt, 
-  TrackRootNodes trn,
-  State, 
-  M
-  )(
-  SequencesCount seqCount,
-  SequenceLength length,
-  State[] states, 
-  M mutationCosts
-) {
-  return Algorithm!(opt, trn, State, M)(seqCount, length, states, mutationCosts);
-} */
 
 /**
   Returns if the given type refers to an algorithm provided by this module.
 */
 template isAlgorithm(A) 
 {
-  enum isAlgorithm = std.traits.isInstanceOf!(Algorithm, A);
+  enum isAlgorithm = isInstanceOf!(Algorithm, A);
 }
 
+auto makeAlgorithm
+  (
+    Optimization opt,
+    TrackRootNodes trn, 
+    Phylo,
+    State, 
+    M
+  ) (
+    Phylo phylo,
+    State[] states, 
+    M mutationCosts,
+)
+out(ret)
+{
+  static assert(isAlgorithm!(typeof(ret)));
+}
+body
+{
+  return Algorithm!(opt, trn, typeof(phylo.root().element().get()), State, M)(phylo, states, mutationCosts);
+}
+
+unittest
+{
+  auto sequences = [[1,2,3,4], [2,4,6,8], [1,3,5,7]];
+  import comet.loader: defaultPhylogeny;
+  auto phylo = defaultPhylogeny(sequences);
+  auto states = [1,2,3,4,5,6,7,8];
+  auto mc = (int a, int b) {
+      if(a == b){return 0;}
+      return 1;
+    };
+  
+  auto algo = makeAlgorithm!(Optimization.windowingPatterns, TrackRootNodes.no)(phylo, states, mc);
+  
+  {
+    auto leaves = algo._smTree.leaves();
+    
+    import std.range: walkLength;
+    assert(walkLength(leaves) == 6);
+    
+    auto counter = 0;
+    foreach(leaf; leaves) 
+    {
+      if(counter < 3)
+      {
+        auto index = counter;
+        assert(algo._leftLeaves[index].node == leaf);
+        assert(algo._leftLeaves[index].sequence == sequences[index]);
+      }
+      else
+      {
+        auto index = counter - 3;
+        assert(algo._rightLeaves[index].node == leaf);
+        assert(algo._rightLeaves[index].sequence == sequences[index]);
+      }
+      ++counter;
+    }
+  }
+  
+  auto cost1 = algo.columnCost!false(0,2);  
+  auto cost2 = algo.columnCost!true(0,2);  
+  
+  assert(cost1 == cost2);
+  
+  {
+    auto cost = algo.costFor(0, 2);  
+  }
+}
+
+/+
 unittest 
 {
   //Instantiate all combinations to see if it compiles.
@@ -244,65 +436,16 @@ unittest
   static assert(isAlgorithm!(typeof(algo1)));
   static assert(isAlgorithm!(typeof(algo9)));
 }
++/
 
-/**
-  The first sequences read are "older" (higher, in terms of levels, in the phylogeny).
-  Every phylogeny node has either 2 children or is a leaf. 
-  If there are 2 sequences, sequence 1 and sequence 2 share the same ancestors. If there
-  are 3 sequences, sequence 2 and sequence 3 share a common ancestor. This ancestor shares
-  a common ancestor with sequence 1. If there is 4 sequences, the same logic goes on.
-  
-  Ex: 3 sequences
-  
-                    root
-                    |
-        -------------------------
-        |                       |
-        node                    node
-        |                       |
-    ---------               ---------
-    |       |               |       |
-    seq1    node            seq1    node
-            |                       |
-        ---------               ---------
-        |       |               |       |
-        seq2    seq3            seq2    seq3
-        
-  The left subtree (from the root) represents the start of the duplication, whereas the right subtree represent the duplicated areas.
-*/
-private void phylogenize( Tree )( ref Tree tree, SequencesCount seqCount ) in {
-  
-  assert( 2 <= seqCount );
-  
-} out {
-
-  assert( count( tree.leaves ) == 2 * seqCount );
-  
-} body {
-  
-  tree.clear();  
-  auto root = tree.setRoot();  
-  auto leftCurrent = tree.appendChild( root );
-  auto rightCurrent = tree.appendChild( root );
-  
-  for( size_t seqIndex = 0; seqIndex < seqCount; ++seqIndex ) {
-    tree.appendChild( leftCurrent );
-    tree.appendChild( rightCurrent );
-    
-    //If we have more than one sequence left, we have to create
-    //at least an additional branch.
-    if( 2 < ( seqCount - seqIndex ) ) {
-      leftCurrent = tree.appendChild( leftCurrent );
-      rightCurrent = tree.appendChild( rightCurrent );
-    }
-  } 
-}
-
+//TODO: known bug for very high values.
 private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
   
-  /*The pre speciation cost is associated with the number of mutations
+  /*
+    The pre speciation cost is associated with the number of mutations
     from the root to its children, accounting for every possible reconstructions.
-    That value is then averaged by the number of possible reconstructions.*/
+    That value is then averaged by the number of possible reconstructions.
+  */
   size_t noRecons = 0;
   Cost costSum = 0.0;
   
@@ -347,7 +490,7 @@ private Cost preSpeciationCost( Tree, U )( Tree smTree, U mutationCosts ) {
         size_t multiplier = rootCount / equivalentsCount;      
       
         assert( 0 < equivalentsCount );
-        assert( rootCount % equivalentsCount == 0 );
+        assert(rootCount % equivalentsCount == 0, "rootCount: " ~ to!string(rootCount) ~ " equivalentsCount: " ~ to!string(equivalentsCount));
         assert( 0 < multiplier );
       
         foreach( childStateTuple; child.element[] ) {

@@ -1,4 +1,4 @@
-module comet.sma.all;
+module comet.sma;
 
 public import comet.sma.algos;
 public import comet.sma.cost;
