@@ -86,7 +86,7 @@ public:
 }
 
 private string VERBOSE_RESULTS_HEADER_FORMAT = "%12s%12s%12s%12s\n";
-private string VERBOSE_RESULT_WRITE_FORMAT = "%12d%12d%12d        ";
+private string VERBOSE_RESULT_WRITE_FORMAT = "%12d%12d%12d       ";
 private string ROOTS_FORMAT = "%s %f %d ";
 
 /**
