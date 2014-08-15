@@ -24,6 +24,7 @@ import std.algorithm;
 import std.range: ElementType, isInputRange;
 import std.traits: isInstanceOf;
 import std.typecons: Nullable;
+import std.conv: to;
 
 /**
   The user can request the algorithm to record intermediate data allowing
@@ -59,8 +60,11 @@ enum Optimization {
 */
 struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M) 
 {
-  //Up to now, supports only when no optimization is used for verbose results.
-  static assert(!trn || opt == Optimization.none);
+  private enum usingPatterns  = opt == Optimization.patterns  || opt == Optimization.windowingPatterns;
+  private enum usingWindow    = opt == Optimization.windowing || opt == Optimization.windowingPatterns;
+  
+  //Up to now, supports only the tracking of root nodes when not using patterns.
+  static assert(!trn || !usingPatterns);
 
   //Those are the fields shared by all algorithms.
   private M _mutationCosts;           //The callable used to evaluate the cost of mutation a state to a given one.
@@ -93,9 +97,6 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
   private NodeSequence[] _leftLeaves;
   private NodeSequence[] _rightLeaves;
 
-  private enum usingPatterns  = opt == Optimization.patterns  || opt == Optimization.windowingPatterns;
-  private enum usingWindow    = opt == Optimization.windowing || opt == Optimization.windowingPatterns;
-  
   static if(usingPatterns) 
   {
     //When the patterns optimization is used, a map is internally used to store a pattern's previously calculated cost.
@@ -150,7 +151,7 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
 
     static if(trn)
     {
-      _rootNodes = new RootData[_sequencesLength/2];  //It will never be bigger than half the sequences length.
+      _rootNodes = new RootData[_sequencesLength];  //It will never be bigger than the sequences length, no matter what algorithm is used.
     }
   }
   
@@ -305,26 +306,54 @@ struct Algorithm(Optimization opt, TrackRootNodes trn, Sequence, State, M)
         for(size_t i = start; i < segmentsEnd; ++i)
         {
           auto posCost = columnCost!usingPatterns(i, segmentsLength);
-          _window[i] = posCost;
+          
+          static if(trn)
+          {
+            _rootNodes[i] = _smTree.root().element().clone();
+          }
+          
+          _window[i] = posCost;          
           _costSum += posCost;
         }
         
         auto cost = _costSum / segmentsLength;      
-        return result(start, .segmentsLength(segmentsLength), cost);
+        
+        static if(trn)
+        {
+          return result(start, .segmentsLength(segmentsLength), cost, _rootNodes[start .. segmentsEnd].dup);
+        }
+        else
+        {
+          return result(start, .segmentsLength(segmentsLength), cost);
+        
+        }
       } 
       
       //Remove the first column cost of the previously processed segment pairs.
       _costSum -= _window[start - 1];
       //Calculate the cost of this segment pairs last column.
       auto lastColumn = start + segmentsLength - 1;
+      
       auto posCost = columnCost!usingPatterns(lastColumn, segmentsLength);
+      static if(trn)
+      {
+        _rootNodes[lastColumn] = _smTree.root().element().clone();
+      }
+      
       //Store it.    
       _window[lastColumn] = posCost;
       //Add it to the current cost.
       _costSum += posCost;
       
       auto cost = _costSum / segmentsLength;      
-      return result(start, .segmentsLength(segmentsLength), cost);
+      static if(trn)
+      {
+        return result(start, .segmentsLength(segmentsLength), cost, _rootNodes[start .. lastColumn + 1].dup);
+      }
+      else
+      {
+        return result(start, .segmentsLength(segmentsLength), cost);
+      }
     }  
   }
   else

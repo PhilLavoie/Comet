@@ -95,7 +95,7 @@ private string ROOTS_FORMAT = "%s %f %d ";
 */
 public void printVerboseResults(Range)(File output, Range results) if(isForwardRange!Range) 
 {
-  output.writefln( VERBOSE_RESULTS_HEADER_FORMAT, "start", "length", "relPos", "roots" );
+  output.writef( VERBOSE_RESULTS_HEADER_FORMAT, "start", "length", "relPos", "roots" );
   
   foreach(result; results) 
   {

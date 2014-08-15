@@ -222,9 +222,21 @@ void calculateSegmentsPairsCosts(VerboseResults vr, RunParametersRange, S) (
     }
     else
     {
-      assert(algorithm == Algo.standard);
-      auto algo = makeAlgorithm!(Optimization.none, TrackRootNodes.yes)(phylo, states, mutationCosts);
-      processSegmentsPairs(algo, results, lengthParams);
+      
+      final switch(algorithm)
+      {
+        case Algo.standard:
+          auto algo = makeAlgorithm!(Optimization.none, TrackRootNodes.yes)(phylo, states, mutationCosts);
+          processSegmentsPairs(algo, results, lengthParams);
+          break;
+        case Algo.cache:
+          auto algo = makeAlgorithm!(Optimization.windowing, TrackRootNodes.yes)(phylo, states, mutationCosts);
+          processSegmentsPairs(algo, results, lengthParams);
+          break;
+        case Algo.patterns:
+        case Algo.cachePatterns:      
+          assert(false, "verbose results only supported with no or cache optimization, not " ~ to!string(algorithm));
+      }
     }
     
     //Stop the clock and store the results.

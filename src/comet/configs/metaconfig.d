@@ -743,7 +743,6 @@ private {
         "w",
         "--vr",
         "Verbose results file. If provided, the program will list out, for every results, the state mutations tree root nodes for every position in the given file."
-        "This option will slow down the processing."
       );   
     } else static if( field == Field.sequencesDir ) {
 
