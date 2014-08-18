@@ -2,15 +2,18 @@
   Module providing mixin code for creating reusable configuration fields and command line arguments.
   It is responsible to hold and know every static and runtime defaults for every configuration field
   available to the user.
+  
+  It is provided so that fields have the same names and semantics across the different scripts
+  and executables of this package.
 */
 module comet.configs.metaconfig;
 
 
 public import comet.configs.algos;
 public import std.container: Array;
-public import comet.typecons;
 public import std.stdio: File;
 public import std.typecons: Tuple, tuple;
+public import comet.typecons;
 
 import comet.cli;
 import comet.loader: fileName;
@@ -424,7 +427,8 @@ private {
   
   mixin template algoField() {
   
-    private comet.configs.algos.Algo _algo = Algo.standard;  
+    //Switched the default to cache optimization, see comment in flag section.
+    private comet.configs.algos.Algo _algo = Algo.cache;  
     mixin getter!_algo;    
   
   }
@@ -483,27 +487,22 @@ private {
     Launch initialization.
   *********************************************************************************************************/
   
-  mixin template initAllFields() {
-  
-    public void init() {
-
+  mixin template initAllFields() 
+  {  
+    public void init() 
+    {
       alias T = typeof( this );
     
-      foreach( member; __traits( allMembers, T ) ) {        
-        
+      foreach(member; __traits(allMembers, T)) 
+      { 
         //Runtime defaults for variables such as files.
         mixin hasDefaultSetter!member;
         
-        static if( hasDefaultSetter ) {
-                
-          mixin( defaultSetterFor!member ~ ";" );
-        
-        }
-      
-      }
-    
-    }
-    
+        static if(hasDefaultSetter){                
+          mixin( defaultSetterFor!member ~ ";" );        
+        }      
+      }    
+    }    
   }
   
   /*********************************************************************************************************
@@ -627,7 +626,7 @@ private {
           
           }
           
-          override void store() {
+          override void convert() {
           
             auto converter = Converters.file( "w" );
             _compileTimeFile = converter( _args );
@@ -696,7 +695,7 @@ private {
             
           }
           
-          override void store() {
+          override void convert() {
           
             foreach( fileName; _args ) {
 
@@ -834,7 +833,15 @@ private {
       static assert( false, "unimplemented" );
       
     } else static if( field == Field.algo ) {
-
+      /* 
+        Patterns do not support correctly element sets for each position in sequences.
+        Patterns do not support as of right now root nodes tracking.
+        Only one optimization remains, which should always be used because 
+        it is always much faster than without any optimization (windowing). 
+        If this is reinstated, make sure to properly initialize the algorithm variable
+        to its default.
+      */
+      static assert(false, "algorithm option has been deactivated");
       return Arguments.mapped( 
         v,
         comet.configs.algos.algosByStrings,        

@@ -1,9 +1,5 @@
 module comet.results_io;
 
-import comet.results;
-
-public import comet.results: Result;
-
 import std.format;
 import std.stdio;
 import std.range: isForwardRange;
@@ -11,6 +7,9 @@ import std.algorithm: splitter, filter, count;
 import std.conv: to;
 import std.traits: isInstanceOf;
   
+import comet.sma: result, Result, hasContainer, isResult;
+import comet.typedefs: Cost, segmentsLength;
+
 private string RESULTS_HEADER_FORMAT = "%12s%12s%12s\n";
 private string RESULT_WRITE_FORMAT = "%12d%12d%12.8f\n";
 

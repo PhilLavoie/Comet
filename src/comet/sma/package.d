@@ -1,5 +1,5 @@
 module comet.sma;
 
 public import comet.sma.algos;
-public import comet.sma.cost;
+//TODO: remove this eventually.
 public import comet.sma.smtree;

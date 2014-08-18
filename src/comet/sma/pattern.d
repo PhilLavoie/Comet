@@ -20,14 +20,15 @@ struct Pattern {
     Constructs the pattern and readies it for comparison.
     This is the only way a pattern should be constructed.
   */
-  this( Range )( Range data ) if( isInputRange!Range && hasLength!Range ) {
-    _data = new size_t[ data.length ];
+  this(Range)(Range data) if( isInputRange!Range ) 
+  {
+    assert(!isInputRange!(ElementType!Range), "element sets as pattern elements not supported");
+    
+    import std.range: walkLength;  
+    _data = new size_t[walkLength(data)];
     this.data( data );
   } 
-  this( Range )( Range data ) if( isInputRange!Range && !hasLength!Range ) {
-    _data = new size_t[ data.count ];
-    this.data( data );
-  }
+  
   
   /**
     Returns the length of the pattern.

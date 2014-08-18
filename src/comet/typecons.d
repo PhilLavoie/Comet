@@ -31,7 +31,6 @@ mixin template getter( alias var, Visibility vis = Visibility.public_ ) {
   
 }
 
-
 /**
   A mixin template for creating different types of bounded size_t values.
   Useful for creating new types to avoid confusion while passing parameters.

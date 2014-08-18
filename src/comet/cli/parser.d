@@ -145,13 +145,13 @@ protected:
   }
   
   /**
-    Calls store on every used argument.
+    Calls convert on every used argument.
   */
-  void store() {
+  void convert() {
   
     foreach( arg; this.used ) {
     
-      argProxy!"store"( arg );      
+      argProxy!"convert"( arg );      
       
     }
     
@@ -413,7 +413,7 @@ public:
     try {
     
       tokens = take( tokens );
-      store();
+      convert();
       assign();
       
     } catch( HelpMenuRequested e ) {
@@ -556,7 +556,7 @@ unittest {
     This is a proxy function whose sole purpose is to wrap around any exception thrown by the argument
     so that the caller function has an exception message in which the argument appear.s  
   */
-private auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "store" || method == "assign" ) {
+private auto argProxy( string method, T... )( Argument arg, T args ) if( method == "take" || method == "convert" || method == "assign" ) {
     
   try {
   

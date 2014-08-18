@@ -4,29 +4,26 @@
 */
 module comet.scripts.run_tests.callbacks;
 
-import comet.logger: Logger;
-import std.stdio: File;
+import std.algorithm: count;
+import std.container: Array;
+import std.datetime : Duration;
+import std.exception: enforce;
+import std.range    : isInputRange, ElementType;
+import std.stdio    : File;
+import std.traits   : FieldTypeTuple;
+
+import comet.core;
 import comet.bio.dna: Nucleotide;
 import comet.configs.algos: Algo;
 import comet.loader;
-import std.container: Array;
-import comet.typedefs: Cost;
-import comet.typedefs: LengthParameters;
-import comet.typecons: getter;
-import std.range: isInputRange, ElementType;
-import std.datetime: Duration;
-import std.traits: FieldTypeTuple;
-
-import comet.core;
-import comet.results;
+import comet.logger: Logger;
 import comet.results_io;
 import comet.scripts.compare_results.program: allEquivalents;
+import comet.typecons: getter;
+import comet.typedefs;
 
-import std.algorithm: count;
-import std.exception: enforce;
-
-class RunParamsRange {
- 
+class RunParamsRange 
+{ 
   private alias Data = typeof( ( loadSequences!( MultipleSequences.yes, ExtendedAbbreviations.yes )( File.init ) )[0].molecules );    
  
   private Logger                          _logger;

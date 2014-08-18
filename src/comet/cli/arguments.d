@@ -379,7 +379,7 @@ static:
   */
   auto value( T, Args... )( ref T value, Args args  ) {
     return guess( 
-      oneArgParser( Converters.to!T(), value ),
+      oneArgParser(Converters.to!T(), value),
       args      
     );
   }
