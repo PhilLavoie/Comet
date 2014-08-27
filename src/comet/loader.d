@@ -116,10 +116,12 @@ string executionTimeString( in Duration time ) {
 
 }
 
-string executionTimeInSeconds( in Duration time ) {
-
-  return time.total!"seconds".to!string() ~ "." ~ time.fracSec.msecs.to!string();
-
+string executionTimeInSeconds(in Duration time)
+{
+  long seconds;
+  long msecs;
+  time.split!("seconds", "msecs")(seconds, msecs);
+  return seconds.to!string() ~ "." ~ msecs.to!string();
 }
 
 /**
