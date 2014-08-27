@@ -3,13 +3,12 @@
 */
 module comet.cli.arguments;
 
-import comet.cli.utils;
 import comet.cli.parsers;
 import comet.cli.exceptions;
 import comet.cli.converters;
 
 import std.exception: enforce;
-import std.container: SList;
+import std.container;
 import std.range: isForwardRange;
 import std.traits: isCallable, ParameterTypeTuple;
 import std.string: strip;
@@ -215,9 +214,9 @@ protected:
   //The name of the argument's arguments, if any.
   string _argumentName;
   //Mutually exclusive flagged argument.
-  SList!( Flagged ) _mutuallyExclusives;
+  Array!( Flagged ) _mutuallyExclusives;
   
-  this( T... )( T args ) in {
+  this(T...)(T args) in {
   
     assert( args[ 0 ].strip == args[ 0 ] );
   
@@ -240,18 +239,17 @@ protected:
     Makes the argument mutually exclusive to this one.
   */
   void addME( Flagged f ) {
-    _mutuallyExclusives.insertFront( f );
+    _mutuallyExclusives.insertBack( f );
   }  
 
 package:
-
   /**  
     Returns true if the user has provided a name for the arguments expected following the flag.  
   */
-  bool hasArgumentName() {
-  
-    return !_argumentName.isEmpty();
-  
+  bool hasArgumentName() 
+  {
+    import std.string: strip;
+    return _argumentName.strip().length != 0;  
   }
     
 public:

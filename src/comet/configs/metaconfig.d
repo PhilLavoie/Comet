@@ -242,7 +242,7 @@ public {
       //For now, no support for setting the number of threads via the command line.
       //The outfile arguments has been removed since this can easily be done in the shell.
       //TODO: remove eventually.
-      static if( field != Field.noThreads && field != Field.outFile ) {
+      static if( field != Field.noThreads && field != Field.outFile && field != Field.algo) {
       
         static assert( __traits( compiles, cfg.argFor!( field )() ), fieldString!field );
       

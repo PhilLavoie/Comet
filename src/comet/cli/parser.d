@@ -5,17 +5,46 @@ module comet.cli.parser;
 
 public import comet.cli.arguments;
 
-import comet.cli.utils;
 import comet.cli.parsers;
 import comet.cli.converters;
 import comet.cli.exceptions;
-
 
 import std.container: Array;
 import std.typecons: Flag;
 import std.range: isForwardRange, ElementType;
 import std.algorithm: max, filter, reduce, map;
 import std.stdio;
+
+
+/**
+  Returns the name of the command used on the command line. It was meant to be called with the
+  arguments provided by the program's entry point. It returns the base name stripped of
+  its extension of the command invocation.
+  
+  If only one string is passed, then this string is considered to be the program invocation and the
+  processing is therefore done on that one.
+  
+  Examples:
+  ---
+    void main(string[] args) {
+      auto cmd = commandName(args);
+    }
+  ---
+*/
+string commandName(string[] tokens) 
+{
+  return commandName(tokens[0]);  
+}
+///Ditto
+string commandName(string token) 
+{
+  import std.path: baseName, stripExtension;
+  //Strip leading directories and extension.
+  return token.baseName().stripExtension();    
+}
+
+
+
 
 
 alias DropFirst = Flag!"DropFirst";

@@ -739,7 +739,7 @@ struct Result(C = void)
     @property public auto perPosition() {return _perPosition[];}  
   }  
   
-  public @property auto start()  { return _start; }
+  @property public auto start()  { return _start; }
   @property public auto length() { return _length; }
   @property public auto cost()   { return _cost; }
   
@@ -807,38 +807,38 @@ unittest {
   static assert( isResult!(typeof(r2)) );
   static assert( !hasContainer!(typeof(r1)) );
   static assert( !hasContainer!(typeof(r2)) );
-  r1.start = 0;
-  r1.length = 100;
-  r1.cost = 20.0;
-  r2.start = 10;
-  r2.length = 20;
-  r2.cost = 21.0;
+  r1._start = 0u;
+  r1._length = 100;
+  r1._cost = 20.0;
+  r2._start = 10;
+  r2._length = 20;
+  r2._cost = 21.0;
   
   //Cost based ordering.
   assert( r1 < r2 );
-  r1.cost = r2.cost + 1;
+  r1._cost = r2._cost + 1;
   assert( r2 < r1 );
   
   //Length ordering.
-  r2.cost = r1.cost;
+  r2._cost = r1._cost;
   assert( r1 < r2 );
-  r2.length = r1.length + 1;
+  r2._length = r1._length + 1;
   assert( r2 < r1 );
   
   //Start index ordering.
-  r2.cost = r1.cost;
-  r2.length = r1.length;
+  r2._cost = r1._cost;
+  r2._length = r1._length;
   assert( r1 < r2 );
-  r1.start = r2.start + 1;
+  r1._start = r2._start + 1;
   assert( r2 < r1 );
   
   //Equality.
   r1 = r2;
   assert( r1 == r2 );
-  assert( r1.isEquivalentTo( r2 ) );
+  assert( r1.isEquivalentTo(r2, double.epsilon ) );
   
-  r1.cost = 0;
-  r2.cost = 1;
-  assert( r1.isEquivalentTo( r2, 1. ) );  
+  r1._cost = 0;
+  r2._cost = 1;
+  assert( r1.isEquivalentTo(r2, 1. ) );  
   
 }

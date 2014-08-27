@@ -1,3 +1,10 @@
+/**
+  This module holds the code for standard exception thrown by the cli package.
+  
+  Also provides useful enforcing functions that unify how exceptions should be thrown
+  and error messages constructed. The user should strive to use those when defining his
+  own arguments/parsers.
+*/
 module comet.cli.exceptions;
 
 import comet.cli.arguments;

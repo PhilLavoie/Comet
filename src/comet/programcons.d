@@ -3,7 +3,7 @@
 */
 module comet.programcons;
 
-public import comet.cli.utils: commandName;
+public import comet.cli: commandName;
 
 /**
   This mixin is only to be used by the program's entry point. It generates a main

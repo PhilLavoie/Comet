@@ -280,7 +280,7 @@ unittest
       }  
     };
     
-  calculateSegmentsPairsCosts!VerboseResults.no(rpr[], storage);  
+  calculateSegmentsPairsCosts!(VerboseResults.no)(rpr[], storage);  
 }
 
 
