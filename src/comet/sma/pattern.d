@@ -84,7 +84,7 @@ struct Pattern {
     
     Note: that this case should not even occur. 
   */
-  const int opCmp( ref const Pattern rhs ) {
+  const ptrdiff_t opCmp( ref const Pattern rhs ) {
     if( this.length != rhs.length ) { return this.length - rhs.length; }
         
     for( size_t i = 0; i < _data.length; i++ ) {

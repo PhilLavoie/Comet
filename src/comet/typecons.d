@@ -125,7 +125,7 @@ unittest
   myToto = myToto + 10 - 9;
   assert(myToto == 7);
   
-  int x = myToto;
+  auto x = myToto;
   assert(x == 7);
   
   //This crashes: myToto = 20;

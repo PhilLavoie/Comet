@@ -751,7 +751,7 @@ struct Result(C = void)
     Unless every field are the same for both results, this function
     will return an unequal comparison.
   */
-  public int opCmp(Result rhs)
+  public ptrdiff_t opCmp(Result rhs)
   {  
     //First compare on the cost criteria.
     if( _cost < rhs._cost - Cost.epsilon ) { 
@@ -766,10 +766,10 @@ struct Result(C = void)
     
     //If the cost is equals, then the longer segments length wins.
     auto cmp = rhs._length - _length;
-    if(cmp) {return cast(int)cmp;}
+    if(cmp) {return cast(ptrdiff_t)cmp;}
     
     //Arbitrary ordering otherwise, based on left segment start.
-    return cast(int)(_start - rhs._start);    
+    return cast(ptrdiff_t)(_start - rhs._start);    
   }
   
   /**
