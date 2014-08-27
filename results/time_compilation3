@@ -1,9 +1,0 @@
-                                    file|         algorithm| number of threads| number of results|        min length|        max length|       length step| execution time(s)
-          random_count4_length1200.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|           514.616
-           random_count4_length300.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|             8.107
-           random_count4_length600.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|            64.751
-           random_count4_length900.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|           217.863
-          random_count5_length1200.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|           647.181
-           random_count5_length300.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|            10.216
-           random_count5_length600.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|            80.941
-           random_count5_length900.fasta|          standard|                 1|              1000|                 3|        4294967295|                 3|            273.86
