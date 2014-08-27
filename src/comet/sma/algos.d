@@ -766,10 +766,10 @@ struct Result(C = void)
     
     //If the cost is equals, then the longer segments length wins.
     auto cmp = rhs._length - _length;
-    if(cmp) {return cmp;}
+    if(cmp) {return cast(int)cmp;}
     
     //Arbitrary ordering otherwise, based on left segment start.
-    return _start - rhs._start;    
+    return cast(int)(_start - rhs._start);    
   }
   
   /**
